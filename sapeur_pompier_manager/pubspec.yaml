@@ -1,0 +1,79 @@
+name: sapeur_pompier_manager
+description: Logiciel de gestion des livrets sanitaires pour sapeurs-pompiers au Burkina Faso
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management
+  flutter_riverpod: ^2.4.9
+
+  # Database
+  sqflite_common_ffi: ^2.3.0
+  path_provider: ^2.1.1
+  path: ^1.8.3
+  sqlite3_flutter_libs: ^0.5.18
+
+  # PDF Generation
+  pdf: ^3.10.7
+  printing: ^5.11.1
+
+  # Charts
+  fl_chart: ^0.65.0
+
+  # Forms & Validation
+  form_field_validator: ^1.1.0
+
+  # Date Picker
+  intl: ^0.18.1
+
+  # File Picker
+  file_picker: ^6.1.1
+
+  # Image Picker
+  image_picker: ^1.0.5
+
+  # Encryption
+  encrypt: ^5.0.3
+  crypto: ^3.0.3
+
+  # Authentication
+  bcrypt: ^1.1.3
+
+  # UI Components
+  google_fonts: ^6.1.0
+  flutter_svg: ^2.0.9
+
+  # Utilities
+  uuid: ^4.2.1
+  logger: ^2.0.2+1
+  equatable: ^2.0.5
+  dartz: ^0.10.1
+
+  # Additional
+  shared_preferences: ^2.2.2
+  url_launcher: ^6.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/fonts/
+
+  fonts:
+    - family: Roboto
+      fonts:
+        - asset: fonts/Roboto-Regular.ttf
+        - asset: fonts/Roboto-Bold.ttf
+          weight: 700
