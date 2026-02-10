@@ -66,6 +66,12 @@ class UnknownFailure extends Failure {
       : super(message);
 }
 
+/// Alias pour compatibilité
+class UnexpectedFailure extends Failure {
+  const UnexpectedFailure([String message = 'Erreur inattendue'])
+      : super(message);
+}
+
 /// Erreur de données introuvables
 class NotFoundFailure extends Failure {
   const NotFoundFailure([String message = 'Données introuvables'])

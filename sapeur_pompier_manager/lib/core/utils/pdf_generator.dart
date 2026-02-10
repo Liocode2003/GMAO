@@ -621,7 +621,7 @@ class PdfGenerator {
           pw.SizedBox(height: 12),
           _buildSignatureBlock(
             'Signature du médecin',
-            _vide(cfs?.nomMedecin, defaut: null),
+            _vide(cfs?.nomMedecin),
             cfs?.dateSignature != null ? _formatDate(cfs!.dateSignature) : null,
           ),
           pw.Spacer(),

@@ -33,7 +33,11 @@ void main() async {
       skipTaskbar: false,
       title: AppStrings.appName,
       titleBarStyle: TitleBarStyle.normal,
+      maximumSize: Size.infinite,
     );
+    await windowManager.setResizable(true);
+    await windowManager.setMaximizable(true);
+    await windowManager.setMinimizable(true);
 
     windowManager.waitUntilReadyToShow(windowOptions, () async {
       await windowManager.show();
@@ -68,7 +72,7 @@ class SapeurPompierApp extends StatelessWidget {
         ),
         textTheme: GoogleFonts.robotoTextTheme(),
         scaffoldBackgroundColor: AppColors.background,
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           elevation: 2,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),

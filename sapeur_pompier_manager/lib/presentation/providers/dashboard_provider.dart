@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/vaccination.dart';
 import '../../domain/entities/indisponibilite.dart';
+import '../../data/repositories/sapeur_pompier_repository_impl.dart';
 import 'sapeur_pompier_provider.dart';
 
 /// État du dashboard

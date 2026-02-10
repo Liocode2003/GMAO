@@ -192,6 +192,21 @@ class SapeurPompierModel extends SapeurPompier {
     );
   }
 
+  // ---- Computed getters for UI ----
+
+  String? get nom => etatCivil?.nom;
+  String? get prenom => etatCivil?.prenoms;
+  String? get grade => null; // Pas de champ grade dans le domaine
+
+  String? get statut {
+    final decision = examenIncorporation?.decision?.toLowerCase() ?? '';
+    if (decision.contains('apte') && !decision.contains('inapte')) return 'Actif';
+    if (decision.contains('inapte')) return 'Inapte';
+    return null;
+  }
+
+  bool? get hasMedicalAlerts => indisponibilites.isNotEmpty;
+
   /// Crée une copie avec les relations chargées
   SapeurPompierModel withRelations({
     EtatCivilModel? etatCivil,

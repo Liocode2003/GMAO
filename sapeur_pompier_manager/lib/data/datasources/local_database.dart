@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:bcrypt/bcrypt.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -408,9 +409,8 @@ class LocalDatabase {
 
   /// Crée l'utilisateur administrateur par défaut
   Future<void> _createDefaultAdmin(Database db) async {
-    // Mot de passe par défaut: "admin123" (à changer lors de la première connexion)
-    // Hash bcrypt du mot de passe (simplifié pour l'exemple)
-    const passwordHash = '\$2a\$12\$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYzpLbHBa9W';
+    // Génère le hash bcrypt du mot de passe par défaut "admin123"
+    final passwordHash = BCrypt.hashpw('admin123', BCrypt.gensalt(logRounds: 10));
 
     await db.insert('users', {
       'id': 'admin-default-id',

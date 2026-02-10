@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_colors.dart';
@@ -364,8 +365,8 @@ class _ListeScreenState extends ConsumerState<ListeScreen> {
                 child: sp.hasPhoto
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: Image.memory(
-                          sp.etatCivil!.photo!,
+                        child: Image.file(
+                          File(sp.etatCivil!.photoPath!),
                           fit: BoxFit.cover,
                         ),
                       )

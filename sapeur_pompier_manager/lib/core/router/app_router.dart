@@ -125,42 +125,42 @@ class AppRouter {
 
       // --- Sections du livret sanitaire ------------------------------------
       case etatCivil:
-        final sapeurId = _extractStringArg(args, 'id');
+        final sapeurId = _extractStringArg(args, 'id') ?? '';
         return _buildRoute(
           EtatCivilScreen(sapeurPompierId: sapeurId),
           routeSettings,
         );
 
       case constantes:
-        final sapeurId = _extractStringArg(args, 'id');
+        final sapeurId = _extractStringArg(args, 'id') ?? '';
         return _buildRoute(
           ConstantesScreen(sapeurPompierId: sapeurId),
           routeSettings,
         );
 
       case examen:
-        final sapeurId = _extractStringArg(args, 'id');
+        final sapeurId = _extractStringArg(args, 'id') ?? '';
         return _buildRoute(
           ExamenIncorporationScreen(sapeurPompierId: sapeurId),
           routeSettings,
         );
 
       case operations:
-        final sapeurId = _extractStringArg(args, 'id');
+        final sapeurId = _extractStringArg(args, 'id') ?? '';
         return _buildRoute(
           OperationsScreen(sapeurPompierId: sapeurId),
           routeSettings,
         );
 
       case vaccinations:
-        final sapeurId = _extractStringArg(args, 'id');
+        final sapeurId = _extractStringArg(args, 'id') ?? '';
         return _buildRoute(
           VaccinationsScreen(sapeurPompierId: sapeurId),
           routeSettings,
         );
 
       case visites:
-        final sapeurId = _extractStringArg(args, 'id');
+        final sapeurId = _extractStringArg(args, 'id') ?? '';
         return _buildRoute(
           VisitesSanitairesScreen(sapeurPompierId: sapeurId),
           routeSettings,

@@ -284,7 +284,9 @@ class _DetailScreenState extends ConsumerState<DetailScreen>
         body: TabBarView(
           controller: _tabController,
           children: [
-            _ResumeTab(sp: sp, onNavigateToTab: _tabController.animateTo),
+            _ResumeTab(sp: sp, onNavigateToTab: (int index, {bool animate = true}) {
+              _tabController.animateTo(index);
+            }),
             _EtatCivilTab(sp: sp, canEdit: canEdit),
             _ConstantesTab(sp: sp, canEdit: canEdit),
             _ExamenIncorporationTab(sp: sp, canEdit: canEdit),
@@ -904,8 +906,6 @@ class _ExamenIncorporationTab extends StatelessWidget {
                       valueColor: ei.isApte
                           ? AppColors.success
                           : AppColors.error),
-                if (ei.etatGeneral != null)
-                  _InfoRow('État général', ei.etatGeneral!),
                 if (ei.nomMedecin != null)
                   _InfoRow('Médecin', ei.nomMedecin!),
                 if (ei.dateCloture != null)
@@ -979,7 +979,7 @@ class _OperationCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    operation.sejour,
+                    'Séjour ${operation.numeroSejour}',
                     style: const TextStyle(
                         color: AppColors.primary,
                         fontWeight: FontWeight.bold,
@@ -988,8 +988,8 @@ class _OperationCard extends StatelessWidget {
                 ),
                 const Spacer(),
                 Text(
-                  '${DateFormat('dd/MM/yy').format(operation.dateDepart)} → '
-                  '${DateFormat('dd/MM/yy').format(operation.dateRetour)}',
+                  '${operation.dateDepart != null ? DateFormat('dd/MM/yy').format(operation.dateDepart!) : '...'} → '
+                  '${operation.dateRetour != null ? DateFormat('dd/MM/yy').format(operation.dateRetour!) : '...'}',
                   style: const TextStyle(
                       color: AppColors.textSecondary, fontSize: 12),
                 ),
@@ -997,7 +997,7 @@ class _OperationCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              operation.lieuSejour,
+              operation.lieuSejour ?? '',
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             if (operation.etatSanteDepart != null)
@@ -1384,9 +1384,9 @@ class _CertificatCard extends StatelessWidget {
         subtitle: certificat.dateCertificat != null
             ? Text(DateFormat('dd/MM/yyyy').format(certificat.dateCertificat!))
             : null,
-        trailing: certificat.type != null
+        trailing: certificat.typeCertificat.isNotEmpty
             ? Chip(
-                label: Text(certificat.type!,
+                label: Text(certificat.typeCertificat,
                     style: const TextStyle(fontSize: 11)),
                 padding: EdgeInsets.zero,
                 backgroundColor:

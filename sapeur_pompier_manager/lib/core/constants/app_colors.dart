@@ -18,6 +18,7 @@ class AppColors {
   static const Color warning = Color(0xFFF57C00); // Orange
   static const Color error = Color(0xFFC62828); // Rouge foncé
   static const Color info = Color(0xFF0288D1); // Bleu clair
+  static const Color infoLight = Color(0xFFE1F5FE); // Bleu très clair
 
   // Couleurs de fond
   static const Color background = Color(0xFFF5F5F5);
