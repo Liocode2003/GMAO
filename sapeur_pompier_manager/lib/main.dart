@@ -4,6 +4,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:sapeur_pompier_manager/core/constants/app_colors.dart';
 import 'package:sapeur_pompier_manager/core/constants/app_strings.dart';
 import 'package:sapeur_pompier_manager/data/datasources/local_database.dart';
+import 'package:sapeur_pompier_manager/presentation/providers/auth_provider.dart';
+import 'package:sapeur_pompier_manager/presentation/screens/login_screen.dart';
+import 'package:sapeur_pompier_manager/presentation/screens/dashboard_screen.dart';
 import 'package:window_manager/window_manager.dart';
 import 'dart:io';
 
@@ -119,162 +122,53 @@ class SapeurPompierApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const WelcomeScreen(),
+      home: const AuthWrapper(),
     );
   }
 }
 
-/// Écran d'accueil temporaire
-class WelcomeScreen extends StatelessWidget {
-  const WelcomeScreen({super.key});
+/// Wrapper pour gérer l'authentification automatique
+class AuthWrapper extends ConsumerWidget {
+  const AuthWrapper({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(AppStrings.appName),
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authProvider);
+
+    // Afficher un écran de chargement pendant la vérification
+    if (authState.isLoading) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 Icons.local_fire_department,
-                size: 120,
+                size: 80,
                 color: AppColors.primary,
               ),
-              const SizedBox(height: 32),
-              Text(
-                AppStrings.appName,
-                style: GoogleFonts.roboto(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
-                textAlign: TextAlign.center,
-              ),
+              const SizedBox(height: 24),
+              const CircularProgressIndicator(),
               const SizedBox(height: 16),
               Text(
-                'Gestion numérique des livrets sanitaires',
+                'Chargement...',
                 style: GoogleFonts.roboto(
-                  fontSize: 18,
-                  color: AppColors.textSecondary,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 48),
-              Card(
-                elevation: 4,
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildInfoRow(
-                        Icons.check_circle,
-                        'Base de données initialisée',
-                        AppColors.success,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildInfoRow(
-                        Icons.architecture,
-                        'Architecture Clean complète',
-                        AppColors.success,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildInfoRow(
-                        Icons.storage,
-                        '13 tables SQLite créées',
-                        AppColors.success,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildInfoRow(
-                        Icons.account_circle,
-                        'Utilisateur admin créé',
-                        AppColors.success,
-                      ),
-                      const SizedBox(height: 24),
-                      const Divider(),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Identifiants par défaut:',
-                        style: GoogleFonts.roboto(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Utilisateur: admin',
-                        style: GoogleFonts.robotoMono(
-                          fontSize: 14,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      Text(
-                        'Mot de passe: admin123',
-                        style: GoogleFonts.robotoMono(
-                          fontSize: 14,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 32),
-              ElevatedButton.icon(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Écran de connexion en cours de développement',
-                      ),
-                      backgroundColor: AppColors.info,
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.login),
-                label: const Text('Se connecter'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 48,
-                    vertical: 16,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                AppStrings.appVersion,
-                style: GoogleFonts.roboto(
-                  fontSize: 12,
+                  fontSize: 16,
                   color: AppColors.textSecondary,
                 ),
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
+      );
+    }
 
-  Widget _buildInfoRow(IconData icon, String text, Color color) {
-    return Row(
-      children: [
-        Icon(icon, color: color, size: 20),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            text,
-            style: GoogleFonts.roboto(
-              fontSize: 14,
-              color: AppColors.textPrimary,
-            ),
-          ),
-        ),
-      ],
-    );
+    // Rediriger vers le dashboard si authentifié, sinon vers le login
+    if (authState.isAuthenticated && authState.user != null) {
+      return const DashboardScreen();
+    }
+
+    return const LoginScreen();
   }
 }
