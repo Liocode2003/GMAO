@@ -68,7 +68,7 @@ class SapeurPompierApp extends StatelessWidget {
         ),
         textTheme: GoogleFonts.robotoTextTheme(),
         scaffoldBackgroundColor: AppColors.background,
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           elevation: 2,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),

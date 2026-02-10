@@ -14,6 +14,7 @@ import 'package:sapeur_pompier_manager/domain/entities/certificat.dart';
 import 'package:sapeur_pompier_manager/domain/entities/decision_reforme.dart';
 import 'package:sapeur_pompier_manager/domain/entities/controle_fin_service.dart';
 import 'package:sapeur_pompier_manager/data/datasources/local_database.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sapeur_pompier_manager/data/models/sapeur_pompier_model.dart';
 import 'package:sapeur_pompier_manager/data/models/etat_civil_model.dart';
 import 'package:sapeur_pompier_manager/data/models/constantes_model.dart';
