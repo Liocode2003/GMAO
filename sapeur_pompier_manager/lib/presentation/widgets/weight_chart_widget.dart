@@ -29,7 +29,7 @@ class _WeightChartWidgetState extends State<WeightChartWidget> {
 
   List<HistoriquePoidsModel> get _sortedData {
     final list = List<HistoriquePoidsModel>.from(widget.historique);
-    list.sort((a, b) => a.date.compareTo(b.date));
+    list.sort((a, b) => a.annee.compareTo(b.annee));
     return list;
   }
 
@@ -129,7 +129,7 @@ class _WeightChartWidgetState extends State<WeightChartWidget> {
                         final index = spot.spotIndex;
                         final entry = data[index];
                         return LineTooltipItem(
-                          '${_fullLabel(entry.date)}\n',
+                          '${_fullLabel(entry.dateMesure?.toIso8601String() ?? entry.annee.toString())}\n',
                           const TextStyle(
                             color: Colors.white,
                             fontSize: 11,
@@ -194,7 +194,7 @@ class _WeightChartWidgetState extends State<WeightChartWidget> {
                         return Padding(
                           padding: const EdgeInsets.only(top: 4.0),
                           child: Text(
-                            _shortLabel(data[index].date),
+                            _shortLabel(data[index].dateMesure?.toIso8601String() ?? data[index].annee.toString()),
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: AppColors.textSecondary,
