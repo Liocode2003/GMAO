@@ -20,24 +20,6 @@ import 'package:sapeur_pompier_manager/core/constants/app_colors.dart';
 // Fake AuthNotifier — controls authState without touching real infrastructure
 // =============================================================================
 
-class FakeAuthNotifier extends AuthNotifier {
-  FakeAuthNotifier(AuthState initialState)
-      : _initialState = initialState,
-        super._fake();
-
-  final AuthState _initialState;
-
-  // Called by super constructor path — must be overridden to avoid real repo.
-  @override
-  AuthState get state => _initialState;
-
-  @override
-  Future<bool> login(String username, String password) async => false;
-
-  @override
-  Future<void> logout() async {}
-}
-
 // ---------------------------------------------------------------------------
 // Because AuthNotifier's constructor calls _checkAuthStatus() (which hits the
 // repo), we provide a minimal alternative via a direct StateNotifier subclass.

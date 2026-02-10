@@ -310,8 +310,9 @@ SapeurPompier _makeSapeurWithEtatCivil({
       id: 'ec-$id',
       sapeurPompierId: id,
       nom: nom,
-      prenom: prenom,
+      prenoms: prenom,
       dateNaissance: DateTime(1990, 6, 15),
+      lieuNaissance: '',
     ),
   );
 }
