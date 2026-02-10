@@ -33,7 +33,11 @@ void main() async {
       skipTaskbar: false,
       title: AppStrings.appName,
       titleBarStyle: TitleBarStyle.normal,
+      maximumSize: Size.infinite,
     );
+    await windowManager.setResizable(true);
+    await windowManager.setMaximizable(true);
+    await windowManager.setMinimizable(true);
 
     windowManager.waitUntilReadyToShow(windowOptions, () async {
       await windowManager.show();
