@@ -1,0 +1,231 @@
+import '../../domain/entities/controle_fin_service.dart';
+
+/// Model de données pour ControleFinService avec sérialisation JSON
+class ControleFinServiceModel extends ControleFinService {
+  const ControleFinServiceModel({
+    required super.id,
+    required super.sapeurPompierId,
+    super.dateRadiation,
+    super.lieuExamen,
+    super.etatSante,
+    super.atteintDe,
+    super.hospitaliseA,
+    super.poids,
+    super.taille,
+    super.indicePignet,
+    super.ta,
+    super.sucre,
+    super.albumine,
+    super.avOdSans,
+    super.avOdAvec,
+    super.avOgSans,
+    super.avOgAvec,
+    super.aaOdHaute,
+    super.aaOdChuchotee,
+    super.aaOgHaute,
+    super.aaOgChuchotee,
+    super.noteE,
+    super.noteV,
+    super.noteA,
+    super.noteS,
+    super.noteI,
+    super.noteF,
+    super.noteX,
+    super.nomMedecin,
+    super.dateSignature,
+    super.signaturePath,
+  });
+
+  /// Crée un ControleFinServiceModel depuis JSON
+  factory ControleFinServiceModel.fromJson(Map<String, dynamic> json) {
+    return ControleFinServiceModel(
+      id: json['id'] as String,
+      sapeurPompierId: json['sapeurPompierId'] as String,
+      dateRadiation: json['dateRadiation'] != null
+          ? DateTime.parse(json['dateRadiation'] as String)
+          : null,
+      lieuExamen: json['lieuExamen'] as String?,
+      etatSante: json['etatSante'] as String?,
+      atteintDe: json['atteintDe'] as String?,
+      hospitaliseA: json['hospitaliseA'] as String?,
+      poids: (json['poids'] as num?)?.toDouble(),
+      taille: (json['taille'] as num?)?.toDouble(),
+      indicePignet: (json['indicePignet'] as num?)?.toDouble(),
+      ta: json['ta'] as String?,
+      sucre: json['sucre'] as String?,
+      albumine: json['albumine'] as String?,
+      avOdSans: json['avOdSans'] as String?,
+      avOdAvec: json['avOdAvec'] as String?,
+      avOgSans: json['avOgSans'] as String?,
+      avOgAvec: json['avOgAvec'] as String?,
+      aaOdHaute: json['aaOdHaute'] as String?,
+      aaOdChuchotee: json['aaOdChuchotee'] as String?,
+      aaOgHaute: json['aaOgHaute'] as String?,
+      aaOgChuchotee: json['aaOgChuchotee'] as String?,
+      noteE: json['noteE'] as String?,
+      noteV: json['noteV'] as String?,
+      noteA: json['noteA'] as String?,
+      noteS: json['noteS'] as String?,
+      noteI: json['noteI'] as String?,
+      noteF: json['noteF'] as String?,
+      noteX: json['noteX'] as String?,
+      nomMedecin: json['nomMedecin'] as String?,
+      dateSignature: json['dateSignature'] != null
+          ? DateTime.parse(json['dateSignature'] as String)
+          : null,
+      signaturePath: json['signaturePath'] as String?,
+    );
+  }
+
+  /// Convertit ControleFinServiceModel vers JSON
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'sapeurPompierId': sapeurPompierId,
+      'dateRadiation': dateRadiation?.toIso8601String(),
+      'lieuExamen': lieuExamen,
+      'etatSante': etatSante,
+      'atteintDe': atteintDe,
+      'hospitaliseA': hospitaliseA,
+      'poids': poids,
+      'taille': taille,
+      'indicePignet': indicePignet,
+      'ta': ta,
+      'sucre': sucre,
+      'albumine': albumine,
+      'avOdSans': avOdSans,
+      'avOdAvec': avOdAvec,
+      'avOgSans': avOgSans,
+      'avOgAvec': avOgAvec,
+      'aaOdHaute': aaOdHaute,
+      'aaOdChuchotee': aaOdChuchotee,
+      'aaOgHaute': aaOgHaute,
+      'aaOgChuchotee': aaOgChuchotee,
+      'noteE': noteE,
+      'noteV': noteV,
+      'noteA': noteA,
+      'noteS': noteS,
+      'noteI': noteI,
+      'noteF': noteF,
+      'noteX': noteX,
+      'nomMedecin': nomMedecin,
+      'dateSignature': dateSignature?.toIso8601String(),
+      'signaturePath': signaturePath,
+    };
+  }
+
+  /// Crée un ControleFinServiceModel depuis une ligne de base de données SQLite
+  factory ControleFinServiceModel.fromDatabase(Map<String, dynamic> map) {
+    return ControleFinServiceModel(
+      id: map['id'] as String,
+      sapeurPompierId: map['sapeur_pompier_id'] as String,
+      dateRadiation: map['date_radiation'] != null
+          ? DateTime.parse(map['date_radiation'] as String)
+          : null,
+      lieuExamen: map['lieu_examen'] as String?,
+      etatSante: map['etat_sante'] as String?,
+      atteintDe: map['atteint_de'] as String?,
+      hospitaliseA: map['hospitalise_a'] as String?,
+      poids: (map['poids'] as num?)?.toDouble(),
+      taille: (map['taille'] as num?)?.toDouble(),
+      indicePignet: (map['indice_pignet'] as num?)?.toDouble(),
+      ta: map['ta'] as String?,
+      sucre: map['sucre'] as String?,
+      albumine: map['albumine'] as String?,
+      avOdSans: map['av_od_sans'] as String?,
+      avOdAvec: map['av_od_avec'] as String?,
+      avOgSans: map['av_og_sans'] as String?,
+      avOgAvec: map['av_og_avec'] as String?,
+      aaOdHaute: map['aa_od_haute'] as String?,
+      aaOdChuchotee: map['aa_od_chuchotee'] as String?,
+      aaOgHaute: map['aa_og_haute'] as String?,
+      aaOgChuchotee: map['aa_og_chuchotee'] as String?,
+      noteE: map['note_e'] as String?,
+      noteV: map['note_v'] as String?,
+      noteA: map['note_a'] as String?,
+      noteS: map['note_s'] as String?,
+      noteI: map['note_i'] as String?,
+      noteF: map['note_f'] as String?,
+      noteX: map['note_x'] as String?,
+      nomMedecin: map['nom_medecin'] as String?,
+      dateSignature: map['date_signature'] != null
+          ? DateTime.parse(map['date_signature'] as String)
+          : null,
+      signaturePath: map['signature_path'] as String?,
+    );
+  }
+
+  /// Convertit ControleFinServiceModel vers format base de données SQLite
+  Map<String, dynamic> toDatabase() {
+    return {
+      'id': id,
+      'sapeur_pompier_id': sapeurPompierId,
+      'date_radiation': dateRadiation?.toIso8601String(),
+      'lieu_examen': lieuExamen,
+      'etat_sante': etatSante,
+      'atteint_de': atteintDe,
+      'hospitalise_a': hospitaliseA,
+      'poids': poids,
+      'taille': taille,
+      'indice_pignet': indicePignet,
+      'ta': ta,
+      'sucre': sucre,
+      'albumine': albumine,
+      'av_od_sans': avOdSans,
+      'av_od_avec': avOdAvec,
+      'av_og_sans': avOgSans,
+      'av_og_avec': avOgAvec,
+      'aa_od_haute': aaOdHaute,
+      'aa_od_chuchotee': aaOdChuchotee,
+      'aa_og_haute': aaOgHaute,
+      'aa_og_chuchotee': aaOgChuchotee,
+      'note_e': noteE,
+      'note_v': noteV,
+      'note_a': noteA,
+      'note_s': noteS,
+      'note_i': noteI,
+      'note_f': noteF,
+      'note_x': noteX,
+      'nom_medecin': nomMedecin,
+      'date_signature': dateSignature?.toIso8601String(),
+      'signature_path': signaturePath,
+    };
+  }
+
+  /// Crée un ControleFinServiceModel depuis une entité ControleFinService
+  factory ControleFinServiceModel.fromEntity(ControleFinService controle) {
+    return ControleFinServiceModel(
+      id: controle.id,
+      sapeurPompierId: controle.sapeurPompierId,
+      dateRadiation: controle.dateRadiation,
+      lieuExamen: controle.lieuExamen,
+      etatSante: controle.etatSante,
+      atteintDe: controle.atteintDe,
+      hospitaliseA: controle.hospitaliseA,
+      poids: controle.poids,
+      taille: controle.taille,
+      indicePignet: controle.indicePignet,
+      ta: controle.ta,
+      sucre: controle.sucre,
+      albumine: controle.albumine,
+      avOdSans: controle.avOdSans,
+      avOdAvec: controle.avOdAvec,
+      avOgSans: controle.avOgSans,
+      avOgAvec: controle.avOgAvec,
+      aaOdHaute: controle.aaOdHaute,
+      aaOdChuchotee: controle.aaOdChuchotee,
+      aaOgHaute: controle.aaOgHaute,
+      aaOgChuchotee: controle.aaOgChuchotee,
+      noteE: controle.noteE,
+      noteV: controle.noteV,
+      noteA: controle.noteA,
+      noteS: controle.noteS,
+      noteI: controle.noteI,
+      noteF: controle.noteF,
+      noteX: controle.noteX,
+      nomMedecin: controle.nomMedecin,
+      dateSignature: controle.dateSignature,
+      signaturePath: controle.signaturePath,
+    );
+  }
+}
