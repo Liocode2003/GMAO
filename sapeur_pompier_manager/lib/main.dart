@@ -68,7 +68,6 @@ class SapeurPompierApp extends StatelessWidget {
           secondary: AppColors.secondary,
           error: AppColors.error,
           surface: AppColors.cardBackground,
-          background: AppColors.background,
         ),
         textTheme: GoogleFonts.robotoTextTheme(),
         scaffoldBackgroundColor: AppColors.background,
