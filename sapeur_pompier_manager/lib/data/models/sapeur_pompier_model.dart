@@ -207,18 +207,6 @@ class SapeurPompierModel extends SapeurPompier {
 
   bool? get hasMedicalAlerts => indisponibilites.isNotEmpty;
 
-  double? get completionPercentage {
-    int filled = 0;
-    const int total = 6;
-    if (etatCivil != null) filled++;
-    if (constantes != null) filled++;
-    if (examenIncorporation != null) filled++;
-    if (operations.isNotEmpty) filled++;
-    if (vaccinations.isNotEmpty) filled++;
-    if (visitesSanitaires.isNotEmpty) filled++;
-    return filled / total;
-  }
-
   /// Crée une copie avec les relations chargées
   SapeurPompierModel withRelations({
     EtatCivilModel? etatCivil,

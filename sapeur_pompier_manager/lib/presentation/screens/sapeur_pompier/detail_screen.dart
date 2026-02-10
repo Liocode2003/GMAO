@@ -1384,9 +1384,9 @@ class _CertificatCard extends StatelessWidget {
         subtitle: certificat.dateCertificat != null
             ? Text(DateFormat('dd/MM/yyyy').format(certificat.dateCertificat!))
             : null,
-        trailing: certificat.typeCertificat != null
+        trailing: certificat.typeCertificat.isNotEmpty
             ? Chip(
-                label: Text(certificat.typeCertificat!.name,
+                label: Text(certificat.typeCertificat,
                     style: const TextStyle(fontSize: 11)),
                 padding: EdgeInsets.zero,
                 backgroundColor:
