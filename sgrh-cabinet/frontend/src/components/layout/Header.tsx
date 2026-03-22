@@ -33,9 +33,6 @@ export default function Header({ onMenuToggle }: HeaderProps) {
         >
           <Bars3Icon className="w-5 h-5" />
         </button>
-        <div className="hidden sm:block">
-          <p className="text-xs text-gray-500">Système de Gestion des Ressources Humaines</p>
-        </div>
       </div>
 
       <div className="flex items-center gap-3">
