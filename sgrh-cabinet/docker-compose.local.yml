@@ -1,0 +1,16 @@
+version: '3.9'
+
+# Override pour développement local
+# Usage: docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
+
+services:
+  nginx:
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      # Pas de SSL en local — on supprime le mount ssl
+    ports:
+      - "8080:80"   # Accessible sur http://localhost:8080
+
+  backend:
+    ports:
+      - "3001:3001"  # API accessible directement sur http://localhost:3001
