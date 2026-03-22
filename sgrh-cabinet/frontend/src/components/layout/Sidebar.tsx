@@ -45,7 +45,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   return (
     <aside
       className={`
-        fixed inset-y-0 left-0 z-30 w-64 bg-navy-900 transform transition-transform duration-300 ease-in-out
+        fixed inset-y-0 left-0 z-30 w-64 bg-navy-800 transform transition-transform duration-300 ease-in-out
         lg:relative lg:translate-x-0
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
       `}
@@ -62,7 +62,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        <p className="px-3 py-2 text-xs font-semibold text-blue-300/60 uppercase tracking-wider">
+        <p className="px-3 py-2 text-xs font-semibold text-white/40 uppercase tracking-wider">
           Principal
         </p>
         {NAV_ITEMS.map((item) =>
@@ -76,7 +76,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150
                 ${isActive
                   ? 'bg-brand-600 text-white'
-                  : 'text-blue-100/70 hover:bg-white/10 hover:text-white'
+                  : 'text-white/60 hover:bg-white/10 hover:text-white'
                 }`
               }
             >
@@ -88,7 +88,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
         {(canAccess(['DRH', 'DIRECTION_GENERALE'])) && (
           <>
-            <p className="px-3 py-2 mt-4 text-xs font-semibold text-blue-300/60 uppercase tracking-wider">
+            <p className="px-3 py-2 mt-4 text-xs font-semibold text-white/40 uppercase tracking-wider">
               Administration
             </p>
             {SETTINGS_ITEMS.map((item) =>
@@ -101,7 +101,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150
                     ${isActive
                       ? 'bg-brand-600 text-white'
-                      : 'text-blue-100/70 hover:bg-white/10 hover:text-white'
+                      : 'text-white/60 hover:bg-white/10 hover:text-white'
                     }`
                   }
                 >
@@ -117,14 +117,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* User info */}
       <div className="p-4 border-t border-white/10">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-brand-700 rounded-full flex items-center justify-center text-white text-sm font-medium">
+          <div className="w-8 h-8 bg-brand-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
             {user?.firstName?.[0]}{user?.lastName?.[0]}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-white text-sm font-medium truncate">
               {user?.firstName} {user?.lastName}
             </p>
-            <p className="text-blue-300/70 text-xs truncate">{user?.role}</p>
+            <p className="text-white/50 text-xs truncate">{user?.role}</p>
           </div>
         </div>
       </div>
