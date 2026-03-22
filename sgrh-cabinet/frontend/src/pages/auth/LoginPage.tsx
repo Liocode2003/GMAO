@@ -36,10 +36,6 @@ export default function LoginPage() {
 
         {/* Texte central */}
         <div>
-          <div
-            className="w-12 h-1 mb-8 rounded"
-            style={{ backgroundColor: '#C8102E' }}
-          />
           <h1 className="text-4xl font-bold text-white leading-tight mb-4">
             Système de Gestion<br />des Ressources<br />Humaines
           </h1>
