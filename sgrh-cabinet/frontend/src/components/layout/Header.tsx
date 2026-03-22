@@ -34,7 +34,6 @@ export default function Header({ onMenuToggle }: HeaderProps) {
           <Bars3Icon className="w-5 h-5" />
         </button>
         <div className="hidden sm:block">
-          <h1 className="text-base font-semibold text-gray-800">SGRH Cabinet</h1>
           <p className="text-xs text-gray-500">Système de Gestion des Ressources Humaines</p>
         </div>
       </div>
