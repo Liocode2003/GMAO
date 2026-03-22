@@ -135,7 +135,13 @@ export default function DashboardPage() {
               <PieChart>
                 <Pie data={genderChart} cx="50%" cy="50%" innerRadius={60} outerRadius={90}
                   paddingAngle={5} dataKey="value"
-                  label={({ name, percentage }) => `${name} ${percentage}%`}
+                  label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+                    const RADIAN = Math.PI / 180;
+                    const radius = innerRadius + (outerRadius - innerRadius) * 1.4;
+                    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                    return <text x={x} y={y} fill="#374151" textAnchor="middle" dominantBaseline="central" fontSize={13}>{`${(percent * 100).toFixed(1)}%`}</text>;
+                  }}
                   labelLine={false}
                 >
                   {genderChart.map((_, i) => (

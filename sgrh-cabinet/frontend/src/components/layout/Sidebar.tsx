@@ -51,11 +51,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       `}
     >
       {/* Logo */}
-      <div className="flex items-center justify-between h-16 px-6 border-b border-white/10">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center">
-            <UsersIcon className="w-5 h-5 text-white" />
-          </div>
+      <div className="flex items-center justify-between h-20 px-4 border-b border-white/10">
+        <div className="flex items-center gap-3 flex-1">
+          <img src="/logo.png" alt="Forvis Mazars" className="h-10 w-auto object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display='none'; }} />
           <div>
             <p className="text-white font-bold text-sm leading-none">SGRH</p>
             <p className="text-blue-300 text-xs">Cabinet</p>
