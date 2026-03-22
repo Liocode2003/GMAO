@@ -119,7 +119,14 @@ export default function DashboardPage() {
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={serviceLinesChart} margin={{ top: 0, right: 0, left: -20, bottom: 60 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="name" tick={{ fontSize: 11, angle: -35, textAnchor: 'end' }} interval={0} />
+              <XAxis dataKey="name" interval={0} tick={(props) => {
+                const { x, y, payload } = props;
+                return (
+                  <g transform={`translate(${x},${y})`}>
+                    <text x={0} y={0} dy={10} textAnchor="end" fill="#666" fontSize={11} transform="rotate(-35)">{payload.value}</text>
+                  </g>
+                );
+              }} />
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip />
               <Bar dataKey="count" fill="#1d4ed8" radius={[4, 4, 0, 0]} />
