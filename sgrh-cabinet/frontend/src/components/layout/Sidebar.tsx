@@ -53,7 +53,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* Logo */}
       <div className="flex items-center justify-between h-20 px-4 border-b border-white/10">
         <div className="flex items-center gap-3 flex-1">
-          <img src="/logo.svg" alt="Forvis Mazars" className="h-10 w-auto object-contain" />
+          <img src="/logo-white.svg" alt="Forvis Mazars" className="h-10 w-auto object-contain" />
         </div>
         <button onClick={onClose} className="lg:hidden text-white/60 hover:text-white">
           <XMarkIcon className="w-5 h-5" />

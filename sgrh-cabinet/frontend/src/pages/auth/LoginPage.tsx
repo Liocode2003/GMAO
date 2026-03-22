@@ -30,14 +30,8 @@ export default function LoginPage() {
         style={{ backgroundColor: '#1C2B4A' }}
       >
         {/* Logo Forvis Mazars */}
-        <div className="flex items-center gap-3">
-          <div
-            className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-white text-lg"
-            style={{ backgroundColor: '#C8102E' }}
-          >
-            FM
-          </div>
-          <span className="text-white font-semibold text-lg tracking-wide">Forvis Mazars</span>
+        <div className="flex items-center">
+          <img src="/logo-white.svg" alt="Forvis Mazars" className="h-10 w-auto object-contain" />
         </div>
 
         {/* Texte central */}
@@ -64,14 +58,8 @@ export default function LoginPage() {
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-gray-50">
         <div className="w-full max-w-sm">
           {/* Logo mobile */}
-          <div className="lg:hidden flex items-center gap-3 mb-10">
-            <div
-              className="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-white"
-              style={{ backgroundColor: '#C8102E' }}
-            >
-              FM
-            </div>
-            <span className="font-semibold text-gray-800 text-base">Forvis Mazars</span>
+          <div className="lg:hidden mb-10">
+            <img src="/logo.svg" alt="Forvis Mazars" className="h-9 w-auto object-contain" />
           </div>
 
           <div className="mb-8">
