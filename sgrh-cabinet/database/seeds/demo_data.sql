@@ -2,13 +2,9 @@
 -- Données de démonstration SGRH Cabinet
 -- ============================================================
 
--- Utilisateurs (mot de passe: Admin123! pour tous)
+-- Utilisateurs
 INSERT INTO users (id, email, password_hash, first_name, last_name, role) VALUES
-  ('a0000001-0000-0000-0000-000000000001', 'drh@cabinet.ci', '$2a$12$e9mHuFjbZyqWx6PmFpE/Z.IBOX0aCfVGOGLg04cPBTXnMz0uAx0Hi', 'Aminata', 'Koné', 'DRH'),
-  ('a0000001-0000-0000-0000-000000000002', 'dg@cabinet.ci', '$2a$12$e9mHuFjbZyqWx6PmFpE/Z.IBOX0aCfVGOGLg04cPBTXnMz0uAx0Hi', 'Jean-Pierre', 'Dupont', 'DIRECTION_GENERALE'),
-  ('a0000001-0000-0000-0000-000000000003', 'associe@cabinet.ci', '$2a$12$e9mHuFjbZyqWx6PmFpE/Z.IBOX0aCfVGOGLg04cPBTXnMz0uAx0Hi', 'Moussa', 'Traoré', 'ASSOCIE'),
-  ('a0000001-0000-0000-0000-000000000004', 'manager@cabinet.ci', '$2a$12$e9mHuFjbZyqWx6PmFpE/Z.IBOX0aCfVGOGLg04cPBTXnMz0uAx0Hi', 'Sophie', 'Martin', 'MANAGER'),
-  ('a0000001-0000-0000-0000-000000000005', 'user@cabinet.ci', '$2a$12$e9mHuFjbZyqWx6PmFpE/Z.IBOX0aCfVGOGLg04cPBTXnMz0uAx0Hi', 'Paul', 'Yao', 'UTILISATEUR');
+  ('a0000001-0000-0000-0000-000000000001', 'drh@cabinet.ci', '$2a$12$e9mHuFjbZyqWx6PmFpE/Z.IBOX0aCfVGOGLg04cPBTXnMz0uAx0Hi', 'Aminata', 'Koné', 'DRH');
 
 -- Collaborateurs
 INSERT INTO employees (matricule, first_name, last_name, gender, email, phone, birth_date, function, service_line, grade, contract_type, entry_date, salary, status, has_dec_french, is_expatriate, department) VALUES
