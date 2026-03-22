@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
-import { EyeIcon, EyeSlashIcon, UserGroupIcon } from '@heroicons/react/24/outline';
+import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
 export default function LoginPage() {
@@ -23,44 +23,94 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-navy-950 via-navy-900 to-brand-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-600 rounded-2xl shadow-lg mb-4">
-            <UserGroupIcon className="w-8 h-8 text-white" />
+    <div className="min-h-screen flex">
+      {/* Panneau gauche — Forvis Mazars branding */}
+      <div
+        className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12"
+        style={{ backgroundColor: '#1C2B4A' }}
+      >
+        {/* Logo Forvis Mazars */}
+        <div className="flex items-center gap-3">
+          <div
+            className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-white text-lg"
+            style={{ backgroundColor: '#C8102E' }}
+          >
+            FM
           </div>
-          <h1 className="text-3xl font-bold text-white">SGRH Cabinet</h1>
-          <p className="text-blue-300/70 mt-2">Système de Gestion des Ressources Humaines</p>
+          <span className="text-white font-semibold text-lg tracking-wide">Forvis Mazars</span>
         </div>
 
-        {/* Card */}
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
-          <h2 className="text-xl font-semibold text-gray-800 mb-6">Connexion</h2>
+        {/* Texte central */}
+        <div>
+          <div
+            className="w-12 h-1 mb-8 rounded"
+            style={{ backgroundColor: '#C8102E' }}
+          />
+          <h1 className="text-4xl font-bold text-white leading-tight mb-4">
+            Système de Gestion<br />des Ressources<br />Humaines
+          </h1>
+          <p className="text-blue-200/70 text-base leading-relaxed max-w-sm">
+            Gérez vos collaborateurs, formations et indicateurs RH depuis une plateforme unifiée et sécurisée.
+          </p>
+        </div>
+
+        {/* Footer */}
+        <p className="text-blue-300/40 text-xs">
+          © {new Date().getFullYear()} Forvis Mazars — Tous droits réservés
+        </p>
+      </div>
+
+      {/* Panneau droit — Formulaire */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-gray-50">
+        <div className="w-full max-w-sm">
+          {/* Logo mobile */}
+          <div className="lg:hidden flex items-center gap-3 mb-10">
+            <div
+              className="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-white"
+              style={{ backgroundColor: '#C8102E' }}
+            >
+              FM
+            </div>
+            <span className="font-semibold text-gray-800 text-base">Forvis Mazars</span>
+          </div>
+
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-gray-900">Connexion</h2>
+            <p className="text-gray-500 text-sm mt-1">Accédez à votre espace RH</p>
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="label">Adresse email</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Adresse email
+              </label>
               <input
                 type="email"
-                className="input"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 bg-white focus:outline-none focus:ring-2 focus:border-transparent transition"
+                style={{ '--tw-ring-color': '#C8102E' } as React.CSSProperties}
+                onFocus={e => (e.target.style.boxShadow = '0 0 0 2px #C8102E33')}
+                onBlur={e => (e.target.style.boxShadow = '')}
                 placeholder="votre@email.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={e => setEmail(e.target.value)}
                 required
                 autoFocus
               />
             </div>
 
             <div>
-              <label className="label">Mot de passe</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Mot de passe
+              </label>
               <div className="relative">
                 <input
                   type={showPwd ? 'text' : 'password'}
-                  className="input pr-10"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2.5 pr-10 text-sm text-gray-900 placeholder-gray-400 bg-white focus:outline-none transition"
+                  onFocus={e => (e.target.style.boxShadow = '0 0 0 2px #C8102E33')}
+                  onBlur={e => (e.target.style.boxShadow = '')}
                   placeholder="••••••••"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={e => setPassword(e.target.value)}
                   required
                 />
                 <button
@@ -68,7 +118,7 @@ export default function LoginPage() {
                   onClick={() => setShowPwd(!showPwd)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
-                  {showPwd ? <EyeSlashIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
+                  {showPwd ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
                 </button>
               </div>
             </div>
@@ -76,13 +126,14 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-3 bg-navy-800 text-white font-semibold rounded-xl hover:bg-navy-900
-                         focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2
-                         transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-2.5 text-white text-sm font-semibold rounded-lg transition-opacity disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+              style={{ backgroundColor: '#C8102E' }}
+              onMouseEnter={e => { if (!isLoading) (e.currentTarget.style.backgroundColor = '#a50d24'); }}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C8102E')}
             >
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                  <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
@@ -93,11 +144,13 @@ export default function LoginPage() {
               )}
             </button>
           </form>
-        </div>
 
-        <p className="text-center text-blue-300/50 text-xs mt-6">
-          © {new Date().getFullYear()} SGRH Cabinet — Tous droits réservés
-        </p>
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <p className="text-xs text-gray-400 text-center">
+              SGRH Cabinet — Forvis Mazars Côte d'Ivoire
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
