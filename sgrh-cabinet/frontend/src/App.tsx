@@ -8,7 +8,7 @@ import EmployeeDetailPage from './pages/personnel/EmployeeDetailPage';
 import EmployeeFormPage from './pages/personnel/EmployeeFormPage';
 import KPIsPage from './pages/kpis/KPIsPage';
 import TrainingsPage from './pages/trainings/TrainingsPage';
-import ReportsPage from './pages/reports/ReportsPage';
+import ReportsPage from './pages/rapport/ReportsPage';
 import UsersPage from './pages/settings/UsersPage';
 import AuditLogsPage from './pages/settings/AuditLogsPage';
 
