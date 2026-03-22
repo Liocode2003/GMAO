@@ -116,10 +116,10 @@ export default function DashboardPage() {
         {/* By service line */}
         <div className="card">
           <h3 className="text-base font-semibold text-gray-800 mb-4">Effectif par ligne de service</h3>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={serviceLinesChart} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={serviceLinesChart} margin={{ top: 0, right: 0, left: -20, bottom: 60 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+              <XAxis dataKey="name" tick={{ fontSize: 11, angle: -35, textAnchor: 'end' }} interval={0} />
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip />
               <Bar dataKey="count" fill="#1d4ed8" radius={[4, 4, 0, 0]} />
