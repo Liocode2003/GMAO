@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import axios from 'axios';
+import api from '../../services/api';
 import toast from 'react-hot-toast';
 
 const MONTHS = [
@@ -22,11 +22,11 @@ export default function ReportsPage() {
     setLoading(true);
     try {
       // Étape 1 : générer le rapport
-      const res = await axios.post('/api/reports/generate', { year, month });
+      const res = await api.post('/reports/generate', { year, month });
       const { filename } = res.data;
 
       // Étape 2 : télécharger le fichier Excel
-      const download = await axios.get(`/api/reports/download/${filename}`, { responseType: 'blob' });
+      const download = await api.get(`/reports/download/${filename}`, { responseType: 'blob' });
       const url = URL.createObjectURL(new Blob([download.data], {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       }));
