@@ -131,7 +131,6 @@ export default function LoginPage() {
 
           <div className="mt-8 pt-6 border-t border-gray-200">
             <p className="text-xs text-gray-400 text-center">
-              SGRH Cabinet — Forvis Mazars Côte d'Ivoire
             </p>
           </div>
         </div>
