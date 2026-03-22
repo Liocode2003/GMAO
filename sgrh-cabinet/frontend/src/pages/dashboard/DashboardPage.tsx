@@ -133,23 +133,15 @@ export default function DashboardPage() {
           <div className="flex items-center justify-center">
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>
-                <Pie data={genderChart} cx="50%" cy="50%" innerRadius={60} outerRadius={90}
-                  paddingAngle={5} dataKey="value"
-                  label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
-                    const RADIAN = Math.PI / 180;
-                    const radius = innerRadius + (outerRadius - innerRadius) * 1.4;
-                    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                    const y = cy + radius * Math.sin(-midAngle * RADIAN);
-                    return <text x={x} y={y} fill="#374151" textAnchor="middle" dominantBaseline="central" fontSize={13}>{`${(percent * 100).toFixed(1)}%`}</text>;
-                  }}
-                  labelLine={false}
+                <Pie data={genderChart} cx="50%" cy="45%" innerRadius={60} outerRadius={90}
+                  paddingAngle={5} dataKey="value" label={false} labelLine={false}
                 >
-                  {genderChart.map((_, i) => (
+                  {genderChart.map((entry, i) => (
                     <Cell key={i} fill={COLORS[i]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(v: number) => [v, 'Effectif']} />
-                <Legend />
+                <Tooltip formatter={(v: number, name: string) => [`${v} (${genderChart.find(g => g.name === name) ? ((genderChart.find(g => g.name === name)!.value / genderChart.reduce((a, b) => a + b.value, 0)) * 100).toFixed(1) : 0}%)`, name]} />
+                <Legend verticalAlign="bottom" height={36} />
               </PieChart>
             </ResponsiveContainer>
           </div>
