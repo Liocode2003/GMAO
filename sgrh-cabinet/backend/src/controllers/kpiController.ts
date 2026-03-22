@@ -79,7 +79,7 @@ export const getDashboard = async (req: Request, res: Response) => {
       query(`
         SELECT id, matricule, first_name, last_name, contract_type,
           exit_date,
-          EXTRACT(DAY FROM exit_date - CURRENT_DATE) as days_remaining
+          (exit_date - CURRENT_DATE) as days_remaining
         FROM employees
         WHERE status = 'ACTIF'
           AND exit_date IS NOT NULL
