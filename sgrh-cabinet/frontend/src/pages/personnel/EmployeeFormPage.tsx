@@ -52,8 +52,9 @@ export default function EmployeeFormPage() {
   const canManage = ['DRH', 'DIRECTION_GENERALE'].includes(user?.role || '');
   const [diplomas, setDiplomas] = useState<EmployeeDiploma[]>([]);
 
-  const { register, handleSubmit, watch, reset, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, watch, reset, formState: { errors }, setError } = useForm<FormData>({
     defaultValues: { marital_status: 'CELIBATAIRE', gender: 'M', children_count: '0' },
+    mode: 'onBlur',
   });
 
   const maritalStatus = watch('marital_status');
@@ -236,20 +237,28 @@ export default function EmployeeFormPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
               <label className="label">Matricule *</label>
-              <input className="input" {...register('matricule', { required: true })} placeholder="MAT-2024-001" />
-              {errors.matricule && <p className="text-red-500 text-xs mt-1">Requis</p>}
+              <input className="input" {...register('matricule', {
+                required: 'Le matricule est requis',
+                minLength: { value: 2, message: 'Minimum 2 caractères' },
+                pattern: { value: /^[A-Z0-9_\-]+$/i, message: 'Caractères alphanumériques uniquement' },
+              })} placeholder="MAT-2024-001" />
+              {errors.matricule && <p className="text-red-500 text-xs mt-1">{errors.matricule.message}</p>}
             </div>
             <div>
               <label className="label">Nom *</label>
-              <input className="input" {...register('last_name', { required: true })}
-                onBlur={checkDuplicates} placeholder="KONÉ" />
-              {errors.last_name && <p className="text-red-500 text-xs mt-1">Requis</p>}
+              <input className="input" {...register('last_name', {
+                required: 'Le nom est requis',
+                minLength: { value: 2, message: 'Minimum 2 caractères' },
+              })} onBlur={checkDuplicates} placeholder="KONÉ" />
+              {errors.last_name && <p className="text-red-500 text-xs mt-1">{errors.last_name.message}</p>}
             </div>
             <div>
               <label className="label">Prénoms *</label>
-              <input className="input" {...register('first_name', { required: true })}
-                onBlur={checkDuplicates} placeholder="Aminata" />
-              {errors.first_name && <p className="text-red-500 text-xs mt-1">Requis</p>}
+              <input className="input" {...register('first_name', {
+                required: 'Le prénom est requis',
+                minLength: { value: 2, message: 'Minimum 2 caractères' },
+              })} onBlur={checkDuplicates} placeholder="Aminata" />
+              {errors.first_name && <p className="text-red-500 text-xs mt-1">{errors.first_name.message}</p>}
             </div>
             <div>
               <label className="label">Sexe *</label>
@@ -260,9 +269,20 @@ export default function EmployeeFormPage() {
             </div>
             <div>
               <label className="label">Date de naissance *</label>
-              <input type="date" className="input" {...register('birth_date', { required: true })}
-                onBlur={checkDuplicates} />
-              {errors.birth_date && <p className="text-red-500 text-xs mt-1">Requis</p>}
+              <input type="date" className="input" {...register('birth_date', {
+                required: 'La date de naissance est requise',
+                validate: v => {
+                  if (!v) return true;
+                  const date = new Date(v);
+                  const now = new Date();
+                  const age = now.getFullYear() - date.getFullYear();
+                  if (date >= now) return 'La date doit être dans le passé';
+                  if (age < 16) return 'L\'âge minimum est 16 ans';
+                  if (age > 80) return 'Veuillez vérifier la date saisie';
+                  return true;
+                },
+              })} onBlur={checkDuplicates} />
+              {errors.birth_date && <p className="text-red-500 text-xs mt-1">{errors.birth_date.message}</p>}
             </div>
             <div>
               <label className="label">Téléphone</label>
@@ -308,8 +328,13 @@ export default function EmployeeFormPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="label">Email professionnel</label>
-              <input type="email" className="input" {...register('email')}
-                onBlur={checkDuplicates} placeholder="prenom.nom@cabinet.bf" />
+              <input type="email" className="input" {...register('email', {
+                pattern: {
+                  value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                  message: 'Adresse email invalide',
+                },
+              })} onBlur={checkDuplicates} placeholder="prenom.nom@cabinet.bf" />
+              {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
             </div>
           </div>
         </div>
@@ -352,8 +377,17 @@ export default function EmployeeFormPage() {
             </div>
             <div>
               <label className="label">Date d'entrée *</label>
-              <input type="date" className="input" {...register('entry_date', { required: true })} />
-              {errors.entry_date && <p className="text-red-500 text-xs mt-1">Requis</p>}
+              <input type="date" className="input" {...register('entry_date', {
+                required: 'La date d\'entrée est requise',
+                validate: v => {
+                  if (!v) return true;
+                  const date = new Date(v);
+                  const minDate = new Date('1990-01-01');
+                  if (date < minDate) return 'Date trop ancienne (avant 1990)';
+                  return true;
+                },
+              })} />
+              {errors.entry_date && <p className="text-red-500 text-xs mt-1">{errors.entry_date.message}</p>}
             </div>
             <div>
               <label className="label">Date de sortie
@@ -364,7 +398,11 @@ export default function EmployeeFormPage() {
             {canEditSalary && (
               <div>
                 <label className="label">Salaire (FCFA)</label>
-                <input type="number" className="input" {...register('salary')} placeholder="0" min="0" />
+                <input type="number" className="input" {...register('salary', {
+                  min: { value: 0, message: 'Le salaire ne peut pas être négatif' },
+                  validate: v => !v || Number(v) >= 0 || 'Valeur invalide',
+                })} placeholder="0" min="0" />
+                {errors.salary && <p className="text-red-500 text-xs mt-1">{errors.salary.message}</p>}
               </div>
             )}
             <div>

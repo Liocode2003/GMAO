@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import {
   Bars3Icon,
-  BellIcon,
   UserCircleIcon,
   ArrowRightOnRectangleIcon,
   KeyIcon,
 } from '@heroicons/react/24/outline';
 import { ROLE_LABELS } from '../../types';
+import NotificationBell from './NotificationBell';
 
 interface HeaderProps {
   onMenuToggle: () => void;
@@ -37,9 +37,7 @@ export default function Header({ onMenuToggle }: HeaderProps) {
 
       <div className="flex items-center gap-3">
         {/* Notifications bell */}
-        <button className="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg">
-          <BellIcon className="w-5 h-5" />
-        </button>
+        <NotificationBell />
 
         {/* User menu */}
         <div className="relative">

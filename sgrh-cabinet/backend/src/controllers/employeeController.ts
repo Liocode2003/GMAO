@@ -4,34 +4,7 @@ import fs from 'fs';
 import multer from 'multer';
 import { query } from '../config/database';
 import { logger } from '../utils/logger';
-import { UserRole } from '../types';
-
-const SALARY_ROLES: UserRole[] = ['DRH', 'DIRECTION_GENERALE', 'ASSOCIE'];
-
-const canViewSalary = (role?: UserRole) => role && SALARY_ROLES.includes(role);
-const canViewBirthDate = (role?: UserRole) =>
-  role && ['DRH', 'DIRECTION_GENERALE', 'ASSOCIE', 'MANAGER'].includes(role as UserRole);
-
-const sanitizeEmployee = (emp: Record<string, unknown>, role?: UserRole) => {
-  const result = { ...emp };
-  if (!canViewSalary(role)) {
-    delete result.salary;
-    delete result.salary_history;
-  }
-  if (!canViewBirthDate(role)) {
-    result.birth_date = undefined;
-    result.age = undefined;
-  }
-  return result;
-};
-
-const calcSeniority = (entryDate: Date) => {
-  const now = new Date();
-  const diff = now.getTime() - new Date(entryDate).getTime();
-  const years = Math.floor(diff / (365.25 * 24 * 3600 * 1000));
-  const months = Math.floor((diff % (365.25 * 24 * 3600 * 1000)) / (30.44 * 24 * 3600 * 1000));
-  return { years, months, label: `${years} an(s) ${months} mois` };
-};
+import { employeeService, sanitizeEmployee, calcSeniority, canViewSalary } from '../services/employeeService';
 
 // ============================================================
 // LISTE DES COLLABORATEURS
@@ -119,37 +92,19 @@ export const listEmployees = async (req: Request, res: Response) => {
 export const getEmployee = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
-    const result = await query(
-      `SELECT e.*,
-         CASE WHEN e.exit_date IS NULL OR e.exit_date > CURRENT_DATE THEN 'ACTIF' ELSE 'INACTIF' END as status,
-         DATE_PART('year', AGE(e.birth_date)) as age,
-         EXTRACT(YEAR FROM e.entry_date) as season,
-         m.first_name || ' ' || m.last_name as manager_name
-       FROM employees e
-       LEFT JOIN employees m ON m.id = e.manager_id
-       WHERE e.id = $1`,
-      [id]
-    );
-    if (!result.rows[0]) return res.status(404).json({ error: 'Collaborateur non trouvé' });
+    const emp = await employeeService.findById(id);
+    if (!emp) return res.status(404).json({ error: 'Collaborateur non trouvé' });
 
-    const emp = result.rows[0];
     const seniority = calcSeniority(emp.entry_date);
+    const diplomas = await employeeService.findDiplomas(id);
 
-    // Récupérer les diplômes depuis la table dédiée
-    const diplomasRes = await query(
-      `SELECT id, diploma_type, diploma_other, domaine, domaine_other FROM employee_diplomas WHERE employee_id = $1 ORDER BY created_at`,
-      [id]
-    );
-
-    if (canViewSalary(req.user?.role)) {
-      await query(
-        `INSERT INTO audit_logs(user_id, user_email, action, resource_type, resource_id, field_accessed, ip_address)
-         VALUES($1,$2,'READ','employee',$3,'salary',$4)`,
-        [req.user?.userId, req.user?.email, id, req.ip]
+    if (canViewSalary(req.user?.role) && req.user) {
+      await employeeService.recordAuditLog(
+        req.user.userId, req.user.email, 'READ', 'employee', id, 'salary', req.ip
       );
     }
 
-    return res.json(sanitizeEmployee({ ...emp, seniority, diplomas: diplomasRes.rows }, req.user?.role));
+    return res.json(sanitizeEmployee({ ...emp, seniority, diplomas }, req.user?.role));
   } catch (err) {
     logger.error('getEmployee error', err);
     return res.status(500).json({ error: 'Erreur serveur' });
@@ -322,15 +277,13 @@ export const deactivateEmployee = async (req: Request, res: Response) => {
   const { exit_date } = req.body;
 
   try {
-    const result = await query(
-      `UPDATE employees SET exit_date = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
-      [exit_date || new Date().toISOString().split('T')[0], id]
-    );
-    if (!result.rows[0]) return res.status(404).json({ error: 'Collaborateur non trouvé' });
+    const exitDate = exit_date || new Date().toISOString().split('T')[0];
+    const emp = await employeeService.deactivate(id, exitDate);
+    if (!emp) return res.status(404).json({ error: 'Collaborateur non trouvé' });
 
     logger.info(`Collaborateur désactivé: ${id} par ${req.user?.email}`);
-    return res.json(result.rows[0]);
-  } catch (err) {
+    return res.json(emp);
+  } catch {
     return res.status(500).json({ error: 'Erreur serveur' });
   }
 };
@@ -366,16 +319,9 @@ export const getSalaryHistory = async (req: Request, res: Response) => {
     return res.status(403).json({ error: 'Accès non autorisé' });
   }
   try {
-    const result = await query(
-      `SELECT sh.*, u.first_name || ' ' || u.last_name as created_by_name
-       FROM salary_history sh
-       LEFT JOIN users u ON u.id = sh.created_by
-       WHERE sh.employee_id = $1
-       ORDER BY sh.effective_date DESC`,
-      [id]
-    );
-    return res.json(result.rows);
-  } catch (err) {
+    const rows = await employeeService.getSalaryHistory(id);
+    return res.json(rows);
+  } catch {
     return res.status(500).json({ error: 'Erreur serveur' });
   }
 };

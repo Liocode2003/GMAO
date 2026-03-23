@@ -5,17 +5,28 @@ import { query } from '../config/database';
 import { logger } from '../utils/logger';
 
 export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
+  // Priorité 1 : cookie httpOnly (production sécurisée)
+  // Priorité 2 : header Bearer (clients API, mobile, tests)
+  const cookieToken = req.cookies?.accessToken;
   const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) {
+
+  let token: string | undefined;
+
+  if (cookieToken) {
+    token = cookieToken;
+  } else if (authHeader?.startsWith('Bearer ')) {
+    token = authHeader.substring(7);
+  }
+
+  if (!token) {
     return res.status(401).json({ error: 'Token manquant' });
   }
 
-  const token = authHeader.substring(7);
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as JwtPayload;
     req.user = decoded;
     next();
-  } catch (err) {
+  } catch {
     return res.status(401).json({ error: 'Token invalide ou expiré' });
   }
 };
