@@ -229,10 +229,11 @@ export const updateEmployee = async (req: Request, res: Response) => {
   const { id } = req.params;
   const updates = { ...req.body };
 
-  delete updates.id;
-  delete updates.created_at;
-  delete updates.created_by;
-  delete updates.status; // statut calculé automatiquement
+  // Supprimer les champs calculés / non-colonnes
+  for (const f of ['id', 'created_at', 'updated_at', 'created_by', 'status',
+                    'age', 'season', 'seniority', 'manager_name']) {
+    delete updates[f];
+  }
 
   // Gérer le changement de salaire → historique
   const salaryChanged = 'salary' in updates;
