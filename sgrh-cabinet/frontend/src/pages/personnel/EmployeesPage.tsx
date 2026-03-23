@@ -562,8 +562,8 @@ export default function EmployeesPage() {
                         {emp.first_name[0]}{emp.last_name[0]}
                       </div>
                     )}
-                    <div>
-                      <p className="font-medium text-gray-800">{emp.last_name} {emp.first_name}</p>
+                    <div className="cursor-pointer" onClick={() => navigate(`/personnel/${emp.id}`)}>
+                      <p className="font-medium text-gray-800 hover:text-blue-600 hover:underline">{emp.last_name} {emp.first_name}</p>
                       {emp.email && <p className="text-xs text-gray-400">{emp.email}</p>}
                     </div>
                   </div>
