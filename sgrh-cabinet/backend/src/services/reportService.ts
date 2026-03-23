@@ -82,8 +82,8 @@ async function buildKPISheet(workbook: ExcelJS.Workbook, year: number, monthName
   const sheet = workbook.addWorksheet('KPI Année');
   sheet.pageSetup = { orientation: 'landscape', fitToPage: true };
 
-  // Titre
-  sheet.mergeCells('A1:P1');
+  // Titre principal (ligne 1)
+  sheet.mergeCells('A1:O1');
   const titleCell = sheet.getCell('A1');
   titleCell.value = `TABLEAU DE BORD RH - ANNÉE ${year}`;
   titleCell.style = {
@@ -92,12 +92,25 @@ async function buildKPISheet(workbook: ExcelJS.Workbook, year: number, monthName
   };
   sheet.getRow(1).height = 30;
 
-  // En-têtes colonnes
+  // Ligne 2: espaceur
+  sheet.getRow(2).height = 8;
+
+  // Ligne 3: Titre entreprise
+  sheet.mergeCells('A3:O3');
+  const companyTitleCell = sheet.getCell('A3');
+  companyTitleCell.value = "KPI's Ressources Humaines Forvis Mazars West And Central Africa : BURKINA FASO";
+  companyTitleCell.style = {
+    font: { bold: true, size: 16, color: { argb: 'FF1E3A5F' } },
+    alignment: { horizontal: 'center', vertical: 'middle' },
+  };
+  sheet.getRow(3).height = 40;
+
+  // En-têtes colonnes (ligne 4)
   const months = MONTH_NAMES.slice(0, 12);
   const headers = ['Indicateur', 'YTD', ...months, 'TARGET'];
   const headerRow = sheet.addRow(headers);
   headerRow.eachCell((cell) => { cell.style = HEADER_STYLE; });
-  sheet.getRow(2).height = 25;
+  sheet.getRow(4).height = 25;
 
   // Largeurs colonnes
   sheet.getColumn(1).width = 35;

@@ -72,6 +72,13 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Company header */}
+      <div className="text-center py-4 bg-white rounded-xl shadow-sm border border-gray-100">
+        <h1 className="text-2xl font-bold" style={{ color: '#1E3A5F' }}>
+          Forvis Mazars West And Central Africa : BURKINA FASO
+        </h1>
+      </div>
+
       {/* Page title */}
       <div>
         <h2 className="text-2xl font-bold text-gray-800">Tableau de bord</h2>
