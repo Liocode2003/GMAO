@@ -321,7 +321,7 @@ export default function ReportingCommercialPage() {
           <select
             value={filterStatus}
             onChange={e => setFilterStatus(e.target.value)}
-            className="input-field text-sm py-1.5 w-auto"
+            className="input text-sm py-1.5 w-auto"
           >
             <option value="">Tous les statuts</option>
             <option value="EN_COURS">En cours</option>
@@ -332,7 +332,7 @@ export default function ReportingCommercialPage() {
           <select
             value={filterServiceLine}
             onChange={e => setFilterServiceLine(e.target.value)}
-            className="input-field text-sm py-1.5 w-auto"
+            className="input text-sm py-1.5 w-auto"
           >
             <option value="">Toutes les lignes</option>
             {SERVICE_LINES.map(sl => (
@@ -343,7 +343,7 @@ export default function ReportingCommercialPage() {
           <select
             value={filterYear}
             onChange={e => { setFilterYear(e.target.value); setFilterQuarter(''); setFilterMonth(''); }}
-            className="input-field text-sm py-1.5 w-auto"
+            className="input text-sm py-1.5 w-auto"
           >
             <option value="">Toutes les années</option>
             {years.map(y => <option key={y} value={y}>{y}</option>)}
@@ -354,7 +354,7 @@ export default function ReportingCommercialPage() {
               <select
                 value={filterQuarter}
                 onChange={e => { setFilterQuarter(e.target.value); setFilterMonth(''); }}
-                className="input-field text-sm py-1.5 w-auto"
+                className="input text-sm py-1.5 w-auto"
               >
                 <option value="">Tous les trimestres</option>
                 <option value="1">T1 (Jan–Mar)</option>
@@ -367,7 +367,7 @@ export default function ReportingCommercialPage() {
                 <select
                   value={filterMonth}
                   onChange={e => setFilterMonth(e.target.value)}
-                  className="input-field text-sm py-1.5 w-auto"
+                  className="input text-sm py-1.5 w-auto"
                 >
                   <option value="">Tous les mois</option>
                   {['Janvier','Février','Mars','Avril','Mai','Juin',
@@ -473,162 +473,221 @@ export default function ReportingCommercialPage() {
 
       {/* Modal Form */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-100">
-              <h3 className="text-lg font-semibold text-gray-800">
-                {editItem ? 'Modifier la soumission' : 'Nouvelle soumission'}
-              </h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl mx-4 max-h-[92vh] flex flex-col">
+
+            {/* Header coloré */}
+            <div className="flex items-center justify-between px-6 py-5 bg-navy-800 rounded-t-2xl">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 bg-brand-600 rounded-lg flex items-center justify-center">
+                  <BriefcaseIcon className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold text-white">
+                    {editItem ? 'Modifier la soumission' : 'Nouvelle soumission'}
+                  </h3>
+                  <p className="text-xs text-white/50">Remplissez tous les champs obligatoires *</p>
+                </div>
+              </div>
+              <button onClick={() => setShowModal(false)} className="text-white/40 hover:text-white transition-colors">
+                <XCircleIcon className="w-6 h-6" />
+              </button>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-5">
-              {/* Type */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="label-field">Type *</label>
-                  <select {...register('type', { required: true })} className="input-field">
-                    <option value="AMI">AMI</option>
-                    <option value="APPEL_OFFRE">Appel d'offre</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="label-field">Numéro de référence *</label>
-                  <input
-                    {...register('reference', { required: 'Champ obligatoire' })}
-                    className="input-field"
-                    placeholder="Ex: AMI-2024-001"
-                  />
-                  {errors.reference && <p className="text-red-500 text-xs mt-1">{errors.reference.message}</p>}
-                </div>
-              </div>
+            <form onSubmit={handleSubmit(onSubmit)} className="overflow-y-auto flex-1">
+              <div className="p-6 space-y-6">
 
-              {/* Title */}
-              <div>
-                <label className="label-field">Objet / Intitulé du dossier *</label>
-                <input
-                  {...register('title', { required: 'Champ obligatoire' })}
-                  className="input-field"
-                  placeholder="Intitulé complet du dossier"
-                />
-                {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title.message}</p>}
-              </div>
-
-              {/* Client + Date */}
-              <div className="grid grid-cols-2 gap-4">
+                {/* Section 1 — Identification */}
                 <div>
-                  <label className="label-field">Client / Organisme *</label>
-                  <input
-                    {...register('client', { required: 'Champ obligatoire' })}
-                    className="input-field"
-                    placeholder="Nom du client"
-                  />
-                  {errors.client && <p className="text-red-500 text-xs mt-1">{errors.client.message}</p>}
-                </div>
-                <div>
-                  <label className="label-field">Date de soumission *</label>
-                  <input
-                    type="date"
-                    {...register('submission_date', { required: 'Champ obligatoire' })}
-                    className="input-field"
-                  />
-                  {errors.submission_date && <p className="text-red-500 text-xs mt-1">{errors.submission_date.message}</p>}
-                </div>
-              </div>
-
-              {/* Service line + Responsible */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="label-field">Ligne de service *</label>
-                  <select {...register('service_line', { required: 'Champ obligatoire' })} className="input-field">
-                    <option value="">— Choisir —</option>
-                    {SERVICE_LINES.map(sl => (
-                      <option key={sl} value={sl}>{SERVICE_LINE_LABELS[sl]}</option>
-                    ))}
-                  </select>
-                  {errors.service_line && <p className="text-red-500 text-xs mt-1">{errors.service_line.message}</p>}
-                </div>
-                <div>
-                  <label className="label-field">Responsable du dossier</label>
-                  <select {...register('responsible_employee_id')} className="input-field">
-                    <option value="">— Non assigné —</option>
-                    {employees.map(emp => (
-                      <option key={emp.id} value={emp.id}>
-                        {emp.first_name} {emp.last_name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Statut */}
-              <div>
-                <label className="label-field">Statut *</label>
-                <select {...register('status', { required: true })} className="input-field">
-                  <option value="EN_COURS">En cours</option>
-                  <option value="GAGNE">Gagné (Win)</option>
-                  <option value="PERDU">Perdu (Loss)</option>
-                </select>
-              </div>
-
-              {/* Win fields */}
-              {watchStatus === 'GAGNE' && (
-                <div className="p-4 bg-green-50 rounded-xl border border-green-200 space-y-4">
-                  <p className="text-sm font-semibold text-green-800">Informations du contrat gagné</p>
-                  <div>
-                    <label className="label-field">Montant du contrat (FCFA) *</label>
-                    <input
-                      type="number"
-                      step="1"
-                      min="0"
-                      {...register('contract_amount', {
-                        required: watchStatus === 'GAGNE' ? 'Obligatoire si statut Gagné' : false,
-                      })}
-                      className="input-field"
-                      placeholder="Ex: 15000000"
-                    />
-                    {errors.contract_amount && <p className="text-red-500 text-xs mt-1">{errors.contract_amount.message}</p>}
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                    Identification du dossier
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="label-field">Date de début *</label>
-                      <input
-                        type="date"
-                        {...register('contract_start_date', {
-                          required: watchStatus === 'GAGNE' ? 'Obligatoire si statut Gagné' : false,
-                        })}
-                        className="input-field"
-                      />
-                      {errors.contract_start_date && <p className="text-red-500 text-xs mt-1">{errors.contract_start_date.message}</p>}
+                      <label className="label">Type *</label>
+                      <select {...register('type', { required: true })} className="input">
+                        <option value="AMI">AMI — Avis à Manifestation d'Intérêt</option>
+                        <option value="APPEL_OFFRE">Appel d'offre</option>
+                      </select>
                     </div>
                     <div>
-                      <label className="label-field">Date de fin *</label>
+                      <label className="label">Numéro de référence *</label>
                       <input
-                        type="date"
-                        {...register('contract_end_date', {
-                          required: watchStatus === 'GAGNE' ? 'Obligatoire si statut Gagné' : false,
-                        })}
-                        className="input-field"
+                        {...register('reference', { required: 'Champ obligatoire' })}
+                        className="input"
+                        placeholder="Ex : AMI-2024-001"
                       />
-                      {errors.contract_end_date && <p className="text-red-500 text-xs mt-1">{errors.contract_end_date.message}</p>}
+                      {errors.reference && <p className="text-red-500 text-xs mt-1">{errors.reference.message}</p>}
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="label">Objet / Intitulé du dossier *</label>
+                      <input
+                        {...register('title', { required: 'Champ obligatoire' })}
+                        className="input"
+                        placeholder="Intitulé complet du marché ou de la mission"
+                      />
+                      {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title.message}</p>}
                     </div>
                   </div>
                 </div>
-              )}
 
-              {/* Actions */}
-              <div className="flex justify-end gap-3 pt-2">
+                <hr className="border-gray-100" />
+
+                {/* Section 2 — Client & Dates */}
+                <div>
+                  <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                    Client & Soumission
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="label">Client / Organisme *</label>
+                      <input
+                        {...register('client', { required: 'Champ obligatoire' })}
+                        className="input"
+                        placeholder="Nom de l'organisme"
+                      />
+                      {errors.client && <p className="text-red-500 text-xs mt-1">{errors.client.message}</p>}
+                    </div>
+                    <div>
+                      <label className="label">Date de soumission *</label>
+                      <input
+                        type="date"
+                        {...register('submission_date', { required: 'Champ obligatoire' })}
+                        className="input"
+                      />
+                      {errors.submission_date && <p className="text-red-500 text-xs mt-1">{errors.submission_date.message}</p>}
+                    </div>
+                  </div>
+                </div>
+
+                <hr className="border-gray-100" />
+
+                {/* Section 3 — Affectation */}
+                <div>
+                  <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                    Affectation interne
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="label">Ligne de service *</label>
+                      <select {...register('service_line', { required: 'Champ obligatoire' })} className="input">
+                        <option value="">— Sélectionner —</option>
+                        {SERVICE_LINES.map(sl => (
+                          <option key={sl} value={sl}>{SERVICE_LINE_LABELS[sl]}</option>
+                        ))}
+                      </select>
+                      {errors.service_line && <p className="text-red-500 text-xs mt-1">{errors.service_line.message}</p>}
+                    </div>
+                    <div>
+                      <label className="label">Responsable du dossier</label>
+                      <select {...register('responsible_employee_id')} className="input">
+                        <option value="">— Non assigné —</option>
+                        {employees.map(emp => (
+                          <option key={emp.id} value={emp.id}>
+                            {emp.first_name} {emp.last_name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <hr className="border-gray-100" />
+
+                {/* Section 4 — Statut */}
+                <div>
+                  <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                    Résultat
+                  </h4>
+                  <div className="grid grid-cols-3 gap-3">
+                    {(['EN_COURS', 'GAGNE', 'PERDU'] as SubmissionStatus[]).map(s => {
+                      const checked = watchStatus === s;
+                      const styles = {
+                        EN_COURS: checked ? 'border-blue-500 bg-blue-50 text-blue-800' : 'border-gray-200 text-gray-600 hover:border-blue-300',
+                        GAGNE:    checked ? 'border-green-500 bg-green-50 text-green-800' : 'border-gray-200 text-gray-600 hover:border-green-300',
+                        PERDU:    checked ? 'border-red-400 bg-red-50 text-red-800' : 'border-gray-200 text-gray-600 hover:border-red-300',
+                      };
+                      const labels = { EN_COURS: 'En cours', GAGNE: 'Gagné (Win)', PERDU: 'Perdu (Loss)' };
+                      const icons = {
+                        EN_COURS: <ClockIcon className="w-4 h-4" />,
+                        GAGNE: <TrophyIcon className="w-4 h-4" />,
+                        PERDU: <XCircleIcon className="w-4 h-4" />,
+                      };
+                      return (
+                        <label
+                          key={s}
+                          className={`flex items-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all font-medium text-sm ${styles[s]}`}
+                        >
+                          <input type="radio" value={s} {...register('status')} className="hidden" />
+                          {icons[s]}
+                          {labels[s]}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Section Win — conditionnelle */}
+                {watchStatus === 'GAGNE' && (
+                  <div className="rounded-xl border-2 border-green-200 bg-green-50 p-5 space-y-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <TrophyIcon className="w-4 h-4 text-green-600" />
+                      <p className="text-sm font-semibold text-green-800">Détails du contrat gagné</p>
+                    </div>
+                    <div>
+                      <label className="label">Montant du contrat (FCFA) *</label>
+                      <input
+                        type="number"
+                        step="1"
+                        min="0"
+                        {...register('contract_amount', {
+                          required: watchStatus === 'GAGNE' ? 'Obligatoire si statut Gagné' : false,
+                        })}
+                        className="input"
+                        placeholder="Ex : 15 000 000"
+                      />
+                      {errors.contract_amount && <p className="text-red-500 text-xs mt-1">{errors.contract_amount.message}</p>}
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="label">Date de début *</label>
+                        <input
+                          type="date"
+                          {...register('contract_start_date', {
+                            required: watchStatus === 'GAGNE' ? 'Obligatoire si statut Gagné' : false,
+                          })}
+                          className="input"
+                        />
+                        {errors.contract_start_date && <p className="text-red-500 text-xs mt-1">{errors.contract_start_date.message}</p>}
+                      </div>
+                      <div>
+                        <label className="label">Date de fin *</label>
+                        <input
+                          type="date"
+                          {...register('contract_end_date', {
+                            required: watchStatus === 'GAGNE' ? 'Obligatoire si statut Gagné' : false,
+                          })}
+                          className="input"
+                        />
+                        {errors.contract_end_date && <p className="text-red-500 text-xs mt-1">{errors.contract_end_date.message}</p>}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+              </div>
+
+              {/* Footer */}
+              <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50"
+                  className="btn-secondary"
                 >
                   Annuler
                 </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 text-sm bg-brand-700 text-white rounded-lg hover:bg-brand-800"
-                >
-                  {editItem ? 'Mettre à jour' : 'Créer'}
+                <button type="submit" className="btn-primary">
+                  {editItem ? 'Enregistrer les modifications' : 'Créer la soumission'}
                 </button>
               </div>
             </form>
