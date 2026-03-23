@@ -101,7 +101,7 @@ export default function DashboardPage() {
           value={data.withEmail}
           icon={EnvelopeIcon}
           color="bg-cyan-600"
-          subtitle={`${Math.round(data.withEmail / data.totalActive * 100)}% de l'effectif`}
+          subtitle={`${data.totalActive > 0 ? Math.round(data.withEmail / data.totalActive * 100) : 0}% de l'effectif`}
         />
         <StatCard
           title="Anniversaires ce mois"
