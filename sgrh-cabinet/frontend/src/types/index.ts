@@ -16,6 +16,8 @@ export interface User {
   lastLogin?: string;
 }
 
+export type MaritalStatus = 'CELIBATAIRE' | 'MARIE' | 'DIVORCE' | 'VEUF';
+
 export interface Employee {
   id: string;
   matricule: string;
@@ -41,11 +43,38 @@ export interface Employee {
   has_cfa: boolean;
   department?: string;
   is_expatriate: boolean;
+  // Nouveaux champs v2
+  photo_url?: string;
+  manager_id?: string;
+  manager_name?: string;
+  marital_status?: MaritalStatus;
+  spouse_name?: string;
+  spouse_phone?: string;
+  children_count?: number;
+  leave_balance?: number;
   age?: number;
   season?: number;
   seniority?: { years: number; months: number; label: string };
   created_at: string;
   updated_at: string;
+}
+
+export interface SalaryHistory {
+  id: string;
+  employee_id: string;
+  old_salary: number | null;
+  new_salary: number;
+  effective_date: string;
+  notes?: string;
+  created_by_name?: string;
+  created_at: string;
+}
+
+export interface ImportRow {
+  rowIndex: number;
+  data: Record<string, unknown>;
+  errors: string[];
+  isDuplicate: boolean;
 }
 
 export interface PaginatedResponse<T> {
@@ -156,6 +185,13 @@ export const CONTRACT_LABELS: Record<ContractType, string> = {
   STAGE: 'Stage',
   CONSULTANT: 'Consultant (Prestation)',
   FREELANCE: 'Freelance (Mission)',
+};
+
+export const MARITAL_STATUS_LABELS: Record<MaritalStatus, string> = {
+  CELIBATAIRE: 'Célibataire',
+  MARIE: 'Marié(e)',
+  DIVORCE: 'Divorcé(e)',
+  VEUF: 'Veuf / Veuve',
 };
 
 export const ROLE_LABELS: Record<UserRole, string> = {

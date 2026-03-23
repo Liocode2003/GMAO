@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../services/api';
-import { Employee, SERVICE_LINE_LABELS, GRADE_LABELS, CONTRACT_LABELS, FUNCTION_LABELS } from '../../types';
+import {
+  Employee, SalaryHistory,
+  SERVICE_LINE_LABELS, GRADE_LABELS, CONTRACT_LABELS, FUNCTION_LABELS, MARITAL_STATUS_LABELS,
+} from '../../types';
 import { useAuthStore } from '../../store/authStore';
 import {
   ArrowLeftIcon, PencilIcon, NoSymbolIcon, ClockIcon,
-  UserIcon, BriefcaseIcon, AcademicCapIcon,
+  UserIcon, BriefcaseIcon, AcademicCapIcon, CurrencyDollarIcon,
+  DocumentArrowDownIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
@@ -33,7 +37,8 @@ export default function EmployeeDetailPage() {
   const { user } = useAuthStore();
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
-  const [activeTab, setActiveTab] = useState<'info' | 'history'>('info');
+  const [salaryHistory, setSalaryHistory] = useState<SalaryHistory[]>([]);
+  const [activeTab, setActiveTab] = useState<'info' | 'history' | 'salary'>('info');
   const [loading, setLoading] = useState(true);
   const [deactivating, setDeactivating] = useState(false);
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
@@ -43,14 +48,18 @@ export default function EmployeeDetailPage() {
   const canViewSalary = ['DRH', 'DIRECTION_GENERALE', 'ASSOCIE'].includes(user?.role || '');
 
   useEffect(() => {
-    Promise.all([
+    const requests: Promise<unknown>[] = [
       api.get(`/employees/${id}`),
       canManage ? api.get(`/employees/${id}/history`) : Promise.resolve({ data: [] }),
-    ]).then(([empRes, histRes]) => {
-      setEmployee(empRes.data);
-      setHistory(histRes.data);
+      canViewSalary ? api.get(`/employees/${id}/salary-history`) : Promise.resolve({ data: [] }),
+    ];
+
+    Promise.all(requests).then(([empRes, histRes, salaryRes]) => {
+      setEmployee((empRes as { data: Employee }).data);
+      setHistory((histRes as { data: HistoryEntry[] }).data);
+      setSalaryHistory((salaryRes as { data: SalaryHistory[] }).data);
     }).finally(() => setLoading(false));
-  }, [id, canManage]);
+  }, [id, canManage, canViewSalary]);
 
   const handleDeactivate = async () => {
     setDeactivating(true);
@@ -64,6 +73,10 @@ export default function EmployeeDetailPage() {
     }
   };
 
+  const handleExportPDF = () => {
+    window.open(`/api/employees/${id}/export/pdf`, '_blank');
+  };
+
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <div className="animate-spin w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full" />
@@ -71,6 +84,12 @@ export default function EmployeeDetailPage() {
   );
 
   if (!employee) return <div className="text-center py-12 text-gray-500">Collaborateur non trouvé</div>;
+
+  const tabs = [
+    { id: 'info', icon: UserIcon, label: 'Informations' },
+    { id: 'history', icon: ClockIcon, label: 'Historique' },
+    ...(canViewSalary ? [{ id: 'salary', icon: CurrencyDollarIcon, label: 'Salaires' }] : []),
+  ];
 
   return (
     <div className="max-w-4xl mx-auto animate-fade-in">
@@ -87,18 +106,24 @@ export default function EmployeeDetailPage() {
             <p className="text-gray-500 text-sm font-mono">{employee.matricule}</p>
           </div>
         </div>
-        {canManage && (
-          <div className="flex gap-2">
-            <button onClick={() => navigate(`/personnel/${id}/modifier`)} className="btn-secondary gap-2">
-              <PencilIcon className="w-4 h-4" /> Modifier
-            </button>
-            {employee.status === 'ACTIF' && (
-              <button onClick={() => setShowDeactivateModal(true)} className="btn-danger gap-2">
-                <NoSymbolIcon className="w-4 h-4" /> Désactiver
+        <div className="flex gap-2 flex-wrap justify-end">
+          <button onClick={handleExportPDF} className="btn-secondary gap-2 text-sm">
+            <DocumentArrowDownIcon className="w-4 h-4" />
+            PDF
+          </button>
+          {canManage && (
+            <>
+              <button onClick={() => navigate(`/personnel/${id}/modifier`)} className="btn-secondary gap-2">
+                <PencilIcon className="w-4 h-4" /> Modifier
               </button>
-            )}
-          </div>
-        )}
+              {employee.status === 'ACTIF' && (
+                <button onClick={() => setShowDeactivateModal(true)} className="btn-danger gap-2">
+                  <NoSymbolIcon className="w-4 h-4" /> Désactiver
+                </button>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       {/* Status banner */}
@@ -112,9 +137,18 @@ export default function EmployeeDetailPage() {
       {/* Summary card */}
       <div className="card mb-6 bg-gradient-to-r from-navy-800 to-navy-900 text-white">
         <div className="flex items-start gap-4">
-          <div className="w-16 h-16 bg-brand-600 rounded-2xl flex items-center justify-center text-white text-xl font-bold flex-shrink-0">
-            {employee.first_name[0]}{employee.last_name[0]}
-          </div>
+          {/* Photo ou initiales */}
+          {employee.photo_url ? (
+            <img
+              src={employee.photo_url}
+              alt={`${employee.first_name} ${employee.last_name}`}
+              className="w-16 h-16 rounded-2xl object-cover flex-shrink-0 border-2 border-white/20"
+            />
+          ) : (
+            <div className="w-16 h-16 bg-brand-600 rounded-2xl flex items-center justify-center text-white text-xl font-bold flex-shrink-0">
+              {employee.first_name[0]}{employee.last_name[0]}
+            </div>
+          )}
           <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div>
               <p className="text-blue-300 text-xs">Grade</p>
@@ -138,13 +172,10 @@ export default function EmployeeDetailPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-4 border-b border-gray-200">
-        {[
-          { id: 'info', icon: UserIcon, label: 'Informations' },
-          { id: 'history', icon: ClockIcon, label: 'Historique' },
-        ].map(tab => (
+        {tabs.map(tab => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as 'info' | 'history')}
+            onClick={() => setActiveTab(tab.id as typeof activeTab)}
             className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               activeTab === tab.id
                 ? 'border-brand-600 text-brand-700'
@@ -157,6 +188,7 @@ export default function EmployeeDetailPage() {
         ))}
       </div>
 
+      {/* Onglet Informations */}
       {activeTab === 'info' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Identité */}
@@ -171,6 +203,17 @@ export default function EmployeeDetailPage() {
             <Field label="Âge" value={employee.age ? `${employee.age} ans` : undefined} />
             <Field label="Email" value={employee.email} />
             <Field label="Téléphone" value={employee.phone} />
+            <Field
+              label="Situation matrimoniale"
+              value={employee.marital_status ? MARITAL_STATUS_LABELS[employee.marital_status] || employee.marital_status : 'Célibataire'}
+            />
+            {employee.marital_status === 'MARIE' && (
+              <>
+                <Field label="Conjoint(e)" value={employee.spouse_name} />
+                <Field label="Tél. conjoint(e)" value={employee.spouse_phone} />
+              </>
+            )}
+            <Field label="Nombre d'enfants" value={employee.children_count != null ? String(employee.children_count) : '0'} />
           </div>
 
           {/* Poste */}
@@ -187,8 +230,14 @@ export default function EmployeeDetailPage() {
             <Field label="Saison" value={employee.season ? `${employee.season}` : undefined} />
             <Field label="Date d'entrée" value={new Date(employee.entry_date).toLocaleDateString('fr-FR')} />
             {employee.exit_date && <Field label="Date de sortie" value={new Date(employee.exit_date).toLocaleDateString('fr-FR')} />}
+            <Field label="Statut" value={
+              <span className={`badge ${employee.status === 'ACTIF' ? 'badge-green' : 'badge-gray'}`}>
+                {employee.status}
+              </span>
+            } />
+            {employee.manager_name && <Field label="Supérieur hiérarchique" value={employee.manager_name} />}
             {canViewSalary && employee.salary && (
-              <Field label="Salaire" value={new Intl.NumberFormat('fr-FR').format(employee.salary) + ' FCFA'} sensitive />
+              <Field label="Salaire actuel" value={new Intl.NumberFormat('fr-FR').format(employee.salary) + ' FCFA'} sensitive />
             )}
             <Field label="Expatrié" value={employee.is_expatriate ? 'Oui' : 'Non'} />
           </div>
@@ -221,6 +270,7 @@ export default function EmployeeDetailPage() {
         </div>
       )}
 
+      {/* Onglet Historique modifications */}
       {activeTab === 'history' && (
         <div className="card">
           <h3 className="font-semibold text-gray-700 mb-4">Historique des modifications</h3>
@@ -246,11 +296,62 @@ export default function EmployeeDetailPage() {
                       <span className="text-green-600 font-medium">{h.new_value || '—'}</span>
                     </p>
                     {h.changed_by_name && (
-                      <p className="text-xs text-gray-400 mt-0.5">Par: {h.changed_by_name}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">Par : {h.changed_by_name}</p>
                     )}
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Onglet Historique salaires */}
+      {activeTab === 'salary' && canViewSalary && (
+        <div className="card">
+          <div className="flex items-center gap-2 mb-4">
+            <CurrencyDollarIcon className="w-4 h-4 text-amber-500" />
+            <h3 className="font-semibold text-gray-700">Historique des salaires</h3>
+            <span className="text-xs text-gray-400 ml-1">— Confidentiel</span>
+          </div>
+          {salaryHistory.length === 0 ? (
+            <p className="text-gray-400 text-sm text-center py-8">Aucun historique de salaire</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">Date d'effet</th>
+                    <th className="text-right py-2 px-3 text-xs font-medium text-gray-500 uppercase">Ancien salaire</th>
+                    <th className="text-right py-2 px-3 text-xs font-medium text-gray-500 uppercase">Nouveau salaire</th>
+                    <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">Modifié par</th>
+                    <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {salaryHistory.map((s, idx) => (
+                    <tr key={s.id} className={`border-b border-gray-50 ${idx === 0 ? 'bg-amber-50' : ''}`}>
+                      <td className="py-3 px-3 text-gray-700 font-medium">
+                        {new Date(s.effective_date).toLocaleDateString('fr-FR')}
+                        {idx === 0 && <span className="ml-2 text-xs bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded">actuel</span>}
+                      </td>
+                      <td className="py-3 px-3 text-right text-gray-500">
+                        {s.old_salary ? new Intl.NumberFormat('fr-FR').format(s.old_salary) + ' FCFA' : '—'}
+                      </td>
+                      <td className="py-3 px-3 text-right font-semibold text-amber-700">
+                        {new Intl.NumberFormat('fr-FR').format(s.new_salary)} FCFA
+                        {s.old_salary && s.new_salary > s.old_salary && (
+                          <span className="ml-1 text-xs text-green-600">
+                            +{new Intl.NumberFormat('fr-FR').format(s.new_salary - s.old_salary)}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-3 text-gray-500 text-xs">{s.created_by_name || '—'}</td>
+                      <td className="py-3 px-3 text-gray-400 text-xs">{s.notes || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>

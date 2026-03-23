@@ -1,12 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import {
-  SERVICE_LINE_LABELS, FUNCTION_LABELS, GRADE_LABELS, CONTRACT_LABELS,
+  SERVICE_LINE_LABELS, FUNCTION_LABELS, GRADE_LABELS, CONTRACT_LABELS, MARITAL_STATUS_LABELS, Employee,
 } from '../../types';
-import { ArrowLeftIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, ExclamationTriangleIcon, CameraIcon, UserIcon } from '@heroicons/react/24/outline';
+import { useAuthStore } from '../../store/authStore';
 
 type FormData = {
   matricule: string;
@@ -23,7 +24,6 @@ type FormData = {
   entry_date: string;
   exit_date: string;
   salary: string;
-  status: string;
   notes: string;
   has_dec_french: boolean;
   has_decofi: boolean;
@@ -32,21 +32,41 @@ type FormData = {
   has_cfa: boolean;
   department: string;
   is_expatriate: boolean;
+  // Nouveaux champs v2
+  manager_id: string;
+  marital_status: string;
+  spouse_name: string;
+  spouse_phone: string;
+  children_count: string;
 };
 
 export default function EmployeeFormPage() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { user } = useAuthStore();
   const isEdit = !!id;
   const [loading, setLoading] = useState(false);
   const [duplicate, setDuplicate] = useState<{ message: string } | null>(null);
   const [confirmDuplicate, setConfirmDuplicate] = useState(false);
+  const [managers, setManagers] = useState<Pick<Employee, 'id' | 'first_name' | 'last_name'>[]>([]);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
+  const canEditSalary = ['DRH', 'DIRECTION_GENERALE'].includes(user?.role || '');
 
   const { register, handleSubmit, watch, reset, formState: { errors } } = useForm<FormData>({
-    defaultValues: { status: 'ACTIF', gender: 'M' },
+    defaultValues: { marital_status: 'CELIBATAIRE', gender: 'M', children_count: '0' },
   });
 
+  const maritalStatus = watch('marital_status');
+
   useEffect(() => {
+    // Charger la liste des managers (tous les collaborateurs actifs)
+    api.get('/employees', { params: { status: 'ACTIF', limit: '500' } }).then(({ data }) => {
+      setManagers(data.data);
+    }).catch(() => {});
+
     if (isEdit) {
       api.get(`/employees/${id}`).then(({ data }) => {
         reset({
@@ -55,7 +75,11 @@ export default function EmployeeFormPage() {
           exit_date: data.exit_date ? data.exit_date.split('T')[0] : '',
           birth_date: data.birth_date ? data.birth_date.split('T')[0] : '',
           entry_date: data.entry_date ? data.entry_date.split('T')[0] : '',
+          children_count: data.children_count != null ? String(data.children_count) : '0',
+          manager_id: data.manager_id || '',
+          marital_status: data.marital_status || 'CELIBATAIRE',
         });
+        if (data.photo_url) setPhotoPreview(data.photo_url);
       });
     }
   }, [id, isEdit, reset]);
@@ -66,7 +90,6 @@ export default function EmployeeFormPage() {
   const emailVal = watch('email');
   const matriculeVal = watch('matricule');
 
-  // Check duplicates on key fields blur
   const checkDuplicates = async () => {
     if (!firstName || !lastName || !birthDate) return;
     try {
@@ -85,6 +108,14 @@ export default function EmployeeFormPage() {
     } catch {}
   };
 
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoFile(file);
+    const url = URL.createObjectURL(file);
+    setPhotoPreview(url);
+  };
+
   const onSubmit = async (formData: FormData) => {
     if (duplicate && !confirmDuplicate) {
       toast.error('Confirmez d\'abord le doublon potentiel');
@@ -95,17 +126,34 @@ export default function EmployeeFormPage() {
     try {
       const payload = {
         ...formData,
-        salary: formData.salary ? parseFloat(formData.salary) : null,
+        salary: canEditSalary && formData.salary ? parseFloat(formData.salary) : undefined,
         exit_date: formData.exit_date || null,
+        manager_id: formData.manager_id || null,
+        children_count: parseInt(formData.children_count) || 0,
+        spouse_name: formData.marital_status === 'MARIE' ? (formData.spouse_name || null) : null,
+        spouse_phone: formData.marital_status === 'MARIE' ? (formData.spouse_phone || null) : null,
       };
+      if (!canEditSalary) delete payload.salary;
 
+      let employeeId = id;
       if (isEdit) {
         await api.put(`/employees/${id}`, payload);
         toast.success('Collaborateur mis à jour');
       } else {
-        await api.post('/employees', payload);
+        const { data } = await api.post('/employees', payload);
+        employeeId = data.id;
         toast.success('Collaborateur créé avec succès');
       }
+
+      // Upload photo si sélectionnée
+      if (photoFile && employeeId) {
+        const formDataPhoto = new FormData();
+        formDataPhoto.append('photo', photoFile);
+        await api.post(`/employees/${employeeId}/photo`, formDataPhoto, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      }
+
       navigate('/personnel');
     } catch {
       // Error handled by interceptor
@@ -145,6 +193,44 @@ export default function EmployeeFormPage() {
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+
+        {/* Photo de profil */}
+        <div className="card">
+          <h3 className="text-base font-semibold text-gray-700 mb-4 pb-2 border-b">Photo de profil</h3>
+          <div className="flex items-center gap-6">
+            <div
+              className="w-24 h-24 rounded-2xl bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden cursor-pointer hover:border-brand-400 transition-colors"
+              onClick={() => photoInputRef.current?.click()}
+            >
+              {photoPreview ? (
+                <img src={photoPreview} alt="Photo" className="w-full h-full object-cover" />
+              ) : (
+                <div className="text-center">
+                  <UserIcon className="w-8 h-8 text-gray-300 mx-auto" />
+                </div>
+              )}
+            </div>
+            <div>
+              <button
+                type="button"
+                onClick={() => photoInputRef.current?.click()}
+                className="btn-secondary gap-2 text-sm"
+              >
+                <CameraIcon className="w-4 h-4" />
+                {photoPreview ? 'Changer la photo' : 'Ajouter une photo'}
+              </button>
+              <p className="text-xs text-gray-400 mt-1">JPEG, PNG ou WebP — 5 Mo max</p>
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={handlePhotoChange}
+              />
+            </div>
+          </div>
+        </div>
+
         {/* Identité */}
         <div className="card">
           <h3 className="text-base font-semibold text-gray-700 mb-4 pb-2 border-b">Identité</h3>
@@ -182,6 +268,37 @@ export default function EmployeeFormPage() {
             <div>
               <label className="label">Téléphone</label>
               <input className="input" {...register('phone')} placeholder="+225 07 XX XX XX" />
+            </div>
+          </div>
+        </div>
+
+        {/* Situation personnelle */}
+        <div className="card">
+          <h3 className="text-base font-semibold text-gray-700 mb-4 pb-2 border-b">Situation personnelle</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div>
+              <label className="label">Situation matrimoniale</label>
+              <select className="input" {...register('marital_status')}>
+                {Object.entries(MARITAL_STATUS_LABELS).map(([k, v]) => (
+                  <option key={k} value={k}>{v}</option>
+                ))}
+              </select>
+            </div>
+            {maritalStatus === 'MARIE' && (
+              <>
+                <div>
+                  <label className="label">Nom du / de la conjoint(e)</label>
+                  <input className="input" {...register('spouse_name')} placeholder="Nom complet" />
+                </div>
+                <div>
+                  <label className="label">Téléphone du / de la conjoint(e)</label>
+                  <input className="input" {...register('spouse_phone')} placeholder="+225 07 XX XX XX" />
+                </div>
+              </>
+            )}
+            <div>
+              <label className="label">Nombre d'enfants</label>
+              <input type="number" min="0" className="input" {...register('children_count')} placeholder="0" />
             </div>
           </div>
         </div>
@@ -240,22 +357,30 @@ export default function EmployeeFormPage() {
               {errors.entry_date && <p className="text-red-500 text-xs mt-1">Requis</p>}
             </div>
             <div>
-              <label className="label">Date de sortie (fin de contrat)</label>
+              <label className="label">Date de sortie
+                <span className="ml-1 text-xs text-gray-400 font-normal">(détermine le statut)</span>
+              </label>
               <input type="date" className="input" {...register('exit_date')} />
             </div>
-            <div>
-              <label className="label">Salaire (FCFA)</label>
-              <input type="number" className="input" {...register('salary')} placeholder="0" min="0" />
-            </div>
+            {canEditSalary && (
+              <div>
+                <label className="label">Salaire (FCFA)</label>
+                <input type="number" className="input" {...register('salary')} placeholder="0" min="0" />
+              </div>
+            )}
             <div>
               <label className="label">Département / Équipe</label>
               <input className="input" {...register('department')} placeholder="Audit, Tax, IT..." />
             </div>
             <div>
-              <label className="label">Statut</label>
-              <select className="input" {...register('status')}>
-                <option value="ACTIF">Actif</option>
-                <option value="INACTIF">Inactif</option>
+              <label className="label">Supérieur hiérarchique</label>
+              <select className="input" {...register('manager_id')}>
+                <option value="">Aucun</option>
+                {managers.map(m => (
+                  <option key={m.id} value={m.id}>
+                    {m.last_name} {m.first_name}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
