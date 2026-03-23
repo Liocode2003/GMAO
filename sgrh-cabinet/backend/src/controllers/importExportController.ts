@@ -97,7 +97,7 @@ export const parseImport = async (req: Request, res: Response) => {
 
   try {
     const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(req.file.buffer as Buffer);
+    await workbook.xlsx.load(Buffer.from(req.file.buffer));
     const sheet = workbook.worksheets[0];
 
     if (!sheet) return res.status(400).json({ error: 'Fichier Excel vide ou invalide' });
