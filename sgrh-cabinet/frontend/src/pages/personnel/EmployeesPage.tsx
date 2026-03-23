@@ -5,7 +5,7 @@ import { Employee, PaginatedResponse, ImportRow, SERVICE_LINE_LABELS, GRADE_LABE
 import { useAuthStore } from '../../store/authStore';
 import {
   PlusIcon, MagnifyingGlassIcon, FunnelIcon,
-  EyeIcon, PencilIcon, XMarkIcon, NoSymbolIcon,
+  EyeIcon, PencilIcon, XMarkIcon, NoSymbolIcon, EllipsisVerticalIcon,
   ArrowUpTrayIcon, DocumentArrowDownIcon, TableCellsIcon,
   CheckCircleIcon, ExclamationCircleIcon, XCircleIcon,
 } from '@heroicons/react/24/outline';
@@ -349,6 +349,7 @@ export default function EmployeesPage() {
   const [deactivateTarget, setDeactivateTarget] = useState<Employee | null>(null);
   const [exitDate, setExitDate] = useState(new Date().toISOString().split('T')[0]);
   const [deactivating, setDeactivating] = useState(false);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
 
   const handleDeactivate = async () => {
     if (!deactivateTarget) return;
@@ -586,33 +587,43 @@ export default function EmployeesPage() {
                 <td className="text-xs text-gray-600">{emp.seniority ? emp.seniority.label : '—'}</td>
                 <td><StatusBadge status={emp.status} /></td>
                 <td>
-                  <div className="flex items-center gap-1">
+                  <div className="relative">
                     <button
-                      onClick={() => navigate(`/personnel/${emp.id}`)}
-                      className="p-1.5 text-gray-400 hover:text-brand-700 hover:bg-brand-50 rounded"
-                      title="Voir"
+                      onClick={() => setOpenMenu(openMenu === emp.id ? null : emp.id)}
+                      className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded"
                     >
-                      <EyeIcon className="w-4 h-4" />
+                      <EllipsisVerticalIcon className="w-5 h-5" />
                     </button>
-                    {canManage && (
-                      <>
+                    {openMenu === emp.id && (
+                      <div
+                        className="absolute right-0 z-20 mt-1 w-44 bg-white border border-gray-200 rounded-xl shadow-lg py-1"
+                        onMouseLeave={() => setOpenMenu(null)}
+                      >
                         <button
-                          onClick={() => navigate(`/personnel/${emp.id}/modifier`)}
-                          className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded"
-                          title="Modifier"
+                          onClick={() => { setOpenMenu(null); navigate(`/personnel/${emp.id}`); }}
+                          className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                         >
-                          <PencilIcon className="w-4 h-4" />
+                          <EyeIcon className="w-4 h-4 text-brand-500" /> Voir la fiche
                         </button>
-                        {emp.status === 'ACTIF' && (
-                          <button
-                            onClick={() => { setDeactivateTarget(emp); setExitDate(new Date().toISOString().split('T')[0]); }}
-                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
-                            title="Désactiver"
-                          >
-                            <NoSymbolIcon className="w-4 h-4" />
-                          </button>
+                        {canManage && (
+                          <>
+                            <button
+                              onClick={() => { setOpenMenu(null); navigate(`/personnel/${emp.id}/modifier`); }}
+                              className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                            >
+                              <PencilIcon className="w-4 h-4 text-amber-500" /> Modifier
+                            </button>
+                            {emp.status === 'ACTIF' && (
+                              <button
+                                onClick={() => { setOpenMenu(null); setDeactivateTarget(emp); setExitDate(new Date().toISOString().split('T')[0]); }}
+                                className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                              >
+                                <NoSymbolIcon className="w-4 h-4" /> Désactiver
+                              </button>
+                            )}
+                          </>
                         )}
-                      </>
+                      </div>
                     )}
                   </div>
                 </td>
