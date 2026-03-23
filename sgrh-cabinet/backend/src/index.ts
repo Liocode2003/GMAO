@@ -1,4 +1,8 @@
 import 'dotenv/config';
+
+// Fuseau horaire Burkina Faso (GMT+0, même heure toute l'année)
+process.env.TZ = 'Africa/Ouagadougou';
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';

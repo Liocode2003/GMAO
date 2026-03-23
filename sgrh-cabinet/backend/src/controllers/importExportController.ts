@@ -307,14 +307,14 @@ export const downloadImportTemplate = async (_req: Request, res: Response) => {
     sheet.addRow([
       'EMP001', 'DUPONT', 'Jean', 'M', '15/03/1990',
       'Célibataire', '', '', '0',
-      'jean.dupont@cabinet.ci', '+225 01 02 03 04',
+      'jean.dupont@cabinet.bf', '+226 70 01 02 03',
       'AUDITEUR', 'JUNIOR', 'AUDIT_ASSURANCE', 'CDI',
       '01/01/2024', '', 'Non', '500000',
     ]);
     sheet.addRow([
       'EMP002', 'MARTIN', 'Sophie', 'F', '22/07/1985',
-      'Marié(e)', 'MARTIN Paul', '+225 07 08 09 10', '2',
-      'sophie.martin@cabinet.ci', '+225 05 06 07 08',
+      'Marié(e)', 'MARTIN Paul', '+226 70 08 09 10', '2',
+      'sophie.martin@cabinet.bf', '+226 75 06 07 08',
       'MANAGER_PRINCIPAL', 'SENIOR_2', 'CONSULTING_FA', 'CDI',
       '15/06/2018', '', 'Non', '1200000',
     ]);

@@ -266,7 +266,7 @@ export default function EmployeeFormPage() {
             </div>
             <div>
               <label className="label">Téléphone</label>
-              <input className="input" {...register('phone')} placeholder="+225 07 XX XX XX" />
+              <input className="input" {...register('phone')} placeholder="+226 70 XX XX XX" />
             </div>
           </div>
         </div>
@@ -291,7 +291,7 @@ export default function EmployeeFormPage() {
                 </div>
                 <div>
                   <label className="label">Téléphone du / de la conjoint(e)</label>
-                  <input className="input" {...register('spouse_phone')} placeholder="+225 07 XX XX XX" />
+                  <input className="input" {...register('spouse_phone')} placeholder="+226 70 XX XX XX" />
                 </div>
               </>
             )}
@@ -309,7 +309,7 @@ export default function EmployeeFormPage() {
             <div>
               <label className="label">Email professionnel</label>
               <input type="email" className="input" {...register('email')}
-                onBlur={checkDuplicates} placeholder="prenom.nom@cabinet.ci" />
+                onBlur={checkDuplicates} placeholder="prenom.nom@cabinet.bf" />
             </div>
           </div>
         </div>
