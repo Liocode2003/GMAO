@@ -31,6 +31,3 @@ CREATE INDEX IF NOT EXISTS idx_cs_status          ON commercial_submissions(stat
 CREATE INDEX IF NOT EXISTS idx_cs_service_line    ON commercial_submissions(service_line);
 CREATE INDEX IF NOT EXISTS idx_cs_submission_date ON commercial_submissions(submission_date);
 
-CREATE TRIGGER update_commercial_submissions_updated_at
-  BEFORE UPDATE ON commercial_submissions
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

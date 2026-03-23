@@ -239,7 +239,7 @@ export const updateSubmission = async (req: Request, res: Response) => {
         type=$1, reference=$2, title=$3, client=$4, submission_date=$5,
         service_line=$6, responsible_employee_id=$7, status=$8,
         contract_amount=$9, contract_start_date=$10, contract_end_date=$11,
-        updated_by=$12
+        updated_by=$12, updated_at=NOW()
        WHERE id=$13
        RETURNING *`,
       [
