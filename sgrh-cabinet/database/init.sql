@@ -115,6 +115,9 @@ CREATE TABLE employees (
   spouse_name VARCHAR(200),
   spouse_phone VARCHAR(30),
   children_count INTEGER DEFAULT 0,
+  -- Photo & congés
+  photo_url VARCHAR(500),
+  leave_balance DECIMAL(5,2) DEFAULT 0,
   created_by UUID REFERENCES users(id),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
