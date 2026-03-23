@@ -5,7 +5,7 @@ import { Employee, PaginatedResponse, ImportRow, SERVICE_LINE_LABELS, GRADE_LABE
 import { useAuthStore } from '../../store/authStore';
 import {
   PlusIcon, MagnifyingGlassIcon, FunnelIcon,
-  EyeIcon, PencilIcon, XMarkIcon, NoSymbolIcon, EllipsisVerticalIcon,
+  PencilIcon, XMarkIcon, NoSymbolIcon,
   ArrowUpTrayIcon, DocumentArrowDownIcon, TableCellsIcon,
   CheckCircleIcon, ExclamationCircleIcon, XCircleIcon,
 } from '@heroicons/react/24/outline';
@@ -349,7 +349,6 @@ export default function EmployeesPage() {
   const [deactivateTarget, setDeactivateTarget] = useState<Employee | null>(null);
   const [exitDate, setExitDate] = useState(new Date().toISOString().split('T')[0]);
   const [deactivating, setDeactivating] = useState(false);
-  const [openMenu, setOpenMenu] = useState<string | null>(null);
 
   const handleDeactivate = async () => {
     if (!deactivateTarget) return;
@@ -530,7 +529,7 @@ export default function EmployeesPage() {
               <th>Contrat</th>
               <th>Ancienneté</th>
               <th>Statut</th>
-              <th>Actions</th>
+              {canManage && <th></th>}
             </tr>
           </thead>
           <tbody>
@@ -586,47 +585,19 @@ export default function EmployeesPage() {
                 </td>
                 <td className="text-xs text-gray-600">{emp.seniority ? emp.seniority.label : '—'}</td>
                 <td><StatusBadge status={emp.status} /></td>
-                <td>
-                  <div className="relative">
-                    <button
-                      onClick={() => setOpenMenu(openMenu === emp.id ? null : emp.id)}
-                      className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded"
-                    >
-                      <EllipsisVerticalIcon className="w-5 h-5" />
-                    </button>
-                    {openMenu === emp.id && (
-                      <div
-                        className="absolute right-0 z-20 mt-1 w-44 bg-white border border-gray-200 rounded-xl shadow-lg py-1"
-                        onMouseLeave={() => setOpenMenu(null)}
+                {canManage && (
+                  <td>
+                    {emp.status === 'ACTIF' && (
+                      <button
+                        onClick={() => { setDeactivateTarget(emp); setExitDate(new Date().toISOString().split('T')[0]); }}
+                        className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"
+                        title="Désactiver"
                       >
-                        <button
-                          onClick={() => { setOpenMenu(null); navigate(`/personnel/${emp.id}`); }}
-                          className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                        >
-                          <EyeIcon className="w-4 h-4 text-brand-500" /> Voir la fiche
-                        </button>
-                        {canManage && (
-                          <>
-                            <button
-                              onClick={() => { setOpenMenu(null); navigate(`/personnel/${emp.id}/modifier`); }}
-                              className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                            >
-                              <PencilIcon className="w-4 h-4 text-amber-500" /> Modifier
-                            </button>
-                            {emp.status === 'ACTIF' && (
-                              <button
-                                onClick={() => { setOpenMenu(null); setDeactivateTarget(emp); setExitDate(new Date().toISOString().split('T')[0]); }}
-                                className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-                              >
-                                <NoSymbolIcon className="w-4 h-4" /> Désactiver
-                              </button>
-                            )}
-                          </>
-                        )}
-                      </div>
+                        <NoSymbolIcon className="w-4 h-4" />
+                      </button>
                     )}
-                  </div>
-                </td>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
