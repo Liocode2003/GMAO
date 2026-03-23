@@ -204,10 +204,27 @@ export default function ReportingCommercialPage() {
     }
   };
 
-  const handleExport = (format: 'excel' | 'pdf') => {
-    const params = new URLSearchParams(buildParams(activeTab) as Record<string, string>);
-    const url = `/api/commercial/export/${format}?${params.toString()}`;
-    window.open(url, '_blank');
+  const handleExport = async (format: 'excel' | 'pdf') => {
+    try {
+      const params = buildParams(activeTab);
+      const response = await api.get(`/commercial/export/${format}`, {
+        params,
+        responseType: 'blob',
+      });
+      const ext = format === 'excel' ? 'xlsx' : 'pdf';
+      const mimeType = format === 'excel'
+        ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        : 'application/pdf';
+      const blob = new Blob([response.data], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `reporting_commercial_${activeTab.toLowerCase()}.${ext}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error('Erreur lors de l\'export');
+    }
   };
 
   const tabStats = stats[activeTab];
