@@ -88,25 +88,31 @@ export const getDashboard = async (req: Request, res: Response) => {
       `),
     ]);
 
-    const canViewAmounts = ['DRH', 'DIRECTION_GENERALE', 'ASSOCIE'].includes(req.user?.role || '');
-    const commercialWidget = await query(
-      `SELECT
-        COUNT(*) FILTER (WHERE type = 'AMI'
-          AND EXTRACT(YEAR FROM submission_date) = EXTRACT(YEAR FROM CURRENT_DATE)
-          AND EXTRACT(MONTH FROM submission_date) = EXTRACT(MONTH FROM CURRENT_DATE)) AS ami_this_month,
-        COUNT(*) FILTER (WHERE type = 'APPEL_OFFRE'
-          AND EXTRACT(YEAR FROM submission_date) = EXTRACT(YEAR FROM CURRENT_DATE)
-          AND EXTRACT(MONTH FROM submission_date) = EXTRACT(MONTH FROM CURRENT_DATE)) AS ao_this_month,
-        COUNT(*) FILTER (WHERE status = 'GAGNE'
-          AND EXTRACT(YEAR FROM submission_date) = EXTRACT(YEAR FROM CURRENT_DATE)
-          AND EXTRACT(MONTH FROM submission_date) = EXTRACT(MONTH FROM CURRENT_DATE)) AS wins_this_month,
-        ${canViewAmounts
-          ? `COALESCE(SUM(contract_amount) FILTER (WHERE status = 'GAGNE'
-              AND EXTRACT(YEAR FROM submission_date) = EXTRACT(YEAR FROM CURRENT_DATE)
-              AND EXTRACT(MONTH FROM submission_date) = EXTRACT(MONTH FROM CURRENT_DATE)), 0) AS amount_this_month`
-          : `0 AS amount_this_month`}
-       FROM commercial_submissions`
-    );
+    const canViewAmounts = ['DRH', 'DIRECTION_GENERALE', 'ASSOCIE'].includes((req.user as { role?: string })?.role || '');
+    let commercialWidget = null;
+    try {
+      const cw = await query(
+        `SELECT
+          COUNT(*) FILTER (WHERE type = 'AMI'
+            AND EXTRACT(YEAR FROM submission_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+            AND EXTRACT(MONTH FROM submission_date) = EXTRACT(MONTH FROM CURRENT_DATE)) AS ami_this_month,
+          COUNT(*) FILTER (WHERE type = 'APPEL_OFFRE'
+            AND EXTRACT(YEAR FROM submission_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+            AND EXTRACT(MONTH FROM submission_date) = EXTRACT(MONTH FROM CURRENT_DATE)) AS ao_this_month,
+          COUNT(*) FILTER (WHERE status = 'GAGNE'
+            AND EXTRACT(YEAR FROM submission_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+            AND EXTRACT(MONTH FROM submission_date) = EXTRACT(MONTH FROM CURRENT_DATE)) AS wins_this_month,
+          ${canViewAmounts
+            ? `COALESCE(SUM(contract_amount) FILTER (WHERE status = 'GAGNE'
+                AND EXTRACT(YEAR FROM submission_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+                AND EXTRACT(MONTH FROM submission_date) = EXTRACT(MONTH FROM CURRENT_DATE)), 0) AS amount_this_month`
+            : `0 AS amount_this_month`}
+         FROM commercial_submissions`
+      );
+      commercialWidget = cw.rows[0];
+    } catch (_err) {
+      // table non encore créée — widget ignoré
+    }
 
     return res.json({
       totalActive: parseInt(totalActive.rows[0].total),
@@ -118,7 +124,7 @@ export const getDashboard = async (req: Request, res: Response) => {
       withEmail: parseInt(withEmail.rows[0].count),
       birthdaysThisMonth: birthdaysThisMonth.rows,
       contractsToRenew: contractsToRenew.rows,
-      commercial: commercialWidget.rows[0],
+      commercial: commercialWidget,
     });
   } catch (err) {
     logger.error('getDashboard error', err);
