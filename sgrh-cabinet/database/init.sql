@@ -293,11 +293,6 @@ CREATE INDEX idx_leaves_status   ON leaves(status);
 CREATE INDEX idx_leaves_year     ON leaves(year);
 CREATE INDEX idx_leave_balances_emp_year ON leave_balances(employee_id, year);
 
-CREATE TRIGGER trg_leaves_updated_at
-  BEFORE UPDATE ON leaves FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER trg_leave_balances_updated_at
-  BEFORE UPDATE ON leave_balances FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-
 -- ============================================================
 -- RAPPORTS
 -- ============================================================
@@ -345,6 +340,8 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER trg_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER trg_employees_updated_at BEFORE UPDATE ON employees FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER trg_trainings_updated_at BEFORE UPDATE ON trainings FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER trg_leaves_updated_at BEFORE UPDATE ON leaves FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER trg_leave_balances_updated_at BEFORE UPDATE ON leave_balances FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- ============================================================
 -- TRIGGER: Historique automatique des changements employé
