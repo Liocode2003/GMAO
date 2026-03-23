@@ -1,6 +1,10 @@
 import { Request, Response } from 'express';
 import { query } from '../config/database';
 import { logger } from '../utils/logger';
+import {
+  sendUnplannedLeaveAlert,
+  sendLeaveBalanceAlert,
+} from '../services/emailService';
 
 // ============================================================
 // UTILITAIRES
@@ -19,12 +23,42 @@ function workingDays(start: string, end: string): number {
   return count;
 }
 
+/** Calcul pro-rata : si l'employé a rejoint en cours d'année,
+ *  il bénéficie de (mois restants dans l'année / 12) × 30 jours.
+ *  Résultat arrondi au demi-jour supérieur.
+ */
+function proRataAllowance(entryDate: string, year: number): number {
+  const entry = new Date(entryDate);
+  if (entry.getFullYear() < year) return 30; // déjà présent en début d'année
+  if (entry.getFullYear() > year) return 0;  // pas encore en poste cette année
+
+  // Mois restants (le mois d'entrée compte entier)
+  const monthsRemaining = 12 - entry.getMonth(); // getMonth() : 0=janvier → janv=12, déc=1
+  const raw = (monthsRemaining / 12) * 30;
+  return Math.ceil(raw * 2) / 2; // arrondi au 0.5 supérieur
+}
+
+async function getHREmails(): Promise<string[]> {
+  const result = await query(
+    `SELECT email FROM users WHERE role IN ('DRH', 'DIRECTION_GENERALE') AND is_active = true`
+  );
+  return result.rows.map((r: { email: string }) => r.email).filter(Boolean);
+}
+
 async function ensureBalance(employeeId: string, year: number): Promise<void> {
+  // Récupère la date d'entrée pour le calcul pro-rata
+  const empRes = await query(
+    `SELECT entry_date FROM employees WHERE id = $1`,
+    [employeeId]
+  );
+  const entryDate: string | undefined = empRes.rows[0]?.entry_date;
+  const allowance = entryDate ? proRataAllowance(entryDate, year) : 30;
+
   await query(
     `INSERT INTO leave_balances (employee_id, year, annual_allowance, carry_over, days_taken, days_unpaid)
-     VALUES ($1, $2, 30, 0, 0, 0)
+     VALUES ($1, $2, $3, 0, 0, 0)
      ON CONFLICT (employee_id, year) DO NOTHING`,
-    [employeeId, year]
+    [employeeId, year, allowance]
   );
 }
 
@@ -123,6 +157,17 @@ export const createLeave = async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Champs obligatoires manquants' });
   }
 
+  // Vérification : collaborateur actif uniquement
+  const empRes = await query(
+    `SELECT status, first_name, last_name, email FROM employees WHERE id = $1`,
+    [id]
+  );
+  const emp = empRes.rows[0];
+  if (!emp) return res.status(404).json({ error: 'Collaborateur non trouvé' });
+  if (emp.status !== 'ACTIF') {
+    return res.status(400).json({ error: 'Impossible de saisir un congé pour un collaborateur inactif' });
+  }
+
   const days = workingDays(start_date, end_date);
   if (days <= 0) return res.status(400).json({ error: 'Nombre de jours invalide' });
 
@@ -159,14 +204,16 @@ export const createLeave = async (req: Request, res: Response) => {
     );
 
     const leave = result.rows[0];
+    const empName = `${emp.first_name} ${emp.last_name}`;
 
-    // Imprévus : déduire immédiatement du solde
+    // Imprévus : déduire immédiatement du solde + notifications
     if (type === 'IMPRÉVU') {
       const balRes = await query(
         `SELECT balance FROM leave_balances WHERE employee_id = $1 AND year = $2`,
         [id, year]
       );
       const balance = parseFloat(balRes.rows[0]?.balance ?? '0');
+
       if (balance >= days) {
         await query(
           `UPDATE leave_balances SET days_taken = days_taken + $1, updated_at = NOW()
@@ -183,11 +230,24 @@ export const createLeave = async (req: Request, res: Response) => {
         );
 
         // Alerte DRH : dépassement de solde
-        const emp = await query(
-          `SELECT first_name, last_name FROM employees WHERE id = $1`, [id]
-        );
-        logger.warn(`ALERTE: ${emp.rows[0]?.first_name} ${emp.rows[0]?.last_name} a dépassé son solde de congés (${overflow} jour(s) en dépassement)`);
+        logger.warn(`ALERTE: ${empName} a dépassé son solde de congés (${overflow} jour(s) en dépassement)`);
+        getHREmails().then(hrEmails => {
+          if (hrEmails.length) {
+            sendLeaveBalanceAlert(empName, overflow, hrEmails).catch(
+              e => logger.error('sendLeaveBalanceAlert error', e)
+            );
+          }
+        }).catch(e => logger.error('getHREmails error', e));
       }
+
+      // Notification email DRH pour chaque imprévu
+      getHREmails().then(hrEmails => {
+        if (hrEmails.length) {
+          sendUnplannedLeaveAlert(empName, absence_subtype || '', days, hrEmails).catch(
+            e => logger.error('sendUnplannedLeaveAlert error', e)
+          );
+        }
+      }).catch(e => logger.error('getHREmails error', e));
     }
 
     logger.info(`Congé créé: ${leave.id} pour employé ${id} par ${req.user?.email}`);
@@ -238,7 +298,7 @@ export const approveLeave = async (req: Request, res: Response) => {
 };
 
 // ============================================================
-// SUPPRIMER UN CONGÉ (DRH uniquement, si EN_ATTENTE)
+// SUPPRIMER UN CONGÉ (DRH/Direction uniquement)
 // ============================================================
 
 export const deleteLeave = async (req: Request, res: Response) => {
@@ -278,31 +338,34 @@ export const yearEndRollover = async (): Promise<void> => {
   const nextYear = currentYear + 1;
 
   try {
-    // Récupérer tous les soldes de l'année en cours
+    // Reporter les soldes des employés ACTIFS uniquement
     const balances = await query(
-      `SELECT lb.*, e.entry_date
+      `SELECT lb.*, e.entry_date, e.status
        FROM leave_balances lb
        JOIN employees e ON e.id = lb.employee_id
-       WHERE lb.year = $1`,
+       WHERE lb.year = $1 AND e.status = 'ACTIF'`,
       [currentYear]
     );
 
     for (const bal of balances.rows) {
+      // balance = annual_allowance + carry_over - days_taken (generated column)
       const remaining = parseFloat(bal.balance);
       const unpaid = parseFloat(bal.days_unpaid);
-      // report = jours restants - dépassement d'imprévus
+      // Jours non utilisés → ajoutés ; dépassement imprévus → soustraits
       const carryOver = remaining - unpaid;
+
+      const nextAllowance = proRataAllowance(bal.entry_date, nextYear);
 
       await query(
         `INSERT INTO leave_balances (employee_id, year, annual_allowance, carry_over, days_taken, days_unpaid)
-         VALUES ($1, $2, 30, $3, 0, 0)
+         VALUES ($1, $2, $3, $4, 0, 0)
          ON CONFLICT (employee_id, year)
-         DO UPDATE SET carry_over = $3, updated_at = NOW()`,
-        [bal.employee_id, nextYear, carryOver]
+         DO UPDATE SET carry_over = $4, annual_allowance = $3, updated_at = NOW()`,
+        [bal.employee_id, nextYear, nextAllowance, carryOver]
       );
     }
 
-    // Initialiser les balances pour les employés sans solde cette année
+    // Initialiser les balances pour les nouveaux employés actifs sans solde
     await query(
       `INSERT INTO leave_balances (employee_id, year, annual_allowance, carry_over, days_taken, days_unpaid)
        SELECT e.id, $1, 30, 0, 0, 0
@@ -315,7 +378,7 @@ export const yearEndRollover = async (): Promise<void> => {
       [nextYear]
     );
 
-    logger.info(`Report fin d'année ${currentYear} → ${nextYear} effectué`);
+    logger.info(`Report fin d'année ${currentYear} → ${nextYear} effectué (${balances.rows.length} employés)`);
   } catch (err) {
     logger.error('yearEndRollover error', err);
   }

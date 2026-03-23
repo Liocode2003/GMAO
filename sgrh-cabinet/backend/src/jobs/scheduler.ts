@@ -1,6 +1,6 @@
 import cron from 'node-cron';
 import { query } from '../config/database';
-import { sendBirthdayAlert, sendContractExpiryAlert, sendMonthlyReport } from '../services/emailService';
+import { sendBirthdayAlert, sendContractExpiryAlert, sendMonthlyReport, sendLeaveEndAlert } from '../services/emailService';
 import { generateMonthlyReport } from '../services/reportService';
 import { logger } from '../utils/logger';
 import { yearEndRollover } from '../controllers/leavesController';
@@ -182,19 +182,34 @@ export const scheduleLeaveEndAlerts = () => {
   cron.schedule('30 8 * * *', async () => {
     logger.info('[CRON] Vérification fins de congés...');
     try {
+      // Congés approuvés se terminant dans 3 jours
       const in3days = await query(`
-        SELECT l.*, e.first_name, e.last_name,
-          m.email as manager_email,
-          (SELECT email FROM users WHERE role = 'DRH' AND is_active = true LIMIT 1) as drh_email
+        SELECT l.end_date,
+          e.first_name, e.last_name, e.email as employee_email,
+          u_mgr.email as manager_email
         FROM leaves l
         JOIN employees e ON e.id = l.employee_id
-        LEFT JOIN employees m ON m.id = e.manager_id
+        LEFT JOIN employees mgr ON mgr.id = e.manager_id
+        LEFT JOIN users u_mgr ON u_mgr.email = mgr.email
         WHERE l.type = 'PLANIFIE' AND l.status = 'APPROUVE'
           AND l.end_date = CURRENT_DATE + INTERVAL '3 days'
       `);
+
       for (const leave of in3days.rows) {
-        logger.info(`[ALERTE] Fin de congé dans 3 jours: ${leave.first_name} ${leave.last_name} le ${leave.end_date}`);
+        const name = `${leave.first_name} ${leave.last_name}`;
+        const endDateFr = new Date(leave.end_date).toLocaleDateString('fr-FR');
+
+        await sendLeaveEndAlert(
+          name,
+          endDateFr,
+          leave.manager_email || null,
+          leave.employee_email || null
+        );
+
+        logger.info(`[ALERTE] Fin de congé dans 3 jours: ${name} le ${leave.end_date}`);
       }
+
+      logger.info(`[CRON] Alertes fins de congés: ${in3days.rows.length} envoyées`);
     } catch (err) {
       logger.error('[CRON] Erreur alerte fins de congés:', err);
     }

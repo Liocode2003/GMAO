@@ -108,6 +108,125 @@ export const sendContractExpiryAlert = async (
   });
 };
 
+export const sendUnplannedLeaveAlert = async (
+  employeeName: string,
+  subtype: string,
+  days: number,
+  hrEmails: string[]
+) => {
+  const subtypeLabels: Record<string, string> = {
+    MALADIE: 'Maladie',
+    DECES_FAMILLE: 'Décès famille',
+    URGENCE: 'Urgence',
+    AUTRE: 'Autre',
+  };
+  const label = subtypeLabels[subtype] || subtype || 'Imprévu';
+
+  await sendEmail({
+    to: hrEmails,
+    subject: `🔔 Imprévu saisi: ${employeeName} — ${label} (${days}j)`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: #1e3a5f; padding: 20px; border-radius: 8px 8px 0 0;">
+          <h2 style="color: white; margin: 0;">SGRH Cabinet</h2>
+        </div>
+        <div style="padding: 20px; border: 1px solid #e5e7eb;">
+          <h3 style="color: #d97706;">🔔 Absence imprévue enregistrée</h3>
+          <p>Une absence imprévue a été saisie pour <strong>${employeeName}</strong>.</p>
+          <table style="width: 100%; border-collapse: collapse; margin-top: 16px;">
+            <tr style="background: #fef3c7;">
+              <td style="padding: 8px; font-weight: bold;">Motif</td>
+              <td style="padding: 8px;">${label}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; font-weight: bold;">Durée</td>
+              <td style="padding: 8px;">${days} jour(s)</td>
+            </tr>
+          </table>
+          <p style="margin-top: 16px; color: #6b7280; font-size: 13px;">
+            Cette absence a été imputée sur le solde de congés du collaborateur.
+          </p>
+        </div>
+        <div style="background: #f9fafb; padding: 10px; text-align: center; font-size: 12px; color: #6b7280; border-radius: 0 0 8px 8px;">
+          SGRH Cabinet — Système de Gestion des Ressources Humaines
+        </div>
+      </div>
+    `,
+  });
+};
+
+export const sendLeaveBalanceAlert = async (
+  employeeName: string,
+  overflowDays: number,
+  hrEmails: string[]
+) => {
+  await sendEmail({
+    to: hrEmails,
+    subject: `⚠️ Dépassement solde congés: ${employeeName} (${overflowDays}j en dépassement)`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: #1e3a5f; padding: 20px; border-radius: 8px 8px 0 0;">
+          <h2 style="color: white; margin: 0;">SGRH Cabinet</h2>
+        </div>
+        <div style="padding: 20px; border: 1px solid #fecaca; background: #fff5f5;">
+          <h3 style="color: #dc2626;">⚠️ Dépassement de solde de congés</h3>
+          <p><strong>${employeeName}</strong> a dépassé son solde annuel de congés.</p>
+          <table style="width: 100%; border-collapse: collapse; margin-top: 16px;">
+            <tr style="background: #fee2e2;">
+              <td style="padding: 8px; font-weight: bold; color: #dc2626;">Jours en dépassement</td>
+              <td style="padding: 8px; font-weight: bold; color: #dc2626;">${overflowDays} jour(s)</td>
+            </tr>
+          </table>
+          <p style="margin-top: 16px; color: #6b7280; font-size: 13px;">
+            Ces jours seront déduits du solde de l'année prochaine lors du report de fin d'année.
+          </p>
+        </div>
+        <div style="background: #f9fafb; padding: 10px; text-align: center; font-size: 12px; color: #6b7280; border-radius: 0 0 8px 8px;">
+          SGRH Cabinet — Système de Gestion des Ressources Humaines
+        </div>
+      </div>
+    `,
+  });
+};
+
+export const sendLeaveEndAlert = async (
+  employeeName: string,
+  endDate: string,
+  managerEmail: string | null,
+  employeeEmail: string | null
+) => {
+  const recipients = [managerEmail, employeeEmail].filter(Boolean) as string[];
+  if (!recipients.length) return;
+
+  await sendEmail({
+    to: recipients,
+    subject: `📅 Fin de congé dans 3 jours: ${employeeName}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: #1e3a5f; padding: 20px; border-radius: 8px 8px 0 0;">
+          <h2 style="color: white; margin: 0;">SGRH Cabinet</h2>
+        </div>
+        <div style="padding: 20px; border: 1px solid #e5e7eb;">
+          <h3 style="color: #2563eb;">📅 Rappel de fin de congé</h3>
+          <p>Le congé de <strong>${employeeName}</strong> se termine dans <strong>3 jours</strong>.</p>
+          <table style="width: 100%; border-collapse: collapse; margin-top: 16px;">
+            <tr style="background: #eff6ff;">
+              <td style="padding: 8px; font-weight: bold;">Date de reprise</td>
+              <td style="padding: 8px; color: #2563eb; font-weight: bold;">${endDate}</td>
+            </tr>
+          </table>
+          <p style="margin-top: 16px; color: #6b7280; font-size: 13px;">
+            Pensez à préparer le retour du collaborateur.
+          </p>
+        </div>
+        <div style="background: #f9fafb; padding: 10px; text-align: center; font-size: 12px; color: #6b7280; border-radius: 0 0 8px 8px;">
+          SGRH Cabinet — Système de Gestion des Ressources Humaines
+        </div>
+      </div>
+    `,
+  });
+};
+
 export const sendMonthlyReport = async (year: number, month: number, filePath: string, recipients: string[]) => {
   const monthNames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
   const monthName = monthNames[month - 1];

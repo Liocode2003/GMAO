@@ -46,6 +46,7 @@ export default function EmployeeDetailPage() {
   const [deactivating, setDeactivating] = useState(false);
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
   const [exitDate, setExitDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedLeaveYear, setSelectedLeaveYear] = useState(new Date().getFullYear());
   const [showLeaveForm, setShowLeaveForm] = useState(false);
   const [leaveForm, setLeaveForm] = useState({
     type: 'PLANIFIE', absence_subtype: '', start_date: '', end_date: '', notes: '',
@@ -56,11 +57,11 @@ export default function EmployeeDetailPage() {
   const canViewSalary = ['DRH', 'DIRECTION_GENERALE', 'ASSOCIE'].includes(user?.role || '');
   const canManageLeaves = ['DRH', 'DIRECTION_GENERALE', 'MANAGER'].includes(user?.role || '');
 
-  const loadLeaves = async () => {
-    const year = new Date().getFullYear();
+  const loadLeaves = async (year?: number) => {
+    const y = year ?? selectedLeaveYear;
     const [leavesRes, balRes] = await Promise.all([
-      api.get(`/leaves/employee/${id}?year=${year}`),
-      api.get(`/leaves/employee/${id}/balance?year=${year}`),
+      api.get(`/leaves/employee/${id}?year=${y}`),
+      api.get(`/leaves/employee/${id}/balance?year=${y}`),
     ]);
     setLeaves((leavesRes as { data: Leave[] }).data);
     setLeaveBalance((balRes as { data: LeaveBalance }).data);
@@ -79,7 +80,7 @@ export default function EmployeeDetailPage() {
       setSalaryHistory((salaryRes as { data: SalaryHistory[] }).data);
     }).finally(() => setLoading(false));
 
-    loadLeaves();
+    loadLeaves(selectedLeaveYear);
   }, [id, canManage, canViewSalary]);
 
   const handleSubmitLeave = async () => {
@@ -456,182 +457,232 @@ export default function EmployeeDetailPage() {
       )}
 
       {/* Onglet Congés */}
-      {activeTab === 'leaves' && (
-        <div className="space-y-4">
-          {/* Solde */}
-          {leaveBalance && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="card text-center">
-                <p className="text-3xl font-bold text-brand-600">{leaveBalance.balance}</p>
-                <p className="text-xs text-gray-500 mt-1">Solde disponible</p>
-              </div>
-              <div className="card text-center">
-                <p className="text-3xl font-bold text-gray-700">{leaveBalance.days_taken}</p>
-                <p className="text-xs text-gray-500 mt-1">Jours pris</p>
-              </div>
-              <div className="card text-center">
-                <p className="text-3xl font-bold text-orange-500">{leaveBalance.days_unplanned}</p>
-                <p className="text-xs text-gray-500 mt-1">Imprévus</p>
-              </div>
-              <div className={`card text-center ${leaveBalance.carry_over >= 0 ? '' : 'bg-red-50'}`}>
-                <p className={`text-3xl font-bold ${leaveBalance.carry_over >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {leaveBalance.carry_over >= 0 ? '+' : ''}{leaveBalance.carry_over}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">Report N-1</p>
-              </div>
-            </div>
-          )}
+      {activeTab === 'leaves' && (() => {
+        const currentYear = new Date().getFullYear();
+        const yearOptions = Array.from({ length: 4 }, (_, i) => currentYear - i);
+        const totalAllowance = leaveBalance ? leaveBalance.annual_allowance + leaveBalance.carry_over : 30;
+        const balanceDisplay = leaveBalance ? Math.max(0, Number(leaveBalance.balance)) : 0;
 
-          {/* Barre de progression */}
-          {leaveBalance && (
-            <div className="card">
-              <div className="flex justify-between text-xs text-gray-500 mb-1">
-                <span>Consommation annuelle</span>
-                <span>{leaveBalance.days_taken} / {leaveBalance.annual_allowance + leaveBalance.carry_over} jours</span>
-              </div>
-              <div className="w-full bg-gray-100 rounded-full h-2">
-                <div
-                  className="bg-brand-500 h-2 rounded-full transition-all"
-                  style={{ width: `${Math.min(100, (leaveBalance.days_taken / Math.max(leaveBalance.annual_allowance + leaveBalance.carry_over, 1)) * 100)}%` }}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Bouton ajouter */}
-          {canManageLeaves && (
-            <div className="flex justify-end">
-              <button onClick={() => setShowLeaveForm(true)} className="btn-primary gap-2 text-sm">
-                <PlusIcon className="w-4 h-4" /> Ajouter un congé
-              </button>
-            </div>
-          )}
-
-          {/* Formulaire ajout */}
-          {showLeaveForm && (
-            <div className="card border-2 border-brand-200">
-              <h4 className="font-semibold text-gray-700 mb-4">Nouveau congé / absence</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="label">Type</label>
-                  <select className="input" value={leaveForm.type}
-                    onChange={e => setLeaveForm(f => ({ ...f, type: e.target.value }))}>
-                    <option value="PLANIFIE">Congé planifié</option>
-                    <option value="IMPRÉVU">Imprévu</option>
-                  </select>
-                </div>
-                {leaveForm.type === 'IMPRÉVU' && (
-                  <div>
-                    <label className="label">Motif</label>
-                    <select className="input" value={leaveForm.absence_subtype}
-                      onChange={e => setLeaveForm(f => ({ ...f, absence_subtype: e.target.value }))}>
-                      <option value="">— Sélectionner —</option>
-                      <option value="MALADIE">Maladie</option>
-                      <option value="DECES_FAMILLE">Décès famille</option>
-                      <option value="URGENCE">Urgence</option>
-                      <option value="AUTRE">Autre</option>
-                    </select>
-                  </div>
-                )}
-                <div>
-                  <label className="label">Date début</label>
-                  <input type="date" className="input" value={leaveForm.start_date}
-                    onChange={e => setLeaveForm(f => ({ ...f, start_date: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="label">Date fin</label>
-                  <input type="date" className="input" value={leaveForm.end_date}
-                    onChange={e => setLeaveForm(f => ({ ...f, end_date: e.target.value }))} />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="label">Commentaire</label>
-                  <input type="text" className="input" placeholder="Optionnel" value={leaveForm.notes}
-                    onChange={e => setLeaveForm(f => ({ ...f, notes: e.target.value }))} />
-                </div>
-              </div>
-              <div className="flex gap-2 mt-4 justify-end">
-                <button onClick={() => setShowLeaveForm(false)} className="btn-secondary text-sm">Annuler</button>
-                <button onClick={handleSubmitLeave} disabled={submittingLeave} className="btn-primary text-sm">
-                  {submittingLeave ? 'Enregistrement...' : 'Enregistrer'}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Historique */}
-          <div className="card">
-            <h4 className="font-semibold text-gray-700 mb-4">Historique {new Date().getFullYear()}</h4>
-            {leaves.length === 0 ? (
-              <p className="text-gray-400 text-sm text-center py-8">Aucun congé enregistré</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-100">
-                      <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">Début</th>
-                      <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">Fin</th>
-                      <th className="text-center py-2 px-3 text-xs font-medium text-gray-500 uppercase">Jours</th>
-                      <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">Type</th>
-                      <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">Statut</th>
-                      <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">Commentaire</th>
-                      {canManageLeaves && <th className="py-2 px-3" />}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {leaves.map(l => (
-                      <tr key={l.id} className="border-b border-gray-50 hover:bg-gray-50">
-                        <td className="py-2.5 px-3 text-gray-700">{new Date(l.start_date).toLocaleDateString('fr-FR')}</td>
-                        <td className="py-2.5 px-3 text-gray-700">{new Date(l.end_date).toLocaleDateString('fr-FR')}</td>
-                        <td className="py-2.5 px-3 text-center font-semibold text-gray-800">{l.days}</td>
-                        <td className="py-2.5 px-3">
-                          {l.type === 'PLANIFIE' ? (
-                            <span className="badge badge-blue">Planifié</span>
-                          ) : (
-                            <span className="badge badge-orange">
-                              {l.absence_subtype ? ABSENCE_SUBTYPE_LABELS[l.absence_subtype as keyof typeof ABSENCE_SUBTYPE_LABELS] || l.absence_subtype : 'Imprévu'}
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-2.5 px-3">
-                          <span className={`badge ${
-                            l.status === 'APPROUVE' ? 'badge-green' :
-                            l.status === 'REFUSE' ? 'badge-red' : 'badge-yellow'
-                          }`}>
-                            {LEAVE_STATUS_LABELS[l.status]}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-3 text-gray-400 text-xs">{l.notes || '—'}</td>
-                        {canManageLeaves && (
-                          <td className="py-2.5 px-3">
-                            <div className="flex gap-1">
-                              {l.status === 'EN_ATTENTE' && (
-                                <>
-                                  <button onClick={() => handleApproveLeave(l.id, 'APPROUVE')}
-                                    className="p-1 text-green-600 hover:bg-green-50 rounded" title="Approuver">
-                                    <CheckIcon className="w-4 h-4" />
-                                  </button>
-                                  <button onClick={() => handleApproveLeave(l.id, 'REFUSE')}
-                                    className="p-1 text-red-500 hover:bg-red-50 rounded" title="Refuser">
-                                    <XMarkIcon className="w-4 h-4" />
-                                  </button>
-                                </>
-                              )}
-                              <button onClick={() => handleDeleteLeave(l.id)}
-                                className="p-1 text-gray-400 hover:bg-gray-100 rounded" title="Supprimer">
-                                <XMarkIcon className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+        return (
+          <div className="space-y-4">
+            {/* Alerte collaborateur inactif */}
+            {employee.status === 'INACTIF' && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700 flex items-center gap-2">
+                <NoSymbolIcon className="w-4 h-4 flex-shrink-0" />
+                Ce collaborateur est inactif — aucun nouveau congé ne peut être saisi.
               </div>
             )}
+
+            {/* Sélecteur d'année + bouton ajouter */}
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-gray-500 font-medium">Année :</label>
+                <select
+                  className="input py-1.5 text-sm w-28"
+                  value={selectedLeaveYear}
+                  onChange={e => {
+                    const y = parseInt(e.target.value);
+                    setSelectedLeaveYear(y);
+                    loadLeaves(y);
+                  }}
+                >
+                  {yearOptions.map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
+              {canManageLeaves && employee.status === 'ACTIF' && (
+                <button onClick={() => setShowLeaveForm(true)} className="btn-primary gap-2 text-sm">
+                  <PlusIcon className="w-4 h-4" /> Ajouter un congé / absence
+                </button>
+              )}
+            </div>
+
+            {/* Cartes de solde */}
+            {leaveBalance && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="card text-center">
+                  <p className="text-3xl font-bold text-brand-600">{balanceDisplay}</p>
+                  <p className="text-xs text-gray-500 mt-1">Solde disponible</p>
+                  <p className="text-xs text-gray-400 mt-0.5">sur {totalAllowance} jours</p>
+                </div>
+                <div className="card text-center">
+                  <p className="text-3xl font-bold text-blue-600">{leaveBalance.days_taken}</p>
+                  <p className="text-xs text-gray-500 mt-1">Congés planifiés pris</p>
+                </div>
+                <div className="card text-center">
+                  <p className="text-3xl font-bold text-orange-500">{leaveBalance.days_unplanned}</p>
+                  <p className="text-xs text-gray-500 mt-1">Jours d'imprévus</p>
+                  {Number(leaveBalance.days_unpaid) > 0 && (
+                    <p className="text-xs text-red-500 mt-0.5">dont {leaveBalance.days_unpaid}j dépassement</p>
+                  )}
+                </div>
+                <div className={`card text-center ${Number(leaveBalance.carry_over) >= 0 ? '' : 'bg-red-50'}`}>
+                  <p className={`text-3xl font-bold ${Number(leaveBalance.carry_over) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {Number(leaveBalance.carry_over) >= 0 ? '+' : ''}{leaveBalance.carry_over}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">Report année N-1</p>
+                </div>
+              </div>
+            )}
+
+            {/* Barre de progression */}
+            {leaveBalance && (
+              <div className="card">
+                <div className="flex justify-between text-xs text-gray-500 mb-2">
+                  <span className="font-medium">Consommation {selectedLeaveYear}</span>
+                  <span>{Number(leaveBalance.days_taken) + Number(leaveBalance.days_unplanned)} / {totalAllowance} jours utilisés</span>
+                </div>
+                <div className="w-full bg-gray-100 rounded-full h-2.5 relative overflow-hidden">
+                  <div
+                    className="bg-blue-500 h-full rounded-full transition-all absolute left-0"
+                    style={{ width: `${Math.min(100, (Number(leaveBalance.days_taken) / Math.max(totalAllowance, 1)) * 100)}%` }}
+                  />
+                  <div
+                    className="bg-orange-400 h-full transition-all absolute"
+                    style={{
+                      left: `${Math.min(100, (Number(leaveBalance.days_taken) / Math.max(totalAllowance, 1)) * 100)}%`,
+                      width: `${Math.min(100 - (Number(leaveBalance.days_taken) / Math.max(totalAllowance, 1)) * 100, (Number(leaveBalance.days_unplanned) / Math.max(totalAllowance, 1)) * 100)}%`,
+                    }}
+                  />
+                </div>
+                <div className="flex gap-4 mt-2 text-xs text-gray-400">
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500 inline-block" />Planifiés</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-400 inline-block" />Imprévus</span>
+                </div>
+              </div>
+            )}
+
+            {/* Formulaire ajout */}
+            {showLeaveForm && (
+              <div className="card border-2 border-brand-200">
+                <h4 className="font-semibold text-gray-700 mb-4">Nouveau congé / absence</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="label">Type</label>
+                    <select className="input" value={leaveForm.type}
+                      onChange={e => setLeaveForm(f => ({ ...f, type: e.target.value, absence_subtype: '' }))}>
+                      <option value="PLANIFIE">Congé planifié</option>
+                      <option value="IMPRÉVU">Imprévu</option>
+                    </select>
+                  </div>
+                  {leaveForm.type === 'IMPRÉVU' && (
+                    <div>
+                      <label className="label">Motif</label>
+                      <select className="input" value={leaveForm.absence_subtype}
+                        onChange={e => setLeaveForm(f => ({ ...f, absence_subtype: e.target.value }))}>
+                        <option value="">— Sélectionner —</option>
+                        <option value="MALADIE">Maladie</option>
+                        <option value="DECES_FAMILLE">Décès famille</option>
+                        <option value="URGENCE">Urgence</option>
+                        <option value="AUTRE">Autre</option>
+                      </select>
+                    </div>
+                  )}
+                  <div>
+                    <label className="label">Date début</label>
+                    <input type="date" className="input" value={leaveForm.start_date}
+                      onChange={e => setLeaveForm(f => ({ ...f, start_date: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label className="label">Date fin</label>
+                    <input type="date" className="input" value={leaveForm.end_date}
+                      onChange={e => setLeaveForm(f => ({ ...f, end_date: e.target.value }))} />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="label">Commentaire</label>
+                    <input type="text" className="input" placeholder="Optionnel" value={leaveForm.notes}
+                      onChange={e => setLeaveForm(f => ({ ...f, notes: e.target.value }))} />
+                  </div>
+                </div>
+                <div className="flex gap-2 mt-4 justify-end">
+                  <button onClick={() => setShowLeaveForm(false)} className="btn-secondary text-sm">Annuler</button>
+                  <button onClick={handleSubmitLeave} disabled={submittingLeave} className="btn-primary text-sm">
+                    {submittingLeave ? 'Enregistrement...' : 'Enregistrer'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Tableau historique */}
+            <div className="card">
+              <h4 className="font-semibold text-gray-700 mb-4">
+                Historique complet — {selectedLeaveYear}
+              </h4>
+              {leaves.length === 0 ? (
+                <p className="text-gray-400 text-sm text-center py-8">Aucun congé enregistré pour {selectedLeaveYear}</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-100 bg-gray-50">
+                        <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">Date début</th>
+                        <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">Date fin</th>
+                        <th className="text-center py-2 px-3 text-xs font-medium text-gray-500 uppercase">Durée</th>
+                        <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">Type</th>
+                        <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">Statut</th>
+                        <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">Commentaire</th>
+                        {canManageLeaves && <th className="py-2 px-3 w-20" />}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {leaves.map(l => (
+                        <tr key={l.id} className="border-b border-gray-50 hover:bg-gray-50">
+                          <td className="py-2.5 px-3 text-gray-700">{new Date(l.start_date).toLocaleDateString('fr-FR')}</td>
+                          <td className="py-2.5 px-3 text-gray-700">{new Date(l.end_date).toLocaleDateString('fr-FR')}</td>
+                          <td className="py-2.5 px-3 text-center font-semibold text-gray-800">{l.days}j</td>
+                          <td className="py-2.5 px-3">
+                            {l.type === 'PLANIFIE' ? (
+                              <span className="badge badge-blue">Planifié</span>
+                            ) : (
+                              <span className="badge badge-orange">
+                                {l.absence_subtype
+                                  ? ABSENCE_SUBTYPE_LABELS[l.absence_subtype as keyof typeof ABSENCE_SUBTYPE_LABELS] || l.absence_subtype
+                                  : 'Imprévu'}
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <span className={`badge ${
+                              l.status === 'APPROUVE' ? 'badge-green' :
+                              l.status === 'REFUSE' ? 'badge-red' : 'badge-yellow'
+                            }`}>
+                              {LEAVE_STATUS_LABELS[l.status]}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-gray-400 text-xs max-w-xs truncate">{l.notes || '—'}</td>
+                          {canManageLeaves && (
+                            <td className="py-2.5 px-3">
+                              <div className="flex gap-1 justify-end">
+                                {l.status === 'EN_ATTENTE' && (
+                                  <>
+                                    <button onClick={() => handleApproveLeave(l.id, 'APPROUVE')}
+                                      className="p-1 text-green-600 hover:bg-green-50 rounded" title="Approuver">
+                                      <CheckIcon className="w-4 h-4" />
+                                    </button>
+                                    <button onClick={() => handleApproveLeave(l.id, 'REFUSE')}
+                                      className="p-1 text-red-500 hover:bg-red-50 rounded" title="Refuser">
+                                      <XMarkIcon className="w-4 h-4" />
+                                    </button>
+                                  </>
+                                )}
+                                <button onClick={() => handleDeleteLeave(l.id)}
+                                  className="p-1 text-gray-400 hover:bg-gray-100 rounded" title="Supprimer">
+                                  <XMarkIcon className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Deactivate Modal */}
       {showDeactivateModal && (
