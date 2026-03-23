@@ -10,7 +10,11 @@ import {
   EnvelopeIcon,
   CakeIcon,
   ExclamationTriangleIcon,
+  BriefcaseIcon,
+  TrophyIcon,
 } from '@heroicons/react/24/outline';
+import { Link } from 'react-router-dom';
+import { useAuthStore } from '../../store/authStore';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -32,7 +36,11 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle }: {
   </div>
 );
 
+const CAN_VIEW_AMOUNTS = ['DRH', 'DIRECTION_GENERALE', 'ASSOCIE'];
+
 export default function DashboardPage() {
+  const { user } = useAuthStore();
+  const canViewAmounts = CAN_VIEW_AMOUNTS.includes(user?.role || '');
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -202,6 +210,52 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Widget Reporting Commercial */}
+      {data.commercial && (
+        <div className="card">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <BriefcaseIcon className="w-5 h-5 text-brand-700" />
+              <h3 className="text-base font-semibold text-gray-800">Reporting Commercial — Ce mois</h3>
+            </div>
+            <Link to="/commercial" className="text-xs text-brand-600 hover:underline">Voir tout →</Link>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="text-center p-3 bg-blue-50 rounded-xl">
+              <p className="text-xl font-bold text-blue-700">{data.commercial.ami_this_month}</p>
+              <p className="text-xs text-gray-500 mt-0.5">AMI soumis</p>
+            </div>
+            <div className="text-center p-3 bg-purple-50 rounded-xl">
+              <p className="text-xl font-bold text-purple-700">{data.commercial.ao_this_month}</p>
+              <p className="text-xs text-gray-500 mt-0.5">Appels d'offre</p>
+            </div>
+            <div className="text-center p-3 bg-green-50 rounded-xl">
+              <div className="flex items-center justify-center gap-1">
+                <TrophyIcon className="w-4 h-4 text-green-600" />
+                <p className="text-xl font-bold text-green-700">{data.commercial.wins_this_month}</p>
+              </div>
+              <p className="text-xs text-gray-500 mt-0.5">Wins</p>
+            </div>
+            {canViewAmounts && (
+              <div className="text-center p-3 bg-amber-50 rounded-xl">
+                <p className="text-base font-bold text-amber-700 leading-tight">
+                  {parseFloat(data.commercial.amount_this_month) > 0
+                    ? new Intl.NumberFormat('fr-FR').format(parseFloat(data.commercial.amount_this_month))
+                    : '0'}
+                </p>
+                <p className="text-xs text-gray-500 mt-0.5">FCFA gagnés</p>
+              </div>
+            )}
+            {!canViewAmounts && (
+              <div className="text-center p-3 bg-gray-50 rounded-xl">
+                <p className="text-xl font-bold text-gray-400">—</p>
+                <p className="text-xs text-gray-400 mt-0.5">Montant (restreint)</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Bottom widgets */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

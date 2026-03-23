@@ -163,6 +163,7 @@ export interface DashboardData {
     exit_date: string;
     days_remaining: number;
   }>;
+  commercial?: CommercialDashboardWidget;
 }
 
 export interface KPIData {
@@ -267,6 +268,57 @@ export const DIPLOMA_LABELS: Record<string, string> = {
   CISA: 'CISA',
   CFA: 'CFA',
   AUTRES: 'Autres',
+};
+
+// ============================================================
+// Reporting Commercial
+// ============================================================
+export type SubmissionType = 'AMI' | 'APPEL_OFFRE';
+export type SubmissionStatus = 'EN_COURS' | 'GAGNE' | 'PERDU';
+
+export interface CommercialSubmission {
+  id: string;
+  type: SubmissionType;
+  reference: string;
+  title: string;
+  client: string;
+  submission_date: string;
+  service_line: ServiceLine;
+  responsible_employee_id?: string;
+  responsible_name?: string;
+  status: SubmissionStatus;
+  contract_amount?: number | null;
+  contract_start_date?: string | null;
+  contract_end_date?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CommercialStats {
+  total: number;
+  wins: number;
+  losses: number;
+  en_cours: number;
+  success_rate: number;
+  total_amount: number;
+}
+
+export interface CommercialDashboardWidget {
+  ami_this_month: string;
+  ao_this_month: string;
+  wins_this_month: string;
+  amount_this_month: string;
+}
+
+export const SUBMISSION_TYPE_LABELS: Record<SubmissionType, string> = {
+  AMI: 'Avis à Manifestation d\'Intérêt',
+  APPEL_OFFRE: 'Appel d\'offre',
+};
+
+export const SUBMISSION_STATUS_LABELS: Record<SubmissionStatus, string> = {
+  EN_COURS: 'En cours',
+  GAGNE: 'Gagné',
+  PERDU: 'Perdu',
 };
 
 export const DOMAINE_LABELS: Record<string, string> = {

@@ -6,10 +6,10 @@ import {
   ChartBarIcon,
   AcademicCapIcon,
   DocumentChartBarIcon,
-  Cog6ToothIcon,
   ClipboardDocumentListIcon,
   UserGroupIcon,
   XMarkIcon,
+  BriefcaseIcon,
 } from '@heroicons/react/24/outline';
 
 interface NavItem {
@@ -24,6 +24,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/personnel', icon: UsersIcon, label: 'Personnel' },
   { to: '/kpis', icon: ChartBarIcon, label: 'KPIs & Statistiques' },
   { to: '/formations', icon: AcademicCapIcon, label: 'Formations' },
+  { to: '/commercial', icon: BriefcaseIcon, label: 'Reporting Commercial' },
   { to: '/rapports', icon: DocumentChartBarIcon, label: 'Rapports', roles: ['DRH', 'DIRECTION_GENERALE'] },
 ];
 

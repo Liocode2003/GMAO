@@ -6,6 +6,7 @@ import trainingRoutes from './trainings';
 import userRoutes from './users';
 import reportRoutes from './reports';
 import leavesRoutes from './leaves';
+import commercialRoutes from './commercial';
 
 const router = Router();
 
@@ -16,5 +17,6 @@ router.use('/trainings', trainingRoutes);
 router.use('/users', userRoutes);
 router.use('/reports', reportRoutes);
 router.use('/leaves', leavesRoutes);
+router.use('/commercial', commercialRoutes);
 
 export default router;

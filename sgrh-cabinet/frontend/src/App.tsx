@@ -11,6 +11,7 @@ import TrainingsPage from './pages/trainings/TrainingsPage';
 import ReportsPage from './pages/rapport/ReportsPage';
 import UsersPage from './pages/settings/UsersPage';
 import AuditLogsPage from './pages/settings/AuditLogsPage';
+import ReportingCommercialPage from './pages/commercial/ReportingCommercialPage';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuthStore();
@@ -41,6 +42,7 @@ export default function App() {
         <Route path="personnel/:id/modifier" element={<AdminRoute><EmployeeFormPage /></AdminRoute>} />
         <Route path="kpis" element={<KPIsPage />} />
         <Route path="formations" element={<TrainingsPage />} />
+        <Route path="commercial" element={<ReportingCommercialPage />} />
         <Route path="rapports" element={<AdminRoute><ReportsPage /></AdminRoute>} />
         <Route path="parametres/utilisateurs" element={<AdminRoute><UsersPage /></AdminRoute>} />
         <Route path="parametres/audit" element={<AdminRoute><AuditLogsPage /></AdminRoute>} />
