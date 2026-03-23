@@ -133,8 +133,18 @@ export default function EmployeeDetailPage() {
     }
   };
 
-  const handleExportPDF = () => {
-    window.open(`/api/employees/${id}/export/pdf`, '_blank');
+  const handleExportPDF = async () => {
+    try {
+      const res = await api.get(`/employees/${id}/export/pdf`, { responseType: 'blob' });
+      const blob = new Blob([res.data as BlobPart], { type: 'application/pdf' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `fiche_${employee?.matricule || id}.pdf`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch {
+      toast.error('Erreur lors de l\'export PDF');
+    }
   };
 
   if (loading) return (

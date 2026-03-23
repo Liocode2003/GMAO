@@ -297,12 +297,26 @@ export default function EmployeesPage() {
     return params.toString();
   };
 
+  const downloadBlob = async (url: string, filename: string) => {
+    try {
+      const res = await api.get(url, { responseType: 'blob' });
+      const blob = new Blob([res.data as BlobPart]);
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch {
+      toast.error('Erreur lors de l\'export');
+    }
+  };
+
   const handleExportExcel = () => {
-    window.open(`/api/employees/export/excel?${buildExportParams()}`, '_blank');
+    downloadBlob(`/employees/export/excel?${buildExportParams()}`, `collaborateurs_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const handleExportPDF = () => {
-    window.open(`/api/employees/export/pdf?${buildExportParams()}`, '_blank');
+    downloadBlob(`/employees/export/pdf?${buildExportParams()}`, `collaborateurs_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   return (
