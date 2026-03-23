@@ -5,7 +5,7 @@ import { Employee, PaginatedResponse, ImportRow, SERVICE_LINE_LABELS, GRADE_LABE
 import { useAuthStore } from '../../store/authStore';
 import {
   PlusIcon, MagnifyingGlassIcon, FunnelIcon,
-  EyeIcon, PencilIcon, XMarkIcon,
+  EyeIcon, PencilIcon, XMarkIcon, NoSymbolIcon,
   ArrowUpTrayIcon, DocumentArrowDownIcon, TableCellsIcon,
   CheckCircleIcon, ExclamationCircleIcon, XCircleIcon,
 } from '@heroicons/react/24/outline';
@@ -346,6 +346,24 @@ export default function EmployeesPage() {
   });
 
   const canManage = ['DRH', 'DIRECTION_GENERALE'].includes(user?.role || '');
+  const [deactivateTarget, setDeactivateTarget] = useState<Employee | null>(null);
+  const [exitDate, setExitDate] = useState(new Date().toISOString().split('T')[0]);
+  const [deactivating, setDeactivating] = useState(false);
+
+  const handleDeactivate = async () => {
+    if (!deactivateTarget) return;
+    setDeactivating(true);
+    try {
+      await api.patch(`/employees/${deactivateTarget.id}/deactivate`, { exit_date: exitDate });
+      toast.success(`${deactivateTarget.first_name} ${deactivateTarget.last_name} désactivé(e)`);
+      setDeactivateTarget(null);
+      fetchEmployees(1);
+    } catch {
+      toast.error('Erreur lors de la désactivation');
+    } finally {
+      setDeactivating(false);
+    }
+  };
 
   const fetchEmployees = useCallback(async (page = 1) => {
     setLoading(true);
@@ -577,13 +595,24 @@ export default function EmployeesPage() {
                       <EyeIcon className="w-4 h-4" />
                     </button>
                     {canManage && (
-                      <button
-                        onClick={() => navigate(`/personnel/${emp.id}/modifier`)}
-                        className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded"
-                        title="Modifier"
-                      >
-                        <PencilIcon className="w-4 h-4" />
-                      </button>
+                      <>
+                        <button
+                          onClick={() => navigate(`/personnel/${emp.id}/modifier`)}
+                          className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded"
+                          title="Modifier"
+                        >
+                          <PencilIcon className="w-4 h-4" />
+                        </button>
+                        {emp.status === 'ACTIF' && (
+                          <button
+                            onClick={() => { setDeactivateTarget(emp); setExitDate(new Date().toISOString().split('T')[0]); }}
+                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
+                            title="Désactiver"
+                          >
+                            <NoSymbolIcon className="w-4 h-4" />
+                          </button>
+                        )}
+                      </>
                     )}
                   </div>
                 </td>
@@ -624,6 +653,28 @@ export default function EmployeesPage() {
           onClose={() => setShowImport(false)}
           onSuccess={() => { fetchEmployees(1); setShowImport(false); }}
         />
+      )}
+
+      {/* Modal Désactivation */}
+      {deactivateTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-fade-in">
+            <h3 className="text-lg font-semibold text-gray-800 mb-1">Désactiver le collaborateur</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              <strong>{deactivateTarget.first_name} {deactivateTarget.last_name}</strong> sera marqué(e) comme inactif(ve). Cette action est réversible.
+            </p>
+            <div className="mb-5">
+              <label className="label">Date de sortie</label>
+              <input type="date" className="input" value={exitDate} onChange={e => setExitDate(e.target.value)} />
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setDeactivateTarget(null)} className="btn-secondary">Annuler</button>
+              <button onClick={handleDeactivate} disabled={deactivating} className="btn-danger">
+                {deactivating ? 'Traitement...' : 'Désactiver'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
