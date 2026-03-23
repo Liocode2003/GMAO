@@ -25,6 +25,10 @@ import { authenticate, authorize, auditLog } from '../middleware/auth';
 
 const router = Router();
 
+// Photo publique — doit être AVANT router.use(authenticate)
+// (le navigateur charge <img src="..."> sans token JWT)
+router.get('/:id/photo/file/:filename', servePhoto);
+
 router.use(authenticate);
 
 // Liste + filtres
@@ -66,7 +70,6 @@ router.post('/:id/photo', authorize('DRH', 'DIRECTION_GENERALE'), (req: Request,
     next();
   });
 }, handlePhotoUpload);
-router.get('/:id/photo/file/:filename', servePhoto);
 
 // Export PDF fiche individuelle
 router.get('/:id/export/pdf', exportEmployeePDF);
