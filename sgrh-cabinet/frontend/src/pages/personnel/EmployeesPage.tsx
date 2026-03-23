@@ -156,25 +156,7 @@ function ImportModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
                     </span>
                   ))}
                 </div>
-                <div className="mt-3 pt-3 border-t border-blue-200 grid grid-cols-2 gap-x-6 gap-y-1 text-xs text-blue-700">
-                  <span>• Sexe : M ou F</span>
-                  <span>• Situation matrimoniale : Célibataire / Marié(e) / Divorcé(e) / Veuf/Veuve</span>
-                  <span>• Type de contrat : CDI / CDD / Stage / Consultant / Freelance</span>
-                  <span>• Expatrié : Oui ou Non</span>
-                  <span>• Dates : format JJ/MM/AAAA</span>
-                  <span>• Grade / Ligne de service / Fonction : voir feuille 2 du modèle</span>
-                </div>
               </div>
-
-              {/* Bouton modèle */}
-              <button
-                type="button"
-                onClick={handleDownloadTemplate}
-                className="flex items-center gap-2 text-sm text-brand-700 hover:text-brand-800 font-medium border border-brand-200 hover:border-brand-400 bg-brand-50 hover:bg-brand-100 px-4 py-2 rounded-lg transition-colors"
-              >
-                <DocumentArrowDownIcon className="w-4 h-4" />
-                Télécharger le fichier modèle (.xlsx)
-              </button>
             </div>
           )}
 
