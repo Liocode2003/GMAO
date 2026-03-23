@@ -484,7 +484,7 @@ export const exportEmployeePDF = async (req: Request, res: Response) => {
       AUDIT_CONTROLE: 'Audit et Contrôle de Gestion', CCA: 'Comptabilité Contrôle Audit', AUTRES: 'Autres',
     };
     const diplomasRes = await query(
-      `SELECT diploma_type, domaine FROM employee_diplomas WHERE employee_id = $1 ORDER BY created_at`,
+      `SELECT diploma_type, diploma_other, domaine, domaine_other FROM employee_diplomas WHERE employee_id = $1 ORDER BY created_at`,
       [id]
     );
     if (diplomasRes.rows.length === 0) {
@@ -497,10 +497,16 @@ export const exportEmployeePDF = async (req: Request, res: Response) => {
       y += lineH;
       for (const d of diplomasRes.rows) {
         if (y > doc.page.height - 80) { doc.addPage(); y = 50; }
+        const diplomaLabel = d.diploma_type === 'AUTRES' && d.diploma_other
+          ? `Autres : ${d.diploma_other}`
+          : (DIPLOMA_DISPLAY[d.diploma_type] || d.diploma_type);
+        const domaineLabel = d.domaine === 'AUTRES' && d.domaine_other
+          ? `Autres : ${d.domaine_other}`
+          : (d.domaine ? (DOMAINE_DISPLAY[d.domaine] || d.domaine) : '—');
         doc.fillColor('#111827').fontSize(10)
-          .text(DIPLOMA_DISPLAY[d.diploma_type] || d.diploma_type, labelX, y, { width: 145 });
+          .text(diplomaLabel, labelX, y, { width: 145 });
         doc.fillColor('#374151').fontSize(10)
-          .text(d.domaine ? (DOMAINE_DISPLAY[d.domaine] || d.domaine) : '—', valueX, y, { width: 200 });
+          .text(domaineLabel, valueX, y, { width: 200 });
         y += lineH;
       }
     }

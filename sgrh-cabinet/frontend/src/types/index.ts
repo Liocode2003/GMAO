@@ -21,7 +21,9 @@ export type MaritalStatus = 'CELIBATAIRE' | 'MARIE' | 'DIVORCE' | 'VEUF';
 export interface EmployeeDiploma {
   id?: string;
   diploma_type: string;
+  diploma_other?: string;
   domaine?: string;
+  domaine_other?: string;
 }
 
 export interface Employee {

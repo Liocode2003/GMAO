@@ -411,39 +411,70 @@ export default function EmployeeFormPage() {
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide px-1">Domaine</p>
                 </div>
                 {diplomas.map((d, idx) => (
-                  <div key={idx} className="flex gap-3 items-center">
-                    <div className="flex-1">
-                      <select
-                        className="input"
-                        value={d.diploma_type}
-                        onChange={(e) => setDiplomas(prev => prev.map((item, i) => i === idx ? { ...item, diploma_type: e.target.value } : item))}
+                  <div key={idx} className="space-y-2">
+                    <div className="flex gap-3 items-center">
+                      <div className="flex-1">
+                        <select
+                          className="input"
+                          value={d.diploma_type}
+                          onChange={(e) => setDiplomas(prev => prev.map((item, i) => i === idx ? { ...item, diploma_type: e.target.value, diploma_other: '' } : item))}
+                        >
+                          <option value="">— Sélectionner —</option>
+                          {Object.entries(DIPLOMA_LABELS).map(([k, v]) => (
+                            <option key={k} value={k}>{v}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="flex-1">
+                        <select
+                          className="input"
+                          value={d.domaine || ''}
+                          onChange={(e) => setDiplomas(prev => prev.map((item, i) => i === idx ? { ...item, domaine: e.target.value, domaine_other: '' } : item))}
+                        >
+                          <option value="">— Domaine —</option>
+                          {Object.entries(DOMAINE_LABELS).map(([k, v]) => (
+                            <option key={k} value={k}>{v}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setDiplomas(prev => prev.filter((_, i) => i !== idx))}
+                        className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Supprimer"
                       >
-                        <option value="">— Sélectionner —</option>
-                        {Object.entries(DIPLOMA_LABELS).map(([k, v]) => (
-                          <option key={k} value={k}>{v}</option>
-                        ))}
-                      </select>
+                        <TrashIcon className="w-4 h-4" />
+                      </button>
                     </div>
-                    <div className="flex-1">
-                      <select
-                        className="input"
-                        value={d.domaine || ''}
-                        onChange={(e) => setDiplomas(prev => prev.map((item, i) => i === idx ? { ...item, domaine: e.target.value } : item))}
-                      >
-                        <option value="">— Domaine —</option>
-                        {Object.entries(DOMAINE_LABELS).map(([k, v]) => (
-                          <option key={k} value={k}>{v}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setDiplomas(prev => prev.filter((_, i) => i !== idx))}
-                      className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition-colors"
-                      title="Supprimer"
-                    >
-                      <TrashIcon className="w-4 h-4" />
-                    </button>
+                    {/* Champs de précision pour "Autres" */}
+                    {(d.diploma_type === 'AUTRES' || d.domaine === 'AUTRES') && (
+                      <div className="flex gap-3 pl-0">
+                        {d.diploma_type === 'AUTRES' && (
+                          <div className="flex-1">
+                            <input
+                              type="text"
+                              className="input text-sm"
+                              placeholder="Précisez le diplôme..."
+                              value={d.diploma_other || ''}
+                              onChange={(e) => setDiplomas(prev => prev.map((item, i) => i === idx ? { ...item, diploma_other: e.target.value } : item))}
+                            />
+                          </div>
+                        )}
+                        {d.domaine === 'AUTRES' && (
+                          <div className="flex-1">
+                            <input
+                              type="text"
+                              className="input text-sm"
+                              placeholder="Précisez le domaine..."
+                              value={d.domaine_other || ''}
+                              onChange={(e) => setDiplomas(prev => prev.map((item, i) => i === idx ? { ...item, domaine_other: e.target.value } : item))}
+                            />
+                          </div>
+                        )}
+                        {/* Espaceur pour aligner avec le bouton supprimer */}
+                        {!(d.diploma_type === 'AUTRES' && d.domaine === 'AUTRES') && <div className="w-10 flex-shrink-0" />}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

@@ -11,7 +11,9 @@ CREATE TABLE IF NOT EXISTS employee_diplomas (
   id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   employee_id  UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
   diploma_type VARCHAR(100) NOT NULL,
+  diploma_other VARCHAR(200),
   domaine      VARCHAR(100),
+  domaine_other VARCHAR(200),
   created_by   UUID REFERENCES users(id),
   created_at   TIMESTAMPTZ DEFAULT NOW()
 );

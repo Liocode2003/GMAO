@@ -137,7 +137,7 @@ export const getEmployee = async (req: Request, res: Response) => {
 
     // Récupérer les diplômes depuis la table dédiée
     const diplomasRes = await query(
-      `SELECT id, diploma_type, domaine FROM employee_diplomas WHERE employee_id = $1 ORDER BY created_at`,
+      `SELECT id, diploma_type, diploma_other, domaine, domaine_other FROM employee_diplomas WHERE employee_id = $1 ORDER BY created_at`,
       [id]
     );
 
@@ -225,8 +225,8 @@ export const createEmployee = async (req: Request, res: Response) => {
       for (const d of diplomas) {
         if (d.diploma_type) {
           await query(
-            `INSERT INTO employee_diplomas (employee_id, diploma_type, domaine, created_by) VALUES ($1, $2, $3, $4)`,
-            [result.rows[0].id, d.diploma_type, d.domaine || null, req.user?.userId]
+            `INSERT INTO employee_diplomas (employee_id, diploma_type, diploma_other, domaine, domaine_other, created_by) VALUES ($1, $2, $3, $4, $5, $6)`,
+            [result.rows[0].id, d.diploma_type, d.diploma_other || null, d.domaine || null, d.domaine_other || null, req.user?.userId]
           );
         }
       }
@@ -297,8 +297,8 @@ export const updateEmployee = async (req: Request, res: Response) => {
         for (const d of diplomasToUpdate) {
           if (d.diploma_type) {
             await query(
-              `INSERT INTO employee_diplomas (employee_id, diploma_type, domaine, created_by) VALUES ($1, $2, $3, $4)`,
-              [id, d.diploma_type, d.domaine || null, req.user?.userId]
+              `INSERT INTO employee_diplomas (employee_id, diploma_type, diploma_other, domaine, domaine_other, created_by) VALUES ($1, $2, $3, $4, $5, $6)`,
+              [id, d.diploma_type, d.diploma_other || null, d.domaine || null, d.domaine_other || null, req.user?.userId]
             );
           }
         }

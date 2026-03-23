@@ -337,10 +337,18 @@ export default function EmployeeDetailPage() {
                     {employee.diplomas.map((d, idx) => (
                       <tr key={d.id || idx} className="border-b border-gray-50 hover:bg-gray-50">
                         <td className="py-2.5 px-3 font-medium text-gray-800">
-                          {DIPLOMA_LABELS[d.diploma_type] || d.diploma_type}
+                          {d.diploma_type === 'AUTRES'
+                            ? <span>{DIPLOMA_LABELS['AUTRES']}{d.diploma_other && <span className="ml-1 text-brand-700">— {d.diploma_other}</span>}</span>
+                            : (DIPLOMA_LABELS[d.diploma_type] || d.diploma_type)
+                          }
                         </td>
                         <td className="py-2.5 px-3 text-gray-600">
-                          {d.domaine ? (DOMAINE_LABELS[d.domaine] || d.domaine) : <span className="text-gray-300">—</span>}
+                          {d.domaine
+                            ? d.domaine === 'AUTRES'
+                              ? <span>{DOMAINE_LABELS['AUTRES']}{d.domaine_other && <span className="ml-1 text-brand-700">— {d.domaine_other}</span>}</span>
+                              : (DOMAINE_LABELS[d.domaine] || d.domaine)
+                            : <span className="text-gray-300">—</span>
+                          }
                         </td>
                       </tr>
                     ))}
