@@ -97,7 +97,7 @@ export const parseImport = async (req: Request, res: Response) => {
 
   try {
     const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(req.file.buffer);
+    await workbook.xlsx.load(req.file.buffer as Buffer);
     const sheet = workbook.worksheets[0];
 
     if (!sheet) return res.status(400).json({ error: 'Fichier Excel vide ou invalide' });
@@ -119,7 +119,7 @@ export const parseImport = async (req: Request, res: Response) => {
         if (field) {
           const cell = row.getCell(colIdx + 1);
           let val = cell.value;
-          if (val instanceof Object && 'result' in val) val = (val as { result: unknown }).result;
+          if (val instanceof Object && 'result' in val) val = (val as { result: ExcelJS.CellValue }).result;
           if (['birth_date', 'entry_date', 'exit_date'].includes(field)) {
             data[field] = parseDate(val);
           } else if (field === 'gender') {
@@ -228,7 +228,7 @@ export const exportEmployeesExcel = async (req: Request, res: Response) => {
 
     const showSalary = canViewSalary(req.user?.role);
 
-    const columns: ExcelJS.Column[] = [
+    const columns: Partial<ExcelJS.Column>[] = [
       { header: 'Matricule', key: 'matricule', width: 16 },
       { header: 'Nom', key: 'last_name', width: 20 },
       { header: 'Prénoms', key: 'first_name', width: 20 },
@@ -250,7 +250,7 @@ export const exportEmployeesExcel = async (req: Request, res: Response) => {
       columns.push({ header: 'Date de naissance', key: 'birth_date', width: 16 });
     }
 
-    sheet.columns = columns;
+    sheet.columns = columns as ExcelJS.Column[];
 
     // Style en-tête
     sheet.getRow(1).eachCell((cell) => {
