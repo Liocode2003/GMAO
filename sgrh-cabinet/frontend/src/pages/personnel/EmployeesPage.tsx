@@ -23,6 +23,14 @@ const GenderBadge = ({ gender }: { gender: string }) => (
   </span>
 );
 
+// Colonnes dans l'ordre du cahier des charges
+const IMPORT_COLUMNS_DISPLAY = [
+  'Matricule', 'Nom', 'Prénoms', 'Sexe', 'Date de naissance',
+  'Situation matrimoniale', 'Nom conjoint', 'Tél conjoint', 'Nb enfants',
+  'Email', 'Téléphone', 'Fonction', 'Grade', 'Ligne de service',
+  "Type de contrat", "Date d'entrée", 'Date de sortie', 'Expatrié', 'Salaire',
+];
+
 // ============================================================
 // Modal Import Excel
 // ============================================================
@@ -32,8 +40,13 @@ function ImportModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
   const [parsing, setParsing] = useState(false);
   const [executing, setExecuting] = useState(false);
   const [rows, setRows] = useState<ImportRow[]>([]);
-  const [result, setResult] = useState<{ imported: number; failed: number } | null>(null);
+  const [result, setResult] = useState<{ imported: number; failed: number; failedRows?: { matricule: unknown; error: string }[] } | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [unknownColumns, setUnknownColumns] = useState<string[]>([]);
+
+  const handleDownloadTemplate = () => {
+    window.open('/api/employees/import/template', '_blank');
+  };
 
   const handleFile = async (file: File) => {
     if (!file.name.endsWith('.xlsx')) {
@@ -41,6 +54,7 @@ function ImportModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
       return;
     }
     setParsing(true);
+    setUnknownColumns([]);
     try {
       const fd = new FormData();
       fd.append('file', file);
@@ -48,6 +62,7 @@ function ImportModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setRows(data.rows);
+      if (data.unknownColumns?.length) setUnknownColumns(data.unknownColumns);
       setStep('preview');
     } catch {
       // handled by interceptor
@@ -81,18 +96,19 @@ function ImportModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
 
   const validCount = rows.filter(r => r.errors.length === 0).length;
   const errorCount = rows.filter(r => r.errors.length > 0).length;
+  const allErrors = rows.filter(r => r.errors.length > 0).flatMap(r => r.errors);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col animate-fade-in">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col animate-fade-in">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
           <div>
             <h3 className="text-lg font-semibold text-gray-800">Import Excel des collaborateurs</h3>
             <p className="text-sm text-gray-500 mt-0.5">
               {step === 'upload' && 'Sélectionnez un fichier .xlsx'}
-              {step === 'preview' && `${rows.length} ligne(s) — ${validCount} valide(s), ${errorCount} erreur(s)`}
-              {step === 'done' && 'Import terminé'}
+              {step === 'preview' && `${rows.length} ligne(s) détectée(s) — ${validCount} valide(s), ${errorCount} en erreur`}
+              {step === 'done' && 'Rapport d\'import'}
             </p>
           </div>
           <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
@@ -105,7 +121,7 @@ function ImportModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
 
           {/* Étape 1: Upload */}
           {step === 'upload' && (
-            <div>
+            <div className="space-y-5">
               <div
                 className={`border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-colors ${
                   dragOver ? 'border-brand-400 bg-brand-50' : 'border-gray-300 hover:border-brand-300 hover:bg-gray-50'
@@ -122,70 +138,114 @@ function ImportModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
                   onChange={(e) => { if (e.target.files?.[0]) handleFile(e.target.files[0]); }} />
               </div>
               {parsing && (
-                <div className="mt-4 flex items-center justify-center gap-2 text-gray-500">
+                <div className="flex items-center justify-center gap-2 text-gray-500">
                   <div className="animate-spin w-5 h-5 border-2 border-brand-600 border-t-transparent rounded-full" />
                   Analyse en cours...
                 </div>
               )}
-              {/* Template colonnes */}
-              <div className="mt-6 p-4 bg-blue-50 rounded-xl">
-                <p className="text-sm font-medium text-blue-800 mb-2">Colonnes attendues dans le fichier :</p>
-                <p className="text-xs text-blue-700">
-                  Matricule · Nom · Prénoms · Sexe · Date de naissance · Email · Téléphone · Fonction · Ligne de service · Grade · Type de contrat · Date d'entrée · Date de sortie · Salaire · Département · Expatrié · Situation matrimoniale · Nom conjoint · Tél conjoint · Nb enfants
+
+              {/* Colonnes attendues */}
+              <div className="p-4 bg-blue-50 rounded-xl">
+                <p className="text-sm font-semibold text-blue-800 mb-3">
+                  Colonnes attendues dans le fichier (dans cet ordre) :
                 </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {IMPORT_COLUMNS_DISPLAY.map((col, i) => (
+                    <span key={i} className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded font-mono">
+                      {col}
+                    </span>
+                  ))}
+                </div>
+                <div className="mt-3 pt-3 border-t border-blue-200 grid grid-cols-2 gap-x-6 gap-y-1 text-xs text-blue-700">
+                  <span>• Sexe : M ou F</span>
+                  <span>• Situation matrimoniale : Célibataire / Marié(e) / Divorcé(e) / Veuf/Veuve</span>
+                  <span>• Type de contrat : CDI / CDD / Stage / Consultant / Freelance</span>
+                  <span>• Expatrié : Oui ou Non</span>
+                  <span>• Dates : format JJ/MM/AAAA</span>
+                  <span>• Grade / Ligne de service / Fonction : voir feuille 2 du modèle</span>
+                </div>
               </div>
+
+              {/* Bouton modèle */}
+              <button
+                type="button"
+                onClick={handleDownloadTemplate}
+                className="flex items-center gap-2 text-sm text-brand-700 hover:text-brand-800 font-medium border border-brand-200 hover:border-brand-400 bg-brand-50 hover:bg-brand-100 px-4 py-2 rounded-lg transition-colors"
+              >
+                <DocumentArrowDownIcon className="w-4 h-4" />
+                Télécharger le fichier modèle (.xlsx)
+              </button>
             </div>
           )}
 
           {/* Étape 2: Aperçu */}
           {step === 'preview' && (
-            <div>
+            <div className="space-y-4">
               {/* Résumé */}
-              <div className="flex gap-4 mb-4">
+              <div className="flex gap-3 flex-wrap">
+                <div className="flex items-center gap-2 text-sm text-gray-700 bg-gray-100 px-3 py-2 rounded-lg">
+                  <TableCellsIcon className="w-4 h-4" />
+                  {rows.length} ligne(s) au total
+                </div>
                 <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 px-3 py-2 rounded-lg">
                   <CheckCircleIcon className="w-4 h-4" />
-                  {validCount} ligne(s) valide(s)
+                  {validCount} valide(s) — seront importées
                 </div>
                 {errorCount > 0 && (
                   <div className="flex items-center gap-2 text-sm text-red-700 bg-red-50 px-3 py-2 rounded-lg">
                     <XCircleIcon className="w-4 h-4" />
-                    {errorCount} ligne(s) en erreur
+                    {errorCount} en erreur — ignorées
                   </div>
                 )}
               </div>
 
+              {/* Avertissement colonnes inconnues */}
+              {unknownColumns.length > 0 && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex gap-2 text-sm text-amber-800">
+                  <ExclamationCircleIcon className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  <span>Colonnes non reconnues (ignorées) : <strong>{unknownColumns.join(', ')}</strong></span>
+                </div>
+              )}
+
               {/* Tableau aperçu */}
               <div className="overflow-x-auto border border-gray-200 rounded-xl">
                 <table className="w-full text-xs">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-gray-50 sticky top-0">
                     <tr>
-                      <th className="px-3 py-2 text-left text-gray-500">Ligne</th>
-                      <th className="px-3 py-2 text-left text-gray-500">Matricule</th>
-                      <th className="px-3 py-2 text-left text-gray-500">Nom</th>
-                      <th className="px-3 py-2 text-left text-gray-500">Prénoms</th>
-                      <th className="px-3 py-2 text-left text-gray-500">Fonction</th>
-                      <th className="px-3 py-2 text-left text-gray-500">Grade</th>
-                      <th className="px-3 py-2 text-left text-gray-500">Contrat</th>
-                      <th className="px-3 py-2 text-left text-gray-500">Statut</th>
+                      <th className="px-3 py-2 text-left text-gray-500 font-medium whitespace-nowrap">#</th>
+                      <th className="px-3 py-2 text-left text-gray-500 font-medium whitespace-nowrap">Matricule</th>
+                      <th className="px-3 py-2 text-left text-gray-500 font-medium whitespace-nowrap">Nom</th>
+                      <th className="px-3 py-2 text-left text-gray-500 font-medium whitespace-nowrap">Prénoms</th>
+                      <th className="px-3 py-2 text-left text-gray-500 font-medium whitespace-nowrap">Fonction</th>
+                      <th className="px-3 py-2 text-left text-gray-500 font-medium whitespace-nowrap">Grade</th>
+                      <th className="px-3 py-2 text-left text-gray-500 font-medium whitespace-nowrap">Ligne de service</th>
+                      <th className="px-3 py-2 text-left text-gray-500 font-medium whitespace-nowrap">Contrat</th>
+                      <th className="px-3 py-2 text-left text-gray-500 font-medium whitespace-nowrap">Date d'entrée</th>
+                      <th className="px-3 py-2 text-left text-gray-500 font-medium whitespace-nowrap">Statut</th>
                     </tr>
                   </thead>
                   <tbody>
                     {rows.map((row) => (
-                      <tr key={row.rowIndex} className={`border-t border-gray-100 ${row.errors.length > 0 ? 'bg-red-50' : ''}`}>
+                      <tr key={row.rowIndex} className={`border-t border-gray-100 ${row.errors.length > 0 ? 'bg-red-50' : 'hover:bg-gray-50'}`}>
                         <td className="px-3 py-2 text-gray-400">{row.rowIndex}</td>
-                        <td className="px-3 py-2 font-mono">{String(row.data.matricule || '')}</td>
-                        <td className="px-3 py-2">{String(row.data.last_name || '')}</td>
-                        <td className="px-3 py-2">{String(row.data.first_name || '')}</td>
-                        <td className="px-3 py-2">{String(row.data.function || '')}</td>
-                        <td className="px-3 py-2">{String(row.data.grade || '')}</td>
-                        <td className="px-3 py-2">{String(row.data.contract_type || '')}</td>
+                        <td className="px-3 py-2 font-mono text-gray-800">{String(row.data.matricule || '—')}</td>
+                        <td className="px-3 py-2">{String(row.data.last_name || '—')}</td>
+                        <td className="px-3 py-2">{String(row.data.first_name || '—')}</td>
+                        <td className="px-3 py-2">{String(row.data.function || '—')}</td>
+                        <td className="px-3 py-2">{String(row.data.grade || '—')}</td>
+                        <td className="px-3 py-2">{String(row.data.service_line || '—')}</td>
+                        <td className="px-3 py-2">{String(row.data.contract_type || '—')}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">{String(row.data.entry_date || '—')}</td>
                         <td className="px-3 py-2">
                           {row.errors.length === 0 ? (
-                            <span className="flex items-center gap-1 text-green-700">
+                            <span className="flex items-center gap-1 text-green-700 font-medium">
                               <CheckCircleIcon className="w-3 h-3" /> OK
                             </span>
                           ) : (
-                            <span className="flex items-center gap-1 text-red-600" title={row.errors.join('\n')}>
+                            <span
+                              className="flex items-center gap-1 text-red-600 cursor-help"
+                              title={row.errors.join('\n')}
+                            >
                               <ExclamationCircleIcon className="w-3 h-3" />
                               {row.errors.length} erreur(s)
                             </span>
@@ -199,45 +259,81 @@ function ImportModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
 
               {/* Détail erreurs */}
               {errorCount > 0 && (
-                <div className="mt-4 p-4 bg-red-50 rounded-xl">
-                  <p className="text-sm font-medium text-red-800 mb-2">Détail des erreurs :</p>
-                  <ul className="text-xs text-red-700 space-y-1 list-disc list-inside">
-                    {rows.filter(r => r.errors.length > 0).flatMap(r => r.errors).slice(0, 10).map((e, i) => (
+                <div className="p-4 bg-red-50 border border-red-100 rounded-xl">
+                  <p className="text-sm font-semibold text-red-800 mb-2">
+                    Détail des erreurs ({allErrors.length} au total) :
+                  </p>
+                  <ul className="text-xs text-red-700 space-y-1 list-disc list-inside max-h-40 overflow-y-auto">
+                    {allErrors.map((e, i) => (
                       <li key={i}>{e}</li>
+                    ))}
+                  </ul>
+                  {validCount > 0 && (
+                    <p className="mt-3 text-xs text-red-600 font-medium">
+                      Les {validCount} ligne(s) valides seront tout de même importées.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Étape 3: Rapport d'import */}
+          {step === 'done' && result && (
+            <div className="space-y-4">
+              <div className="text-center py-6">
+                <CheckCircleIcon className="w-14 h-14 text-green-500 mx-auto mb-3" />
+                <p className="text-xl font-semibold text-gray-800 mb-1">Import terminé</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-green-50 rounded-xl p-4 text-center">
+                  <p className="text-3xl font-bold text-green-700">{result.imported}</p>
+                  <p className="text-sm text-green-600 mt-1">collaborateur(s) importé(s)</p>
+                </div>
+                <div className={`rounded-xl p-4 text-center ${result.failed > 0 ? 'bg-red-50' : 'bg-gray-50'}`}>
+                  <p className={`text-3xl font-bold ${result.failed > 0 ? 'text-red-600' : 'text-gray-400'}`}>{result.failed}</p>
+                  <p className={`text-sm mt-1 ${result.failed > 0 ? 'text-red-500' : 'text-gray-400'}`}>ligne(s) en échec</p>
+                </div>
+              </div>
+              {result.failedRows && result.failedRows.length > 0 && (
+                <div className="p-4 bg-red-50 border border-red-100 rounded-xl">
+                  <p className="text-sm font-semibold text-red-800 mb-2">Détail des échecs :</p>
+                  <ul className="text-xs text-red-700 space-y-1 list-disc list-inside">
+                    {result.failedRows.map((f, i) => (
+                      <li key={i}>Matricule {String(f.matricule)} — {f.error}</li>
                     ))}
                   </ul>
                 </div>
               )}
             </div>
           )}
-
-          {/* Étape 3: Résultat */}
-          {step === 'done' && result && (
-            <div className="text-center py-8">
-              <CheckCircleIcon className="w-16 h-16 text-green-500 mx-auto mb-4" />
-              <p className="text-xl font-semibold text-gray-800 mb-2">Import terminé</p>
-              <p className="text-green-700 font-medium">{result.imported} collaborateur(s) importé(s)</p>
-              {result.failed > 0 && (
-                <p className="text-red-600 text-sm mt-1">{result.failed} ligne(s) en échec</p>
-              )}
-            </div>
-          )}
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 p-6 border-t border-gray-100">
-          <button onClick={onClose} className="btn-secondary">
-            {step === 'done' ? 'Fermer' : 'Annuler'}
-          </button>
-          {step === 'preview' && validCount > 0 && (
-            <button onClick={handleConfirm} disabled={executing} className="btn-primary gap-2">
-              {executing ? (
-                <><div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" /> Import...</>
-              ) : (
-                <><CheckCircleIcon className="w-4 h-4" /> Importer {validCount} collaborateur(s)</>
-              )}
+        <div className="flex justify-between gap-3 p-6 border-t border-gray-100">
+          <div>
+            {step === 'upload' && (
+              <button type="button" onClick={handleDownloadTemplate}
+                className="flex items-center gap-2 text-xs text-gray-500 hover:text-brand-700 transition-colors">
+                <DocumentArrowDownIcon className="w-4 h-4" />
+                Fichier modèle
+              </button>
+            )}
+          </div>
+          <div className="flex gap-3">
+            <button onClick={onClose} className="btn-secondary">
+              {step === 'done' ? 'Fermer' : 'Annuler'}
             </button>
-          )}
+            {step === 'preview' && validCount > 0 && (
+              <button onClick={handleConfirm} disabled={executing} className="btn-primary gap-2">
+                {executing ? (
+                  <><div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" /> Import...</>
+                ) : (
+                  <><CheckCircleIcon className="w-4 h-4" /> Importer {validCount} collaborateur(s)</>
+                )}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

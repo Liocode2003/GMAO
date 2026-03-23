@@ -16,6 +16,7 @@ import {
   uploadExcel,
   parseImport,
   executeImport,
+  downloadImportTemplate,
   exportEmployeesExcel,
   exportEmployeesPDF,
   exportEmployeePDF,
@@ -35,6 +36,8 @@ router.get('/export/excel', exportEmployeesExcel);
 router.get('/export/pdf', exportEmployeesPDF);
 
 // Import Excel
+router.get('/import/template', downloadImportTemplate);
+
 router.post('/import/parse', authorize('DRH', 'DIRECTION_GENERALE'), (req: Request, res: Response, next: NextFunction) => {
   uploadExcel(req, res, (err) => {
     if (err) return res.status(400).json({ error: err.message });
