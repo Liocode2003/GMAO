@@ -253,6 +253,52 @@ CREATE INDEX idx_audit_logs_resource ON audit_logs(resource_type, resource_id);
 CREATE INDEX idx_audit_logs_created ON audit_logs(created_at);
 
 -- ============================================================
+-- CONGÉS ET ABSENCES
+-- ============================================================
+
+CREATE TABLE leaves (
+  id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  employee_id   UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+  type          VARCHAR(20) NOT NULL DEFAULT 'PLANIFIE', -- PLANIFIE | IMPRÉVU
+  absence_subtype VARCHAR(30),                           -- MALADIE | DECES_FAMILLE | URGENCE | AUTRE
+  start_date    DATE NOT NULL,
+  end_date      DATE NOT NULL,
+  days          INTEGER NOT NULL,
+  year          INTEGER NOT NULL,
+  status        VARCHAR(20) DEFAULT 'EN_ATTENTE',        -- EN_ATTENTE | APPROUVE | REFUSE
+  notes         TEXT,
+  approved_by   UUID REFERENCES users(id),
+  approved_at   TIMESTAMPTZ,
+  created_by    UUID REFERENCES users(id),
+  created_at    TIMESTAMPTZ DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE leave_balances (
+  id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  employee_id       UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+  year              INTEGER NOT NULL,
+  annual_allowance  INTEGER DEFAULT 30,
+  carry_over        DECIMAL(5,2) DEFAULT 0,
+  days_taken        DECIMAL(5,2) DEFAULT 0,
+  days_unpaid       DECIMAL(5,2) DEFAULT 0,
+  balance           DECIMAL(5,2) GENERATED ALWAYS AS (annual_allowance + carry_over - days_taken) STORED,
+  created_at        TIMESTAMPTZ DEFAULT NOW(),
+  updated_at        TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(employee_id, year)
+);
+
+CREATE INDEX idx_leaves_employee ON leaves(employee_id);
+CREATE INDEX idx_leaves_status   ON leaves(status);
+CREATE INDEX idx_leaves_year     ON leaves(year);
+CREATE INDEX idx_leave_balances_emp_year ON leave_balances(employee_id, year);
+
+CREATE TRIGGER trg_leaves_updated_at
+  BEFORE UPDATE ON leaves FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER trg_leave_balances_updated_at
+  BEFORE UPDATE ON leave_balances FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- ============================================================
 -- RAPPORTS
 -- ============================================================
 

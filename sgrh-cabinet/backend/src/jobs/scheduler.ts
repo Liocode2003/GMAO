@@ -3,6 +3,7 @@ import { query } from '../config/database';
 import { sendBirthdayAlert, sendContractExpiryAlert, sendMonthlyReport } from '../services/emailService';
 import { generateMonthlyReport } from '../services/reportService';
 import { logger } from '../utils/logger';
+import { yearEndRollover } from '../controllers/leavesController';
 
 // Récupère les emails DRH/Direction
 const getHREmails = async (): Promise<string[]> => {
@@ -164,9 +165,47 @@ export const scheduleMonthlyReport = () => {
   });
 };
 
+// ============================================================
+// REPORT FIN D'ANNÉE CONGÉS — 31 décembre à 23h00
+// ============================================================
+export const scheduleYearEndRollover = () => {
+  cron.schedule('0 23 31 12 *', async () => {
+    logger.info('[CRON] Report fin d\'année des congés...');
+    await yearEndRollover();
+  });
+};
+
+// ============================================================
+// ALERTE FIN DE CONGÉ — tous les jours à 8h30
+// ============================================================
+export const scheduleLeaveEndAlerts = () => {
+  cron.schedule('30 8 * * *', async () => {
+    logger.info('[CRON] Vérification fins de congés...');
+    try {
+      const in3days = await query(`
+        SELECT l.*, e.first_name, e.last_name,
+          m.email as manager_email,
+          (SELECT email FROM users WHERE role = 'DRH' AND is_active = true LIMIT 1) as drh_email
+        FROM leaves l
+        JOIN employees e ON e.id = l.employee_id
+        LEFT JOIN employees m ON m.id = e.manager_id
+        WHERE l.type = 'PLANIFIE' AND l.status = 'APPROUVE'
+          AND l.end_date = CURRENT_DATE + INTERVAL '3 days'
+      `);
+      for (const leave of in3days.rows) {
+        logger.info(`[ALERTE] Fin de congé dans 3 jours: ${leave.first_name} ${leave.last_name} le ${leave.end_date}`);
+      }
+    } catch (err) {
+      logger.error('[CRON] Erreur alerte fins de congés:', err);
+    }
+  });
+};
+
 export const initScheduler = () => {
   scheduleBirthdayAlerts();
   scheduleContractAlerts();
   scheduleMonthlyReport();
-  logger.info('Scheduler initialisé (anniversaires, contrats, rapports)');
+  scheduleYearEndRollover();
+  scheduleLeaveEndAlerts();
+  logger.info('Scheduler initialisé (anniversaires, contrats, rapports, congés)');
 };

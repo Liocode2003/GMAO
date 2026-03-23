@@ -2,14 +2,15 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../services/api';
 import {
-  Employee, SalaryHistory,
+  Employee, SalaryHistory, Leave, LeaveBalance,
   SERVICE_LINE_LABELS, GRADE_LABELS, CONTRACT_LABELS, FUNCTION_LABELS, MARITAL_STATUS_LABELS,
+  LEAVE_STATUS_LABELS, ABSENCE_SUBTYPE_LABELS,
 } from '../../types';
 import { useAuthStore } from '../../store/authStore';
 import {
   ArrowLeftIcon, PencilIcon, NoSymbolIcon, ClockIcon,
   UserIcon, BriefcaseIcon, AcademicCapIcon, CurrencyDollarIcon,
-  DocumentArrowDownIcon,
+  DocumentArrowDownIcon, CalendarDaysIcon, PlusIcon, CheckIcon, XMarkIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
@@ -38,14 +39,32 @@ export default function EmployeeDetailPage() {
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [salaryHistory, setSalaryHistory] = useState<SalaryHistory[]>([]);
-  const [activeTab, setActiveTab] = useState<'info' | 'history' | 'salary'>('info');
+  const [leaves, setLeaves] = useState<Leave[]>([]);
+  const [leaveBalance, setLeaveBalance] = useState<LeaveBalance | null>(null);
+  const [activeTab, setActiveTab] = useState<'info' | 'history' | 'salary' | 'leaves'>('info');
   const [loading, setLoading] = useState(true);
   const [deactivating, setDeactivating] = useState(false);
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
   const [exitDate, setExitDate] = useState(new Date().toISOString().split('T')[0]);
+  const [showLeaveForm, setShowLeaveForm] = useState(false);
+  const [leaveForm, setLeaveForm] = useState({
+    type: 'PLANIFIE', absence_subtype: '', start_date: '', end_date: '', notes: '',
+  });
+  const [submittingLeave, setSubmittingLeave] = useState(false);
 
   const canManage = ['DRH', 'DIRECTION_GENERALE'].includes(user?.role || '');
   const canViewSalary = ['DRH', 'DIRECTION_GENERALE', 'ASSOCIE'].includes(user?.role || '');
+  const canManageLeaves = ['DRH', 'DIRECTION_GENERALE', 'MANAGER'].includes(user?.role || '');
+
+  const loadLeaves = async () => {
+    const year = new Date().getFullYear();
+    const [leavesRes, balRes] = await Promise.all([
+      api.get(`/leaves/employee/${id}?year=${year}`),
+      api.get(`/leaves/employee/${id}/balance?year=${year}`),
+    ]);
+    setLeaves((leavesRes as { data: Leave[] }).data);
+    setLeaveBalance((balRes as { data: LeaveBalance }).data);
+  };
 
   useEffect(() => {
     const requests: Promise<unknown>[] = [
@@ -59,7 +78,48 @@ export default function EmployeeDetailPage() {
       setHistory((histRes as { data: HistoryEntry[] }).data);
       setSalaryHistory((salaryRes as { data: SalaryHistory[] }).data);
     }).finally(() => setLoading(false));
+
+    loadLeaves();
   }, [id, canManage, canViewSalary]);
+
+  const handleSubmitLeave = async () => {
+    if (!leaveForm.start_date || !leaveForm.end_date) {
+      toast.error('Dates obligatoires'); return;
+    }
+    setSubmittingLeave(true);
+    try {
+      await api.post(`/leaves/employee/${id}`, leaveForm);
+      toast.success('Congé enregistré');
+      setShowLeaveForm(false);
+      setLeaveForm({ type: 'PLANIFIE', absence_subtype: '', start_date: '', end_date: '', notes: '' });
+      await loadLeaves();
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      toast.error(msg || 'Erreur lors de l\'enregistrement');
+    } finally {
+      setSubmittingLeave(false);
+    }
+  };
+
+  const handleApproveLeave = async (leaveId: string, status: 'APPROUVE' | 'REFUSE') => {
+    try {
+      await api.patch(`/leaves/${leaveId}/approve`, { status });
+      toast.success(status === 'APPROUVE' ? 'Congé approuvé' : 'Congé refusé');
+      await loadLeaves();
+    } catch {
+      toast.error('Erreur');
+    }
+  };
+
+  const handleDeleteLeave = async (leaveId: string) => {
+    try {
+      await api.delete(`/leaves/${leaveId}`);
+      toast.success('Congé supprimé');
+      await loadLeaves();
+    } catch {
+      toast.error('Erreur');
+    }
+  };
 
   const handleDeactivate = async () => {
     setDeactivating(true);
@@ -89,6 +149,7 @@ export default function EmployeeDetailPage() {
     { id: 'info', icon: UserIcon, label: 'Informations' },
     { id: 'history', icon: ClockIcon, label: 'Historique' },
     ...(canViewSalary ? [{ id: 'salary', icon: CurrencyDollarIcon, label: 'Salaires' }] : []),
+    { id: 'leaves', icon: CalendarDaysIcon, label: 'Congés' },
   ];
 
   return (
@@ -354,6 +415,184 @@ export default function EmployeeDetailPage() {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Onglet Congés */}
+      {activeTab === 'leaves' && (
+        <div className="space-y-4">
+          {/* Solde */}
+          {leaveBalance && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="card text-center">
+                <p className="text-3xl font-bold text-brand-600">{leaveBalance.balance}</p>
+                <p className="text-xs text-gray-500 mt-1">Solde disponible</p>
+              </div>
+              <div className="card text-center">
+                <p className="text-3xl font-bold text-gray-700">{leaveBalance.days_taken}</p>
+                <p className="text-xs text-gray-500 mt-1">Jours pris</p>
+              </div>
+              <div className="card text-center">
+                <p className="text-3xl font-bold text-orange-500">{leaveBalance.days_unplanned}</p>
+                <p className="text-xs text-gray-500 mt-1">Imprévus</p>
+              </div>
+              <div className={`card text-center ${leaveBalance.carry_over >= 0 ? '' : 'bg-red-50'}`}>
+                <p className={`text-3xl font-bold ${leaveBalance.carry_over >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {leaveBalance.carry_over >= 0 ? '+' : ''}{leaveBalance.carry_over}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">Report N-1</p>
+              </div>
+            </div>
+          )}
+
+          {/* Barre de progression */}
+          {leaveBalance && (
+            <div className="card">
+              <div className="flex justify-between text-xs text-gray-500 mb-1">
+                <span>Consommation annuelle</span>
+                <span>{leaveBalance.days_taken} / {leaveBalance.annual_allowance + leaveBalance.carry_over} jours</span>
+              </div>
+              <div className="w-full bg-gray-100 rounded-full h-2">
+                <div
+                  className="bg-brand-500 h-2 rounded-full transition-all"
+                  style={{ width: `${Math.min(100, (leaveBalance.days_taken / Math.max(leaveBalance.annual_allowance + leaveBalance.carry_over, 1)) * 100)}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Bouton ajouter */}
+          {canManageLeaves && (
+            <div className="flex justify-end">
+              <button onClick={() => setShowLeaveForm(true)} className="btn-primary gap-2 text-sm">
+                <PlusIcon className="w-4 h-4" /> Ajouter un congé
+              </button>
+            </div>
+          )}
+
+          {/* Formulaire ajout */}
+          {showLeaveForm && (
+            <div className="card border-2 border-brand-200">
+              <h4 className="font-semibold text-gray-700 mb-4">Nouveau congé / absence</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="label">Type</label>
+                  <select className="input" value={leaveForm.type}
+                    onChange={e => setLeaveForm(f => ({ ...f, type: e.target.value }))}>
+                    <option value="PLANIFIE">Congé planifié</option>
+                    <option value="IMPRÉVU">Imprévu</option>
+                  </select>
+                </div>
+                {leaveForm.type === 'IMPRÉVU' && (
+                  <div>
+                    <label className="label">Motif</label>
+                    <select className="input" value={leaveForm.absence_subtype}
+                      onChange={e => setLeaveForm(f => ({ ...f, absence_subtype: e.target.value }))}>
+                      <option value="">— Sélectionner —</option>
+                      <option value="MALADIE">Maladie</option>
+                      <option value="DECES_FAMILLE">Décès famille</option>
+                      <option value="URGENCE">Urgence</option>
+                      <option value="AUTRE">Autre</option>
+                    </select>
+                  </div>
+                )}
+                <div>
+                  <label className="label">Date début</label>
+                  <input type="date" className="input" value={leaveForm.start_date}
+                    onChange={e => setLeaveForm(f => ({ ...f, start_date: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="label">Date fin</label>
+                  <input type="date" className="input" value={leaveForm.end_date}
+                    onChange={e => setLeaveForm(f => ({ ...f, end_date: e.target.value }))} />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="label">Commentaire</label>
+                  <input type="text" className="input" placeholder="Optionnel" value={leaveForm.notes}
+                    onChange={e => setLeaveForm(f => ({ ...f, notes: e.target.value }))} />
+                </div>
+              </div>
+              <div className="flex gap-2 mt-4 justify-end">
+                <button onClick={() => setShowLeaveForm(false)} className="btn-secondary text-sm">Annuler</button>
+                <button onClick={handleSubmitLeave} disabled={submittingLeave} className="btn-primary text-sm">
+                  {submittingLeave ? 'Enregistrement...' : 'Enregistrer'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Historique */}
+          <div className="card">
+            <h4 className="font-semibold text-gray-700 mb-4">Historique {new Date().getFullYear()}</h4>
+            {leaves.length === 0 ? (
+              <p className="text-gray-400 text-sm text-center py-8">Aucun congé enregistré</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100">
+                      <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">Début</th>
+                      <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">Fin</th>
+                      <th className="text-center py-2 px-3 text-xs font-medium text-gray-500 uppercase">Jours</th>
+                      <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">Type</th>
+                      <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">Statut</th>
+                      <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">Commentaire</th>
+                      {canManageLeaves && <th className="py-2 px-3" />}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leaves.map(l => (
+                      <tr key={l.id} className="border-b border-gray-50 hover:bg-gray-50">
+                        <td className="py-2.5 px-3 text-gray-700">{new Date(l.start_date).toLocaleDateString('fr-FR')}</td>
+                        <td className="py-2.5 px-3 text-gray-700">{new Date(l.end_date).toLocaleDateString('fr-FR')}</td>
+                        <td className="py-2.5 px-3 text-center font-semibold text-gray-800">{l.days}</td>
+                        <td className="py-2.5 px-3">
+                          {l.type === 'PLANIFIE' ? (
+                            <span className="badge badge-blue">Planifié</span>
+                          ) : (
+                            <span className="badge badge-orange">
+                              {l.absence_subtype ? ABSENCE_SUBTYPE_LABELS[l.absence_subtype as keyof typeof ABSENCE_SUBTYPE_LABELS] || l.absence_subtype : 'Imprévu'}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <span className={`badge ${
+                            l.status === 'APPROUVE' ? 'badge-green' :
+                            l.status === 'REFUSE' ? 'badge-red' : 'badge-yellow'
+                          }`}>
+                            {LEAVE_STATUS_LABELS[l.status]}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 text-gray-400 text-xs">{l.notes || '—'}</td>
+                        {canManageLeaves && (
+                          <td className="py-2.5 px-3">
+                            <div className="flex gap-1">
+                              {l.status === 'EN_ATTENTE' && (
+                                <>
+                                  <button onClick={() => handleApproveLeave(l.id, 'APPROUVE')}
+                                    className="p-1 text-green-600 hover:bg-green-50 rounded" title="Approuver">
+                                    <CheckIcon className="w-4 h-4" />
+                                  </button>
+                                  <button onClick={() => handleApproveLeave(l.id, 'REFUSE')}
+                                    className="p-1 text-red-500 hover:bg-red-50 rounded" title="Refuser">
+                                    <XMarkIcon className="w-4 h-4" />
+                                  </button>
+                                </>
+                              )}
+                              <button onClick={() => handleDeleteLeave(l.id)}
+                                className="p-1 text-gray-400 hover:bg-gray-100 rounded" title="Supprimer">
+                                <XMarkIcon className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

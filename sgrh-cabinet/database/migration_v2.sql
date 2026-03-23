@@ -35,26 +35,8 @@ CREATE INDEX IF NOT EXISTS idx_salary_history_employee ON salary_history(employe
 CREATE INDEX IF NOT EXISTS idx_salary_history_date ON salary_history(effective_date);
 
 -- ============================================================
--- 3. TABLE CONGÉS (pour développement futur)
+-- 3. TABLE CONGÉS — définie dans init.sql, skip ici
 -- ============================================================
-
-CREATE TABLE IF NOT EXISTS leaves (
-  id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  employee_id  UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
-  type         VARCHAR(50) NOT NULL DEFAULT 'ANNUEL',
-  start_date   DATE NOT NULL,
-  end_date     DATE NOT NULL,
-  days         INTEGER,
-  status       VARCHAR(20) DEFAULT 'PENDING',
-  notes        TEXT,
-  approved_by  UUID REFERENCES users(id),
-  created_by   UUID REFERENCES users(id),
-  created_at   TIMESTAMPTZ DEFAULT NOW(),
-  updated_at   TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_leaves_employee ON leaves(employee_id);
-CREATE INDEX IF NOT EXISTS idx_leaves_status ON leaves(status);
 
 -- ============================================================
 -- 4. TRIGGER: STATUT AUTOMATIQUE BASÉ SUR LA DATE DE SORTIE

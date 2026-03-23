@@ -5,6 +5,7 @@ import kpiRoutes from './kpis';
 import trainingRoutes from './trainings';
 import userRoutes from './users';
 import reportRoutes from './reports';
+import leavesRoutes from './leaves';
 
 const router = Router();
 
@@ -14,5 +15,6 @@ router.use('/kpis', kpiRoutes);
 router.use('/trainings', trainingRoutes);
 router.use('/users', userRoutes);
 router.use('/reports', reportRoutes);
+router.use('/leaves', leavesRoutes);
 
 export default router;

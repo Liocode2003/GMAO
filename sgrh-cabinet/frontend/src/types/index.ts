@@ -70,6 +70,53 @@ export interface SalaryHistory {
   created_at: string;
 }
 
+export type LeaveType = 'PLANIFIE' | 'IMPRÉVU';
+export type LeaveStatus = 'EN_ATTENTE' | 'APPROUVE' | 'REFUSE';
+export type AbsenceSubtype = 'MALADIE' | 'DECES_FAMILLE' | 'URGENCE' | 'AUTRE';
+
+export interface Leave {
+  id: string;
+  employee_id: string;
+  type: LeaveType;
+  absence_subtype?: AbsenceSubtype;
+  start_date: string;
+  end_date: string;
+  days: number;
+  year: number;
+  status: LeaveStatus;
+  notes?: string;
+  approved_by?: string;
+  approved_by_name?: string;
+  approved_at?: string;
+  created_by?: string;
+  created_by_name?: string;
+  created_at: string;
+}
+
+export interface LeaveBalance {
+  employee_id: string;
+  year: number;
+  annual_allowance: number;
+  carry_over: number;
+  days_taken: number;
+  days_unpaid: number;
+  balance: number;
+  days_unplanned: number;
+}
+
+export const LEAVE_STATUS_LABELS: Record<LeaveStatus, string> = {
+  EN_ATTENTE: 'En attente',
+  APPROUVE: 'Approuvé',
+  REFUSE: 'Refusé',
+};
+
+export const ABSENCE_SUBTYPE_LABELS: Record<AbsenceSubtype, string> = {
+  MALADIE: 'Maladie',
+  DECES_FAMILLE: 'Décès famille',
+  URGENCE: 'Urgence',
+  AUTRE: 'Autre',
+};
+
 export interface ImportRow {
   rowIndex: number;
   data: Record<string, unknown>;
