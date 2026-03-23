@@ -109,6 +109,12 @@ CREATE TABLE employees (
   -- Associations
   department VARCHAR(100),
   is_expatriate BOOLEAN DEFAULT false,
+  manager_id UUID REFERENCES employees(id) ON DELETE SET NULL,
+  -- Situation familiale
+  marital_status VARCHAR(20) DEFAULT 'CELIBATAIRE',
+  spouse_name VARCHAR(200),
+  spouse_phone VARCHAR(30),
+  children_count INTEGER DEFAULT 0,
   created_by UUID REFERENCES users(id),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -122,6 +128,23 @@ CREATE INDEX idx_employees_grade ON employees(grade);
 CREATE INDEX idx_employees_entry_date ON employees(entry_date);
 CREATE INDEX idx_employees_exit_date ON employees(exit_date);
 CREATE INDEX idx_employees_birth_date ON employees(birth_date);
+
+-- ============================================================
+-- HISTORIQUE DES SALAIRES
+-- ============================================================
+
+CREATE TABLE salary_history (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+  old_salary DECIMAL(15,2),
+  new_salary DECIMAL(15,2) NOT NULL,
+  effective_date DATE NOT NULL,
+  notes TEXT,
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_salary_history_employee ON salary_history(employee_id);
 
 -- ============================================================
 -- HISTORIQUE DES MODIFICATIONS
