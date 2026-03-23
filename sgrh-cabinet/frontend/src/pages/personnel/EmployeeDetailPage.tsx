@@ -207,37 +207,43 @@ export default function EmployeeDetailPage() {
       )}
 
       {/* Summary card */}
-      <div className="card mb-6 bg-gradient-to-r from-navy-800 to-navy-900 text-white">
-        <div className="flex items-start gap-4">
-          {/* Photo ou initiales */}
-          {employee.photo_url ? (
-            <img
-              src={employee.photo_url}
-              alt={`${employee.first_name} ${employee.last_name}`}
-              className="w-16 h-16 rounded-2xl object-cover flex-shrink-0 border-2 border-white/20"
-            />
-          ) : (
-            <div className="w-16 h-16 bg-brand-600 rounded-2xl flex items-center justify-center text-white text-xl font-bold flex-shrink-0">
-              {employee.first_name[0]}{employee.last_name[0]}
-            </div>
-          )}
-          <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div>
-              <p className="text-blue-300 text-xs">Grade</p>
-              <p className="font-semibold text-sm">{GRADE_LABELS[employee.grade] || employee.grade}</p>
-            </div>
-            <div>
-              <p className="text-blue-300 text-xs">Ligne de service</p>
-              <p className="font-semibold text-sm">{SERVICE_LINE_LABELS[employee.service_line] || employee.service_line}</p>
-            </div>
-            <div>
-              <p className="text-blue-300 text-xs">Contrat</p>
-              <p className="font-semibold text-sm">{CONTRACT_LABELS[employee.contract_type] || employee.contract_type}</p>
-            </div>
-            <div>
-              <p className="text-blue-300 text-xs">Ancienneté</p>
-              <p className="font-semibold text-sm">{employee.seniority?.label || '—'}</p>
-            </div>
+      <div className="mb-6 bg-gradient-to-r from-navy-800 to-navy-900 text-white rounded-2xl overflow-hidden">
+        <div className="flex items-center">
+          {/* Photo / initiales */}
+          <div className="px-6 py-5 flex-shrink-0">
+            {employee.photo_url ? (
+              <img
+                src={employee.photo_url}
+                alt={`${employee.first_name} ${employee.last_name}`}
+                className="w-14 h-14 rounded-xl object-cover border-2 border-white/20"
+              />
+            ) : (
+              <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-white text-xl font-bold ${employee.gender === 'M' ? 'bg-blue-500' : 'bg-purple-500'}`}>
+                {employee.first_name[0]}{employee.last_name[0]}
+              </div>
+            )}
+          </div>
+
+          {/* Fonction + matricule */}
+          <div className="px-4 py-5 border-l border-white/10 min-w-[160px]">
+            <p className="text-white/50 text-xs uppercase tracking-wide mb-0.5">Fonction</p>
+            <p className="font-semibold text-sm leading-tight">{(FUNCTION_LABELS as Record<string, string>)[employee.function] || employee.function.replace(/_/g, ' ')}</p>
+            <p className="text-white/40 text-xs mt-1 font-mono">{employee.matricule}</p>
+          </div>
+
+          {/* Stats */}
+          <div className="flex flex-1 divide-x divide-white/10 border-l border-white/10">
+            {[
+              { label: 'Grade', value: GRADE_LABELS[employee.grade] || employee.grade },
+              { label: 'Ligne de service', value: SERVICE_LINE_LABELS[employee.service_line] || employee.service_line },
+              { label: 'Contrat', value: CONTRACT_LABELS[employee.contract_type] || employee.contract_type },
+              { label: 'Ancienneté', value: employee.seniority?.label || '—' },
+            ].map(({ label, value }) => (
+              <div key={label} className="flex-1 px-4 py-5">
+                <p className="text-white/50 text-xs uppercase tracking-wide mb-1">{label}</p>
+                <p className="font-semibold text-sm">{value}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
