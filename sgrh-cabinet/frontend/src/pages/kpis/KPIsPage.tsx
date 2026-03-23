@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
-import { KPIData, SERVICE_LINE_LABELS, GRADE_LABELS } from '../../types';
+import { KPIData, SERVICE_LINE_LABELS, GRADE_LABELS, DIPLOMA_LABELS } from '../../types';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, Legend,
@@ -186,16 +186,23 @@ export default function KPIsPage() {
         </ResponsiveContainer>
       </div>
 
-      {/* Diplômes */}
+      {/* Diplômes — Section 7.4 */}
       <div className="card">
         <h3 className="text-base font-semibold text-gray-800 mb-4">Diplômes professionnels</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-          <KPICard label="DEC Français" value={data.diplomas.dec_french} color="text-brand-700" />
-          <KPICard label="DECOFI" value={data.diplomas.decofi} color="text-brand-700" />
-          <KPICard label="Autre DEC" value={data.diplomas.other_dec} />
-          <KPICard label="CISA" value={data.diplomas.cisa} color="text-green-700" />
-          <KPICard label="CFA" value={data.diplomas.cfa} color="text-green-700" />
-        </div>
+        {data.diplomas.length === 0 ? (
+          <p className="text-gray-400 text-sm text-center py-4">Aucun diplôme enregistré pour cette période</p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {data.diplomas.map(d => (
+              <KPICard
+                key={d.diploma_type}
+                label={DIPLOMA_LABELS[d.diploma_type] || d.diploma_type}
+                value={d.count}
+                color="text-brand-700"
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Effectifs par ligne de service */}

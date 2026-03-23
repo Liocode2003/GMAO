@@ -166,15 +166,14 @@ export const getKPIs = async (req: Request, res: Response) => {
       ORDER BY service_line, grade
     `);
 
-    // Diplômes
+    // Diplômes — depuis la table employee_diplomas
     const diplomas = await query(`
-      SELECT
-        COUNT(*) FILTER (WHERE has_dec_french) as dec_french,
-        COUNT(*) FILTER (WHERE has_decofi) as decofi,
-        COUNT(*) FILTER (WHERE has_other_dec) as other_dec,
-        COUNT(*) FILTER (WHERE has_cisa) as cisa,
-        COUNT(*) FILTER (WHERE has_cfa) as cfa
-      FROM employees WHERE status = 'ACTIF'
+      SELECT ed.diploma_type, COUNT(*) as count
+      FROM employee_diplomas ed
+      JOIN employees e ON e.id = ed.employee_id
+      WHERE e.status = 'ACTIF'
+      GROUP BY ed.diploma_type
+      ORDER BY count DESC
     `);
 
     // Par grade
@@ -216,7 +215,7 @@ export const getKPIs = async (req: Request, res: Response) => {
       trainings: trainings.rows,
       totalTrainingHours: parseFloat(totalTrainingHours.rows[0].total),
       byServiceAndGrade: byServiceAndGrade.rows,
-      diplomas: diplomas.rows[0],
+      diplomas: diplomas.rows,
       byGrade: byGrade.rows,
       turnover: turnover.rows[0],
       mobilitiesCount: parseInt(mobilities.rows[0].count),

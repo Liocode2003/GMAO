@@ -4,7 +4,7 @@ import api from '../../services/api';
 import {
   Employee, SalaryHistory, Leave, LeaveBalance,
   SERVICE_LINE_LABELS, GRADE_LABELS, CONTRACT_LABELS, FUNCTION_LABELS, MARITAL_STATUS_LABELS,
-  LEAVE_STATUS_LABELS, ABSENCE_SUBTYPE_LABELS,
+  LEAVE_STATUS_LABELS, ABSENCE_SUBTYPE_LABELS, DIPLOMA_LABELS, DOMAINE_LABELS,
 } from '../../types';
 import { useAuthStore } from '../../store/authStore';
 import {
@@ -318,17 +318,36 @@ export default function EmployeeDetailPage() {
             <div className="flex items-center gap-2 mb-4">
               <AcademicCapIcon className="w-4 h-4 text-gray-400" />
               <h3 className="font-semibold text-gray-700">Diplômes professionnels</h3>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {employee.has_dec_french && <span className="badge badge-blue">DEC Français</span>}
-              {employee.has_decofi && <span className="badge badge-blue">DECOFI</span>}
-              {employee.has_other_dec && <span className="badge badge-blue">Autre DEC</span>}
-              {employee.has_cisa && <span className="badge badge-green">CISA</span>}
-              {employee.has_cfa && <span className="badge badge-green">CFA</span>}
-              {!employee.has_dec_french && !employee.has_decofi && !employee.has_other_dec && !employee.has_cisa && !employee.has_cfa && (
-                <p className="text-gray-400 text-sm">Aucun diplôme professionnel enregistré</p>
+              {canManage && (
+                <span className="ml-auto text-xs text-gray-400">Modifiable par DRH / Direction Générale</span>
               )}
             </div>
+            {(!employee.diplomas || employee.diplomas.length === 0) ? (
+              <p className="text-gray-400 text-sm">Aucun diplôme professionnel enregistré</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100 bg-gray-50">
+                      <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Diplôme</th>
+                      <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Domaine</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {employee.diplomas.map((d, idx) => (
+                      <tr key={d.id || idx} className="border-b border-gray-50 hover:bg-gray-50">
+                        <td className="py-2.5 px-3 font-medium text-gray-800">
+                          {DIPLOMA_LABELS[d.diploma_type] || d.diploma_type}
+                        </td>
+                        <td className="py-2.5 px-3 text-gray-600">
+                          {d.domaine ? (DOMAINE_LABELS[d.domaine] || d.domaine) : <span className="text-gray-300">—</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           {/* Notes */}

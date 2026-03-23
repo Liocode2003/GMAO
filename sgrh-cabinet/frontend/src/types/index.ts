@@ -18,6 +18,12 @@ export interface User {
 
 export type MaritalStatus = 'CELIBATAIRE' | 'MARIE' | 'DIVORCE' | 'VEUF';
 
+export interface EmployeeDiploma {
+  id?: string;
+  diploma_type: string;
+  domaine?: string;
+}
+
 export interface Employee {
   id: string;
   matricule: string;
@@ -36,11 +42,7 @@ export interface Employee {
   salary?: number;
   status: EmployeeStatus;
   notes?: string;
-  has_dec_french: boolean;
-  has_decofi: boolean;
-  has_other_dec: boolean;
-  has_cisa: boolean;
-  has_cfa: boolean;
+  diplomas?: EmployeeDiploma[];
   department?: string;
   is_expatriate: boolean;
   // Nouveaux champs v2
@@ -180,7 +182,7 @@ export interface KPIData {
   trainings: Array<{ type: string; count: string; total_hours: string; total_budget: string }>;
   totalTrainingHours: number;
   byServiceAndGrade: Array<{ service_line: string; grade: string; count: string }>;
-  diplomas: { dec_french: string; decofi: string; other_dec: string; cisa: string; cfa: string };
+  diplomas: Array<{ diploma_type: string; count: string }>;
   byGrade: Array<{ grade: string; count: string }>;
   turnover: { entries: string; exits: string };
   mobilitiesCount: number;
@@ -247,4 +249,34 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   ASSOCIE: 'Associé',
   MANAGER: 'Manager',
   UTILISATEUR: 'Utilisateur',
+};
+
+export const DIPLOMA_LABELS: Record<string, string> = {
+  DEC: "Diplôme d'Expertise Comptable Français (DEC)",
+  DECOFI: 'Diplôme d\'Expertise Comptable Régional (DECOFI)',
+  DSCOGEF: 'DSCOGEF',
+  MASTER_2: 'Master 2',
+  MASTER_1: 'Master 1',
+  LICENCE: 'Licence',
+  DUT: 'DUT',
+  DTS: 'DTS',
+  BAC: 'BAC',
+  BEPC: 'BEPC',
+  CISA: 'CISA',
+  CFA: 'CFA',
+  AUTRES: 'Autres',
+};
+
+export const DOMAINE_LABELS: Record<string, string> = {
+  INFORMATIQUE: 'Informatique',
+  MARKETING: 'Marketing',
+  COMMUNICATION: 'Communication',
+  RH: 'Ressources Humaines',
+  EGEO: 'EGEO',
+  ANALYSE_FINANCIERE: 'Analyse Financière',
+  FINANCE_COMPTABILITE: 'Finance Comptabilité',
+  EXPERTISE_COMPTABLE: 'Expertise Comptable',
+  AUDIT_CONTROLE: 'Audit et Contrôle de Gestion',
+  CCA: 'Comptabilité Contrôle Audit',
+  AUTRES: 'Autres',
 };

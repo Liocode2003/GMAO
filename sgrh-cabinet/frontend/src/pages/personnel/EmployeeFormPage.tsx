@@ -4,9 +4,10 @@ import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import {
-  SERVICE_LINE_LABELS, FUNCTION_LABELS, GRADE_LABELS, CONTRACT_LABELS, MARITAL_STATUS_LABELS, Employee,
+  SERVICE_LINE_LABELS, FUNCTION_LABELS, GRADE_LABELS, CONTRACT_LABELS, MARITAL_STATUS_LABELS,
+  DIPLOMA_LABELS, DOMAINE_LABELS, Employee, EmployeeDiploma,
 } from '../../types';
-import { ArrowLeftIcon, ExclamationTriangleIcon, CameraIcon, UserIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, ExclamationTriangleIcon, CameraIcon, UserIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../../store/authStore';
 
 type FormData = {
@@ -25,14 +26,8 @@ type FormData = {
   exit_date: string;
   salary: string;
   notes: string;
-  has_dec_french: boolean;
-  has_decofi: boolean;
-  has_other_dec: boolean;
-  has_cisa: boolean;
-  has_cfa: boolean;
   department: string;
   is_expatriate: boolean;
-  // Nouveaux champs v2
   manager_id: string;
   marital_status: string;
   spouse_name: string;
@@ -54,6 +49,8 @@ export default function EmployeeFormPage() {
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   const canEditSalary = ['DRH', 'DIRECTION_GENERALE'].includes(user?.role || '');
+  const canManage = ['DRH', 'DIRECTION_GENERALE'].includes(user?.role || '');
+  const [diplomas, setDiplomas] = useState<EmployeeDiploma[]>([]);
 
   const { register, handleSubmit, watch, reset, formState: { errors } } = useForm<FormData>({
     defaultValues: { marital_status: 'CELIBATAIRE', gender: 'M', children_count: '0' },
@@ -80,6 +77,7 @@ export default function EmployeeFormPage() {
           marital_status: data.marital_status || 'CELIBATAIRE',
         });
         if (data.photo_url) setPhotoPreview(data.photo_url);
+        if (data.diplomas) setDiplomas(data.diplomas);
       });
     }
   }, [id, isEdit, reset]);
@@ -124,7 +122,7 @@ export default function EmployeeFormPage() {
 
     setLoading(true);
     try {
-      const payload = {
+      const payload: Record<string, unknown> = {
         ...formData,
         salary: canEditSalary && formData.salary ? parseFloat(formData.salary) : undefined,
         exit_date: formData.exit_date || null,
@@ -132,6 +130,7 @@ export default function EmployeeFormPage() {
         children_count: parseInt(formData.children_count) || 0,
         spouse_name: formData.marital_status === 'MARIE' ? (formData.spouse_name || null) : null,
         spouse_phone: formData.marital_status === 'MARIE' ? (formData.spouse_phone || null) : null,
+        diplomas: canManage ? diplomas.filter(d => d.diploma_type) : undefined,
       };
       if (!canEditSalary) delete payload.salary;
 
@@ -390,24 +389,67 @@ export default function EmployeeFormPage() {
           </div>
         </div>
 
-        {/* Diplômes */}
-        <div className="card">
-          <h3 className="text-base font-semibold text-gray-700 mb-4 pb-2 border-b">Diplômes professionnels</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {[
-              { field: 'has_dec_french' as const, label: 'DEC Français' },
-              { field: 'has_decofi' as const, label: 'DECOFI' },
-              { field: 'has_other_dec' as const, label: 'Autre DEC' },
-              { field: 'has_cisa' as const, label: 'CISA' },
-              { field: 'has_cfa' as const, label: 'CFA' },
-            ].map(({ field, label }) => (
-              <label key={field} className="flex items-center gap-2 cursor-pointer p-3 border rounded-lg hover:bg-gray-50">
-                <input type="checkbox" {...register(field)} className="rounded" />
-                <span className="text-sm text-gray-700">{label}</span>
-              </label>
-            ))}
+        {/* Diplômes — modifiables uniquement par DRH et Direction Générale */}
+        {canManage && (
+          <div className="card">
+            <div className="flex items-center justify-between mb-4 pb-2 border-b">
+              <h3 className="text-base font-semibold text-gray-700">Diplômes professionnels</h3>
+              <button
+                type="button"
+                onClick={() => setDiplomas(prev => [...prev, { diploma_type: '', domaine: '' }])}
+                className="btn-secondary gap-2 text-sm"
+              >
+                <PlusIcon className="w-4 h-4" /> Ajouter
+              </button>
+            </div>
+            {diplomas.length === 0 ? (
+              <p className="text-sm text-gray-400">Aucun diplôme. Cliquez sur "Ajouter" pour en enregistrer un.</p>
+            ) : (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3 mb-1">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide px-1">Diplôme</p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide px-1">Domaine</p>
+                </div>
+                {diplomas.map((d, idx) => (
+                  <div key={idx} className="flex gap-3 items-center">
+                    <div className="flex-1">
+                      <select
+                        className="input"
+                        value={d.diploma_type}
+                        onChange={(e) => setDiplomas(prev => prev.map((item, i) => i === idx ? { ...item, diploma_type: e.target.value } : item))}
+                      >
+                        <option value="">— Sélectionner —</option>
+                        {Object.entries(DIPLOMA_LABELS).map(([k, v]) => (
+                          <option key={k} value={k}>{v}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex-1">
+                      <select
+                        className="input"
+                        value={d.domaine || ''}
+                        onChange={(e) => setDiplomas(prev => prev.map((item, i) => i === idx ? { ...item, domaine: e.target.value } : item))}
+                      >
+                        <option value="">— Domaine —</option>
+                        {Object.entries(DOMAINE_LABELS).map(([k, v]) => (
+                          <option key={k} value={k}>{v}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setDiplomas(prev => prev.filter((_, i) => i !== idx))}
+                      className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Supprimer"
+                    >
+                      <TrashIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        </div>
+        )}
 
         {/* Notes */}
         <div className="card">

@@ -135,6 +135,12 @@ export const getEmployee = async (req: Request, res: Response) => {
     const emp = result.rows[0];
     const seniority = calcSeniority(emp.entry_date);
 
+    // Récupérer les diplômes depuis la table dédiée
+    const diplomasRes = await query(
+      `SELECT id, diploma_type, domaine FROM employee_diplomas WHERE employee_id = $1 ORDER BY created_at`,
+      [id]
+    );
+
     if (canViewSalary(req.user?.role)) {
       await query(
         `INSERT INTO audit_logs(user_id, user_email, action, resource_type, resource_id, field_accessed, ip_address)
@@ -143,7 +149,7 @@ export const getEmployee = async (req: Request, res: Response) => {
       );
     }
 
-    return res.json(sanitizeEmployee({ ...emp, seniority }, req.user?.role));
+    return res.json(sanitizeEmployee({ ...emp, seniority, diplomas: diplomasRes.rows }, req.user?.role));
   } catch (err) {
     logger.error('getEmployee error', err);
     return res.status(500).json({ error: 'Erreur serveur' });
@@ -161,6 +167,7 @@ export const createEmployee = async (req: Request, res: Response) => {
     salary, notes, has_dec_french, has_decofi, has_other_dec,
     has_cisa, has_cfa, department, is_expatriate,
     manager_id, marital_status, spouse_name, spouse_phone, children_count,
+    diplomas,
   } = req.body;
 
   if (email) {
@@ -213,6 +220,18 @@ export const createEmployee = async (req: Request, res: Response) => {
       );
     }
 
+    // Insérer les diplômes si fournis
+    if (diplomas && Array.isArray(diplomas)) {
+      for (const d of diplomas) {
+        if (d.diploma_type) {
+          await query(
+            `INSERT INTO employee_diplomas (employee_id, diploma_type, domaine, created_by) VALUES ($1, $2, $3, $4)`,
+            [result.rows[0].id, d.diploma_type, d.domaine || null, req.user?.userId]
+          );
+        }
+      }
+    }
+
     logger.info(`Nouveau collaborateur créé: ${matricule} par ${req.user?.email}`);
     return res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -229,9 +248,12 @@ export const updateEmployee = async (req: Request, res: Response) => {
   const { id } = req.params;
   const updates = { ...req.body };
 
+  // Extraire les diplômes avant de construire la requête SQL
+  const diplomasToUpdate = updates.diplomas;
+
   // Supprimer les champs calculés / non-colonnes
   for (const f of ['id', 'created_at', 'updated_at', 'created_by', 'status',
-                    'age', 'season', 'seniority', 'manager_name']) {
+                    'age', 'season', 'seniority', 'manager_name', 'diplomas']) {
     delete updates[f];
   }
 
@@ -266,6 +288,21 @@ export const updateEmployee = async (req: Request, res: Response) => {
          VALUES ($1, $2, $3, CURRENT_DATE, $4)`,
         [id, oldSalary, updates.salary, req.user?.userId]
       );
+    }
+
+    // Mettre à jour les diplômes si fournis (DRH et Direction Générale uniquement)
+    if (diplomasToUpdate !== undefined && ['DRH', 'DIRECTION_GENERALE'].includes(req.user?.role || '')) {
+      await query(`DELETE FROM employee_diplomas WHERE employee_id = $1`, [id]);
+      if (Array.isArray(diplomasToUpdate)) {
+        for (const d of diplomasToUpdate) {
+          if (d.diploma_type) {
+            await query(
+              `INSERT INTO employee_diplomas (employee_id, diploma_type, domaine, created_by) VALUES ($1, $2, $3, $4)`,
+              [id, d.diploma_type, d.domaine || null, req.user?.userId]
+            );
+          }
+        }
+      }
     }
 
     logger.info(`Collaborateur modifié: ${id} par ${req.user?.email}`);

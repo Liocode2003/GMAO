@@ -470,14 +470,40 @@ export const exportEmployeePDF = async (req: Request, res: Response) => {
     }
 
     section('Diplômes professionnels');
-    const diplomas = [
-      emp.has_dec_french && 'DEC Français',
-      emp.has_decofi && 'DECOFI',
-      emp.has_other_dec && 'Autre DEC',
-      emp.has_cisa && 'CISA',
-      emp.has_cfa && 'CFA',
-    ].filter(Boolean).join(', ');
-    field('Certifications', diplomas || 'Aucune');
+    const DIPLOMA_DISPLAY: Record<string, string> = {
+      DEC: 'Diplôme d\'Expertise Comptable Français (DEC)',
+      DECOFI: 'Diplôme d\'Expertise Comptable Régional (DECOFI)',
+      DSCOGEF: 'DSCOGEF', MASTER_2: 'Master 2', MASTER_1: 'Master 1',
+      LICENCE: 'Licence', DUT: 'DUT', DTS: 'DTS', BAC: 'BAC', BEPC: 'BEPC',
+      CISA: 'CISA', CFA: 'CFA', AUTRES: 'Autres',
+    };
+    const DOMAINE_DISPLAY: Record<string, string> = {
+      INFORMATIQUE: 'Informatique', MARKETING: 'Marketing', COMMUNICATION: 'Communication',
+      RH: 'Ressources Humaines', EGEO: 'EGEO', ANALYSE_FINANCIERE: 'Analyse Financière',
+      FINANCE_COMPTABILITE: 'Finance Comptabilité', EXPERTISE_COMPTABLE: 'Expertise Comptable',
+      AUDIT_CONTROLE: 'Audit et Contrôle de Gestion', CCA: 'Comptabilité Contrôle Audit', AUTRES: 'Autres',
+    };
+    const diplomasRes = await query(
+      `SELECT diploma_type, domaine FROM employee_diplomas WHERE employee_id = $1 ORDER BY created_at`,
+      [id]
+    );
+    if (diplomasRes.rows.length === 0) {
+      field('Diplômes', 'Aucun diplôme enregistré');
+    } else {
+      // En-tête mini-tableau
+      if (y > doc.page.height - 80) { doc.addPage(); y = 50; }
+      doc.fillColor('#6B7280').fontSize(9).text('Diplôme', labelX, y);
+      doc.fillColor('#6B7280').fontSize(9).text('Domaine', valueX, y);
+      y += lineH;
+      for (const d of diplomasRes.rows) {
+        if (y > doc.page.height - 80) { doc.addPage(); y = 50; }
+        doc.fillColor('#111827').fontSize(10)
+          .text(DIPLOMA_DISPLAY[d.diploma_type] || d.diploma_type, labelX, y, { width: 145 });
+        doc.fillColor('#374151').fontSize(10)
+          .text(d.domaine ? (DOMAINE_DISPLAY[d.domaine] || d.domaine) : '—', valueX, y, { width: 200 });
+        y += lineH;
+      }
+    }
 
     if (emp.notes) {
       section('Notes');
