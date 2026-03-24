@@ -4,9 +4,12 @@ import { v4 as uuidv4 } from 'uuid';
 import { query } from '../config/database';
 import { JwtPayload } from '../types';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'sgrh_secret_key_change_in_prod';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required');
+}
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1h';
-const REFRESH_EXPIRES_DAYS = 7;
+const REFRESH_EXPIRES_DAYS = parseInt(process.env.JWT_REFRESH_EXPIRES_DAYS || '7', 10);
 
 export interface LoginResult {
   accessToken: string;

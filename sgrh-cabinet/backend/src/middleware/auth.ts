@@ -23,7 +23,9 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as JwtPayload;
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) throw new Error('JWT_SECRET environment variable is required');
+    const decoded = jwt.verify(token, jwtSecret) as JwtPayload;
     req.user = decoded;
     next();
   } catch {

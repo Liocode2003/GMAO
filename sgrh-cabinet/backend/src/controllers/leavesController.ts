@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { query } from '../config/database';
+import { query, getClient } from '../config/database';
 import { logger } from '../utils/logger';
 import {
   sendUnplannedLeaveAlert,
@@ -175,24 +175,29 @@ export const createLeave = async (req: Request, res: Response) => {
 
   const year = new Date(start_date).getFullYear();
 
+  const client = await getClient();
   try {
+    await client.query('BEGIN');
+
     await ensureBalance(id, year);
 
-    // Vérification solde pour congés planifiés
+    // Vérification et déduction du solde dans la même transaction (évite TOCTOU)
     if (type === 'PLANIFIE') {
-      const balRes = await query(
-        `SELECT balance FROM leave_balances WHERE employee_id = $1 AND year = $2`,
+      const balRes = await client.query(
+        `SELECT balance FROM leave_balances WHERE employee_id = $1 AND year = $2 FOR UPDATE`,
         [id, year]
       );
       const balance = parseFloat(balRes.rows[0]?.balance ?? '0');
       if (balance < days) {
+        await client.query('ROLLBACK');
+        client.release();
         return res.status(400).json({
           error: `Solde insuffisant. Disponible: ${balance} jour(s), demandé: ${days} jour(s)`,
         });
       }
     }
 
-    const result = await query(
+    const result = await client.query(
       `INSERT INTO leaves
          (employee_id, type, absence_subtype, start_date, end_date, days, year, status, notes, created_by)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
@@ -208,30 +213,30 @@ export const createLeave = async (req: Request, res: Response) => {
     const leave = result.rows[0];
     const empName = `${emp.first_name} ${emp.last_name}`;
 
-    // Imprévus : déduire immédiatement du solde + notifications
+    // Imprévus : déduire immédiatement du solde dans la même transaction
     if (type === 'IMPRÉVU') {
-      const balRes = await query(
-        `SELECT balance FROM leave_balances WHERE employee_id = $1 AND year = $2`,
+      const balRes = await client.query(
+        `SELECT balance FROM leave_balances WHERE employee_id = $1 AND year = $2 FOR UPDATE`,
         [id, year]
       );
       const balance = parseFloat(balRes.rows[0]?.balance ?? '0');
 
       if (balance >= days) {
-        await query(
+        await client.query(
           `UPDATE leave_balances SET days_taken = days_taken + $1, updated_at = NOW()
            WHERE employee_id = $2 AND year = $3`,
           [days, id, year]
         );
       } else {
         const overflow = days - Math.max(balance, 0);
-        await query(
+        await client.query(
           `UPDATE leave_balances
            SET days_taken = days_taken + $1, days_unpaid = days_unpaid + $2, updated_at = NOW()
            WHERE employee_id = $3 AND year = $4`,
           [days, overflow, id, year]
         );
 
-        // Alerte DRH : dépassement de solde
+        // Alerte DRH : dépassement de solde (après commit)
         logger.warn(`ALERTE: ${empName} a dépassé son solde de congés (${overflow} jour(s) en dépassement)`);
         getHREmails().then(hrEmails => {
           if (hrEmails.length) {
@@ -252,11 +257,15 @@ export const createLeave = async (req: Request, res: Response) => {
       }).catch(e => logger.error('getHREmails error', e));
     }
 
+    await client.query('COMMIT');
     logger.info(`Congé créé: ${leave.id} pour employé ${id} par ${req.user?.email}`);
     return res.status(201).json(leave);
   } catch (err) {
+    await client.query('ROLLBACK');
     logger.error('createLeave error', err);
     return res.status(500).json({ error: 'Erreur serveur' });
+  } finally {
+    client.release();
   }
 };
 
