@@ -188,12 +188,12 @@ CREATE INDEX IF NOT EXISTS idx_cs_submission_date ON commercial_submissions(subm
 -- MIGRATION 007 : Index notifications / sécurité
 -- ============================================================
 
-CREATE INDEX IF NOT EXISTS idx_employees_birth_date_month
-  ON employees (TO_CHAR(birth_date, 'MM-DD'));
+-- Note: index fonctionnel TO_CHAR omis (non IMMUTABLE en PostgreSQL)
+-- L'index sur birth_date reste suffisant pour les requêtes d'anniversaires.
 
 CREATE INDEX IF NOT EXISTS idx_employees_exit_date_contract
   ON employees (exit_date, contract_type)
-  WHERE exit_date IS NOT NULL AND contract_type IN ('CDD', 'STAGE');
+  WHERE exit_date IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires_at
   ON refresh_tokens (expires_at)
