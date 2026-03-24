@@ -224,7 +224,7 @@ async function buildHeadcountSheet(workbook: ExcelJS.Workbook) {
 
   const data = await query(`
     SELECT service_line, grade, COUNT(*) as count
-    FROM employees WHERE status = 'ACTIF'
+    FROM employees WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE)
     GROUP BY service_line, grade
   `);
 

@@ -125,26 +125,26 @@ export const createEmployee = async (req: Request, res: Response) => {
     diplomas,
   } = req.body;
 
-  if (email) {
-    const emailCheck = await query('SELECT id FROM employees WHERE email = $1', [email]);
-    if (emailCheck.rows[0]) return res.status(409).json({ error: 'Email déjà utilisé' });
-  }
-  const matriculeCheck = await query('SELECT id FROM employees WHERE matricule = $1', [matricule]);
-  if (matriculeCheck.rows[0]) return res.status(409).json({ error: 'Matricule déjà utilisé' });
-
-  const dupCheck = await query(
-    `SELECT id FROM employees WHERE LOWER(first_name) = LOWER($1) AND LOWER(last_name) = LOWER($2) AND birth_date = $3`,
-    [first_name, last_name, birth_date]
-  );
-  if (dupCheck.rows[0]) {
-    return res.status(409).json({
-      error: 'Doublon possible détecté',
-      duplicate: true,
-      message: `Un collaborateur avec le même nom et la même date de naissance existe déjà.`,
-    });
-  }
-
   try {
+    if (email) {
+      const emailCheck = await query('SELECT id FROM employees WHERE email = $1', [email]);
+      if (emailCheck.rows[0]) return res.status(409).json({ error: 'Email déjà utilisé' });
+    }
+    const matriculeCheck = await query('SELECT id FROM employees WHERE matricule = $1', [matricule]);
+    if (matriculeCheck.rows[0]) return res.status(409).json({ error: 'Matricule déjà utilisé' });
+
+    const dupCheck = await query(
+      `SELECT id FROM employees WHERE LOWER(first_name) = LOWER($1) AND LOWER(last_name) = LOWER($2) AND birth_date = $3`,
+      [first_name, last_name, birth_date]
+    );
+    if (dupCheck.rows[0]) {
+      return res.status(409).json({
+        error: 'Doublon possible détecté',
+        duplicate: true,
+        message: `Un collaborateur avec le même nom et la même date de naissance existe déjà.`,
+      });
+    }
+
     const result = await query(
       `INSERT INTO employees (
          matricule, first_name, last_name, gender, email, phone, birth_date,

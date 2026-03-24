@@ -159,7 +159,9 @@ export const createLeave = async (req: Request, res: Response) => {
 
   // Vérification : collaborateur actif uniquement
   const empRes = await query(
-    `SELECT status, first_name, last_name, email FROM employees WHERE id = $1`,
+    `SELECT first_name, last_name, email,
+       CASE WHEN exit_date IS NULL OR exit_date > CURRENT_DATE THEN 'ACTIF' ELSE 'INACTIF' END as status
+     FROM employees WHERE id = $1`,
     [id]
   );
   const emp = empRes.rows[0];
@@ -340,10 +342,10 @@ export const yearEndRollover = async (): Promise<void> => {
   try {
     // Reporter les soldes des employés ACTIFS uniquement
     const balances = await query(
-      `SELECT lb.*, e.entry_date, e.status
+      `SELECT lb.*, e.entry_date
        FROM leave_balances lb
        JOIN employees e ON e.id = lb.employee_id
-       WHERE lb.year = $1 AND e.status = 'ACTIF'`,
+       WHERE lb.year = $1 AND (e.exit_date IS NULL OR e.exit_date > CURRENT_DATE)`,
       [currentYear]
     );
 
@@ -370,7 +372,7 @@ export const yearEndRollover = async (): Promise<void> => {
       `INSERT INTO leave_balances (employee_id, year, annual_allowance, carry_over, days_taken, days_unpaid)
        SELECT e.id, $1, 30, 0, 0, 0
        FROM employees e
-       WHERE e.status = 'ACTIF'
+       WHERE (e.exit_date IS NULL OR e.exit_date > CURRENT_DATE)
          AND NOT EXISTS (
            SELECT 1 FROM leave_balances lb
            WHERE lb.employee_id = e.id AND lb.year = $1

@@ -66,32 +66,43 @@ export const updateTraining = async (req: Request, res: Response) => {
   const { id } = req.params;
   const { participant_ids, ...updates } = req.body;
 
-  const fields = Object.keys(updates).filter(k => !['id','created_at','created_by'].includes(k));
-  if (fields.length > 0) {
-    const setClauses = fields.map((f, i) => `${f} = $${i + 1}`).join(', ');
-    await query(
-      `UPDATE trainings SET ${setClauses}, updated_at = NOW() WHERE id = $${fields.length + 1}`,
-      [...fields.map(f => updates[f]), id]
-    );
-  }
-
-  if (Array.isArray(participant_ids)) {
-    await query('DELETE FROM training_participants WHERE training_id = $1', [id]);
-    if (participant_ids.length > 0) {
-      const placeholders = participant_ids.map((_, i) => `($1, $${i + 2})`).join(', ');
+  try {
+    const fields = Object.keys(updates).filter(k => !['id','created_at','created_by'].includes(k));
+    if (fields.length > 0) {
+      const setClauses = fields.map((f, i) => `${f} = $${i + 1}`).join(', ');
       await query(
-        `INSERT INTO training_participants(training_id, employee_id) VALUES ${placeholders}`,
-        [id, ...participant_ids]
+        `UPDATE trainings SET ${setClauses}, updated_at = NOW() WHERE id = $${fields.length + 1}`,
+        [...fields.map(f => updates[f]), id]
       );
     }
-  }
 
-  const result = await query('SELECT * FROM trainings WHERE id = $1', [id]);
-  return res.json(result.rows[0]);
+    if (Array.isArray(participant_ids)) {
+      await query('DELETE FROM training_participants WHERE training_id = $1', [id]);
+      if (participant_ids.length > 0) {
+        const placeholders = participant_ids.map((_, i) => `($1, $${i + 2})`).join(', ');
+        await query(
+          `INSERT INTO training_participants(training_id, employee_id) VALUES ${placeholders}`,
+          [id, ...participant_ids]
+        );
+      }
+    }
+
+    const result = await query('SELECT * FROM trainings WHERE id = $1', [id]);
+    if (!result.rows[0]) return res.status(404).json({ error: 'Formation non trouvée' });
+    return res.json(result.rows[0]);
+  } catch (err) {
+    logger.error('updateTraining error', err);
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
 };
 
 export const deleteTraining = async (req: Request, res: Response) => {
   const { id } = req.params;
-  await query('DELETE FROM trainings WHERE id = $1', [id]);
-  return res.json({ message: 'Formation supprimée' });
+  try {
+    await query('DELETE FROM trainings WHERE id = $1', [id]);
+    return res.json({ message: 'Formation supprimée' });
+  } catch (err) {
+    logger.error('deleteTraining error', err);
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
 };

@@ -16,12 +16,12 @@ export const getDashboard = async (req: Request, res: Response) => {
       contractsToRenew,
     ] = await Promise.all([
       // Total actif
-      query(`SELECT COUNT(*) as total FROM employees WHERE status = 'ACTIF'`),
+      query(`SELECT COUNT(*) as total FROM employees WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE)`),
 
       // Par ligne de service
       query(`
         SELECT service_line, COUNT(*) as count
-        FROM employees WHERE status = 'ACTIF'
+        FROM employees WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE)
         GROUP BY service_line ORDER BY count DESC
       `),
 
@@ -29,14 +29,14 @@ export const getDashboard = async (req: Request, res: Response) => {
       query(`
         SELECT gender, COUNT(*) as count,
           ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 1) as percentage
-        FROM employees WHERE status = 'ACTIF'
+        FROM employees WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE)
         GROUP BY gender
       `),
 
       // Par type de contrat
       query(`
         SELECT contract_type, COUNT(*) as count
-        FROM employees WHERE status = 'ACTIF'
+        FROM employees WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE)
         GROUP BY contract_type
       `),
 
@@ -50,19 +50,19 @@ export const getDashboard = async (req: Request, res: Response) => {
             ELSE 'plus_45'
           END as age_group,
           COUNT(*) as count
-        FROM employees WHERE status = 'ACTIF'
+        FROM employees WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE)
         GROUP BY age_group
       `),
 
       // Par saison
       query(`
         SELECT EXTRACT(YEAR FROM entry_date) as season, COUNT(*) as count
-        FROM employees WHERE status = 'ACTIF'
+        FROM employees WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE)
         GROUP BY season ORDER BY season DESC
       `),
 
       // Avec email
-      query(`SELECT COUNT(*) as count FROM employees WHERE status = 'ACTIF' AND email IS NOT NULL`),
+      query(`SELECT COUNT(*) as count FROM employees WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE) AND email IS NOT NULL`),
 
       // Anniversaires du mois
       query(`
@@ -70,7 +70,7 @@ export const getDashboard = async (req: Request, res: Response) => {
           DATE_PART('year', AGE(birth_date)) + 1 as upcoming_age,
           TO_CHAR(birth_date, 'DD/MM') as birth_day_month
         FROM employees
-        WHERE status = 'ACTIF'
+        WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE)
           AND EXTRACT(MONTH FROM birth_date) = EXTRACT(MONTH FROM CURRENT_DATE)
         ORDER BY EXTRACT(DAY FROM birth_date)
       `),
@@ -81,7 +81,7 @@ export const getDashboard = async (req: Request, res: Response) => {
           exit_date,
           (exit_date - CURRENT_DATE) as days_remaining
         FROM employees
-        WHERE status = 'ACTIF'
+        WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE)
           AND exit_date IS NOT NULL
           AND exit_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '30 days'
         ORDER BY exit_date
@@ -150,21 +150,32 @@ export const getKPIs = async (req: Request, res: Response) => {
         COUNT(*) FILTER (WHERE gender = 'F') as femmes,
         COUNT(*) as total
       FROM employees
-      WHERE status = 'ACTIF'
+      WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE)
         AND EXTRACT(YEAR FROM entry_date) <= $1
         AND (exit_date IS NULL OR EXTRACT(YEAR FROM exit_date) >= $1)
     `, [year]);
 
     // Mouvements du mois
-    const monthFilter = month ? `AND EXTRACT(MONTH FROM entry_date) = ${month}` : '';
+    const movementsParams: unknown[] = [year];
+    let monthFilter = '';
+    if (month) {
+      movementsParams.push(parseInt(month));
+      monthFilter = `AND EXTRACT(MONTH FROM entry_date) = $${movementsParams.length}`;
+    }
     const movements = await query(`
       SELECT
         COUNT(*) FILTER (WHERE EXTRACT(YEAR FROM entry_date) = $1 ${monthFilter}) as entries,
         COUNT(*) FILTER (WHERE exit_date IS NOT NULL AND EXTRACT(YEAR FROM exit_date) = $1 ${monthFilter}) as exits
       FROM employees
-    `, [year]);
+    `, movementsParams);
 
     // Formations
+    const trainingsParams: unknown[] = [year];
+    let trainingsMonthFilter = '';
+    if (month) {
+      trainingsParams.push(parseInt(month));
+      trainingsMonthFilter = `AND EXTRACT(MONTH FROM t.date) = $${trainingsParams.length}`;
+    }
     const trainings = await query(`
       SELECT
         t.type,
@@ -173,9 +184,9 @@ export const getKPIs = async (req: Request, res: Response) => {
         COALESCE(SUM(t.budget), 0) as total_budget
       FROM trainings t
       WHERE EXTRACT(YEAR FROM t.date) = $1
-        ${month ? `AND EXTRACT(MONTH FROM t.date) = ${month}` : ''}
+        ${trainingsMonthFilter}
       GROUP BY t.type
-    `, [year]);
+    `, trainingsParams);
 
     // Total heures formation
     const totalTrainingHours = await query(`
@@ -188,7 +199,7 @@ export const getKPIs = async (req: Request, res: Response) => {
     const byServiceAndGrade = await query(`
       SELECT service_line, grade, COUNT(*) as count
       FROM employees
-      WHERE status = 'ACTIF'
+      WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE)
       GROUP BY service_line, grade
       ORDER BY service_line, grade
     `);
@@ -198,7 +209,7 @@ export const getKPIs = async (req: Request, res: Response) => {
       SELECT ed.diploma_type, COUNT(*) as count
       FROM employee_diplomas ed
       JOIN employees e ON e.id = ed.employee_id
-      WHERE e.status = 'ACTIF'
+      WHERE (e.exit_date IS NULL OR e.exit_date > CURRENT_DATE)
       GROUP BY ed.diploma_type
       ORDER BY count DESC
     `);
@@ -206,7 +217,7 @@ export const getKPIs = async (req: Request, res: Response) => {
     // Par grade
     const byGrade = await query(`
       SELECT grade, COUNT(*) as count
-      FROM employees WHERE status = 'ACTIF'
+      FROM employees WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE)
       GROUP BY grade ORDER BY grade
     `);
 
