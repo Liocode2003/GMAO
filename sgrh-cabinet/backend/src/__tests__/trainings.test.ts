@@ -78,7 +78,13 @@ describe('POST /api/trainings', () => {
     const res = await request(app)
       .post('/api/trainings')
       .set('Authorization', `Bearer ${makeToken('MANAGER')}`)
-      .send({ ...fakeTraining, participant_ids: ['emp-1', 'emp-2'] });
+      .send({
+        type: 'INTERNE',
+        title: 'Formation IFRS',
+        date: '2024-06-15',
+        duration_hours: 8,
+        participant_ids: ['550e8400-e29b-41d4-a716-446655440000', '550e8400-e29b-41d4-a716-446655440001'],
+      });
     expect(res.status).toBe(201);
   });
 
