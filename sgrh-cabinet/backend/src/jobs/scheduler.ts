@@ -79,23 +79,23 @@ export const scheduleContractAlerts = () => {
       // CDD: alertes à 60 et 30 jours
       const cddAlerts = await query(`
         SELECT id, matricule, first_name, last_name, contract_type, exit_date,
-          EXTRACT(DAY FROM exit_date - CURRENT_DATE) as days_remaining
+          (exit_date - CURRENT_DATE) as days_remaining
         FROM employees
         WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE)
           AND contract_type = 'CDD'
           AND exit_date IS NOT NULL
-          AND EXTRACT(DAY FROM exit_date - CURRENT_DATE) IN (60, 30)
+          AND (exit_date - CURRENT_DATE) IN (60, 30)
       `);
 
       // STAGE: alerte à 15 jours
       const stageAlerts = await query(`
         SELECT id, matricule, first_name, last_name, contract_type, exit_date,
-          EXTRACT(DAY FROM exit_date - CURRENT_DATE) as days_remaining
+          (exit_date - CURRENT_DATE) as days_remaining
         FROM employees
         WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE)
           AND contract_type = 'STAGE'
           AND exit_date IS NOT NULL
-          AND EXTRACT(DAY FROM exit_date - CURRENT_DATE) = 15
+          AND (exit_date - CURRENT_DATE) = 15
       `);
 
       const allAlerts = [...cddAlerts.rows, ...stageAlerts.rows];
