@@ -1,14 +1,8 @@
 import { Request, Response } from 'express';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { v4 as uuidv4 } from 'uuid';
 import { query } from '../config/database';
 import { logger } from '../utils/logger';
 import { JwtPayload } from '../types';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'sgrh_secret_key_change_in_prod';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1h';
-const REFRESH_EXPIRES_DAYS = 7;
+import { authService } from '../services/authService';
 
 export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body;
@@ -18,41 +12,35 @@ export const login = async (req: Request, res: Response) => {
   }
 
   try {
-    const result = await query(
-      'SELECT id, email, password_hash, first_name, last_name, role, is_active FROM users WHERE email = $1',
-      [email.toLowerCase()]
-    );
-
-    const user = result.rows[0];
-    if (!user || !user.is_active) {
+    const user = await authService.validateCredentials(email, password);
+    if (!user) {
       return res.status(401).json({ error: 'Identifiants incorrects' });
     }
 
-    const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid) {
-      return res.status(401).json({ error: 'Identifiants incorrects' });
-    }
-
-    const payload: JwtPayload = {
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-    };
-
-    const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions);
-    const refreshToken = uuidv4();
-
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + REFRESH_EXPIRES_DAYS);
-
-    await query(
-      'INSERT INTO refresh_tokens(user_id, token, expires_at) VALUES($1,$2,$3)',
-      [user.id, refreshToken, expiresAt]
-    );
-
-    await query('UPDATE users SET last_login = NOW() WHERE id = $1', [user.id]);
+    const payload: JwtPayload = { userId: user.id, email: user.email, role: user.role };
+    const accessToken = authService.generateAccessToken(payload);
+    const refreshToken = await authService.createRefreshToken(user.id);
+    await authService.updateLastLogin(user.id);
 
     logger.info(`Connexion réussie: ${email}`);
+
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    // Stocker les tokens dans des cookies httpOnly (sécurité renforcée)
+    res.cookie('accessToken', accessToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'strict' : 'lax',
+      maxAge: 60 * 60 * 1000, // 1 heure
+      path: '/',
+    });
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'strict' : 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 jours
+      path: '/api/auth',
+    });
 
     return res.json({
       accessToken,
@@ -76,22 +64,10 @@ export const refresh = async (req: Request, res: Response) => {
   if (!refreshToken) return res.status(400).json({ error: 'Token de rafraîchissement manquant' });
 
   try {
-    const result = await query(
-      `SELECT rt.user_id, u.email, u.role, u.first_name, u.last_name
-       FROM refresh_tokens rt
-       JOIN users u ON u.id = rt.user_id
-       WHERE rt.token = $1 AND rt.expires_at > NOW() AND u.is_active = true`,
-      [refreshToken]
-    );
-
-    if (!result.rows[0]) {
+    const accessToken = await authService.refreshAccessToken(refreshToken);
+    if (!accessToken) {
       return res.status(401).json({ error: 'Token de rafraîchissement invalide' });
     }
-
-    const { user_id, email, role } = result.rows[0];
-    const payload: JwtPayload = { userId: user_id, email, role };
-    const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions);
-
     return res.json({ accessToken });
   } catch (err) {
     logger.error('Erreur refresh', err);
@@ -100,10 +76,13 @@ export const refresh = async (req: Request, res: Response) => {
 };
 
 export const logout = async (req: Request, res: Response) => {
-  const { refreshToken } = req.body;
+  const refreshToken = req.body.refreshToken || req.cookies?.refreshToken;
   if (refreshToken) {
-    await query('DELETE FROM refresh_tokens WHERE token = $1', [refreshToken]);
+    await authService.revokeRefreshToken(refreshToken);
   }
+  // Nettoyer les cookies
+  res.clearCookie('accessToken', { path: '/' });
+  res.clearCookie('refreshToken', { path: '/api/auth' });
   return res.json({ message: 'Déconnexion réussie' });
 };
 
@@ -115,7 +94,7 @@ export const getProfile = async (req: Request, res: Response) => {
       [req.user.userId]
     );
     return res.json(result.rows[0]);
-  } catch (err) {
+  } catch {
     return res.status(500).json({ error: 'Erreur serveur' });
   }
 };
@@ -130,14 +109,14 @@ export const changePassword = async (req: Request, res: Response) => {
 
   try {
     const result = await query('SELECT password_hash FROM users WHERE id = $1', [req.user.userId]);
-    const valid = await bcrypt.compare(currentPassword, result.rows[0].password_hash);
+    const valid = await authService.verifyPassword(currentPassword, result.rows[0].password_hash);
     if (!valid) return res.status(400).json({ error: 'Mot de passe actuel incorrect' });
 
-    const hash = await bcrypt.hash(newPassword, 12);
+    const hash = await authService.hashPassword(newPassword);
     await query('UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2', [hash, req.user.userId]);
 
     return res.json({ message: 'Mot de passe mis à jour' });
-  } catch (err) {
+  } catch {
     return res.status(500).json({ error: 'Erreur serveur' });
   }
 };

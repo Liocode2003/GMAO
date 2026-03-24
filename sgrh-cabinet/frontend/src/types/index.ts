@@ -16,6 +16,16 @@ export interface User {
   lastLogin?: string;
 }
 
+export type MaritalStatus = 'CELIBATAIRE' | 'MARIE' | 'DIVORCE' | 'VEUF';
+
+export interface EmployeeDiploma {
+  id?: string;
+  diploma_type: string;
+  diploma_other?: string;
+  domaine?: string;
+  domaine_other?: string;
+}
+
 export interface Employee {
   id: string;
   matricule: string;
@@ -34,18 +44,88 @@ export interface Employee {
   salary?: number;
   status: EmployeeStatus;
   notes?: string;
-  has_dec_french: boolean;
-  has_decofi: boolean;
-  has_other_dec: boolean;
-  has_cisa: boolean;
-  has_cfa: boolean;
+  diplomas?: EmployeeDiploma[];
   department?: string;
   is_expatriate: boolean;
+  // Nouveaux champs v2
+  photo_url?: string;
+  manager_id?: string;
+  manager_name?: string;
+  marital_status?: MaritalStatus;
+  spouse_name?: string;
+  spouse_phone?: string;
+  children_count?: number;
+  leave_balance?: number;
   age?: number;
   season?: number;
   seniority?: { years: number; months: number; label: string };
   created_at: string;
   updated_at: string;
+}
+
+export interface SalaryHistory {
+  id: string;
+  employee_id: string;
+  old_salary: number | null;
+  new_salary: number;
+  effective_date: string;
+  notes?: string;
+  created_by_name?: string;
+  created_at: string;
+}
+
+export type LeaveType = 'PLANIFIE' | 'IMPRÉVU';
+export type LeaveStatus = 'EN_ATTENTE' | 'APPROUVE' | 'REFUSE';
+export type AbsenceSubtype = 'MALADIE' | 'DECES_FAMILLE' | 'URGENCE' | 'AUTRE';
+
+export interface Leave {
+  id: string;
+  employee_id: string;
+  type: LeaveType;
+  absence_subtype?: AbsenceSubtype;
+  start_date: string;
+  end_date: string;
+  days: number;
+  year: number;
+  status: LeaveStatus;
+  notes?: string;
+  approved_by?: string;
+  approved_by_name?: string;
+  approved_at?: string;
+  created_by?: string;
+  created_by_name?: string;
+  created_at: string;
+}
+
+export interface LeaveBalance {
+  employee_id: string;
+  year: number;
+  annual_allowance: number;
+  carry_over: number;
+  days_taken: number;
+  days_unpaid: number;
+  balance: number;
+  days_unplanned: number;
+}
+
+export const LEAVE_STATUS_LABELS: Record<LeaveStatus, string> = {
+  EN_ATTENTE: 'En attente',
+  APPROUVE: 'Approuvé',
+  REFUSE: 'Refusé',
+};
+
+export const ABSENCE_SUBTYPE_LABELS: Record<AbsenceSubtype, string> = {
+  MALADIE: 'Maladie',
+  DECES_FAMILLE: 'Décès famille',
+  URGENCE: 'Urgence',
+  AUTRE: 'Autre',
+};
+
+export interface ImportRow {
+  rowIndex: number;
+  data: Record<string, unknown>;
+  errors: string[];
+  isDuplicate: boolean;
 }
 
 export interface PaginatedResponse<T> {
@@ -83,6 +163,7 @@ export interface DashboardData {
     exit_date: string;
     days_remaining: number;
   }>;
+  commercial?: CommercialDashboardWidget;
 }
 
 export interface KPIData {
@@ -104,7 +185,7 @@ export interface KPIData {
   trainings: Array<{ type: string; count: string; total_hours: string; total_budget: string }>;
   totalTrainingHours: number;
   byServiceAndGrade: Array<{ service_line: string; grade: string; count: string }>;
-  diplomas: { dec_french: string; decofi: string; other_dec: string; cisa: string; cfa: string };
+  diplomas: Array<{ diploma_type: string; count: string }>;
   byGrade: Array<{ grade: string; count: string }>;
   turnover: { entries: string; exits: string };
   mobilitiesCount: number;
@@ -158,10 +239,98 @@ export const CONTRACT_LABELS: Record<ContractType, string> = {
   FREELANCE: 'Freelance (Mission)',
 };
 
+export const MARITAL_STATUS_LABELS: Record<MaritalStatus, string> = {
+  CELIBATAIRE: 'Célibataire',
+  MARIE: 'Marié(e)',
+  DIVORCE: 'Divorcé(e)',
+  VEUF: 'Veuf / Veuve',
+};
+
 export const ROLE_LABELS: Record<UserRole, string> = {
   DRH: 'DRH',
   DIRECTION_GENERALE: 'Direction Générale',
   ASSOCIE: 'Associé',
   MANAGER: 'Manager',
   UTILISATEUR: 'Utilisateur',
+};
+
+export const DIPLOMA_LABELS: Record<string, string> = {
+  DEC: "Diplôme d'Expertise Comptable Français (DEC)",
+  DECOFI: 'Diplôme d\'Expertise Comptable Régional (DECOFI)',
+  DSCOGEF: 'DSCOGEF',
+  MASTER_2: 'Master 2',
+  MASTER_1: 'Master 1',
+  LICENCE: 'Licence',
+  DUT: 'DUT',
+  DTS: 'DTS',
+  BAC: 'BAC',
+  BEPC: 'BEPC',
+  CISA: 'CISA',
+  CFA: 'CFA',
+  AUTRES: 'Autres',
+};
+
+// ============================================================
+// Reporting Commercial
+// ============================================================
+export type SubmissionType = 'AMI' | 'APPEL_OFFRE';
+export type SubmissionStatus = 'EN_COURS' | 'GAGNE' | 'PERDU';
+
+export interface CommercialSubmission {
+  id: string;
+  type: SubmissionType;
+  reference: string;
+  title: string;
+  client: string;
+  submission_date: string;
+  service_line: ServiceLine;
+  responsible_employee_id?: string;
+  responsible_name?: string;
+  status: SubmissionStatus;
+  contract_amount?: number | null;
+  contract_start_date?: string | null;
+  contract_end_date?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CommercialStats {
+  total: number;
+  wins: number;
+  losses: number;
+  en_cours: number;
+  success_rate: number;
+  total_amount: number;
+}
+
+export interface CommercialDashboardWidget {
+  ami_this_month: string;
+  ao_this_month: string;
+  wins_this_month: string;
+  amount_this_month: string;
+}
+
+export const SUBMISSION_TYPE_LABELS: Record<SubmissionType, string> = {
+  AMI: 'Avis à Manifestation d\'Intérêt',
+  APPEL_OFFRE: 'Appel d\'offre',
+};
+
+export const SUBMISSION_STATUS_LABELS: Record<SubmissionStatus, string> = {
+  EN_COURS: 'En cours',
+  GAGNE: 'Gagné',
+  PERDU: 'Perdu',
+};
+
+export const DOMAINE_LABELS: Record<string, string> = {
+  INFORMATIQUE: 'Informatique',
+  MARKETING: 'Marketing',
+  COMMUNICATION: 'Communication',
+  RH: 'Ressources Humaines',
+  EGEO: 'EGEO',
+  ANALYSE_FINANCIERE: 'Analyse Financière',
+  FINANCE_COMPTABILITE: 'Finance Comptabilité',
+  EXPERTISE_COMPTABLE: 'Expertise Comptable',
+  AUDIT_CONTROLE: 'Audit et Contrôle de Gestion',
+  CCA: 'Comptabilité Contrôle Audit',
+  AUTRES: 'Autres',
 };

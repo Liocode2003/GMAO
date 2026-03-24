@@ -20,6 +20,9 @@ npm-debug.log*
 # Generated reports
 reports/
 
+# Test coverage
+coverage/
+
 # Docker
 *.pid
 

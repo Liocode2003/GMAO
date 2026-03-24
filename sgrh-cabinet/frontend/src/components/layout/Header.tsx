@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import {
   Bars3Icon,
-  BellIcon,
   UserCircleIcon,
   ArrowRightOnRectangleIcon,
   KeyIcon,
 } from '@heroicons/react/24/outline';
 import { ROLE_LABELS } from '../../types';
+import NotificationBell from './NotificationBell';
 
 interface HeaderProps {
   onMenuToggle: () => void;
@@ -25,7 +25,7 @@ export default function Header({ onMenuToggle }: HeaderProps) {
   };
 
   return (
-    <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 flex-shrink-0">
+    <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-6 flex-shrink-0">
       <div className="flex items-center gap-4">
         <button
           onClick={onMenuToggle}
@@ -33,17 +33,11 @@ export default function Header({ onMenuToggle }: HeaderProps) {
         >
           <Bars3Icon className="w-5 h-5" />
         </button>
-        <div className="hidden sm:block">
-          <h1 className="text-base font-semibold text-gray-800">SGRH Cabinet</h1>
-          <p className="text-xs text-gray-500">Système de Gestion des Ressources Humaines</p>
-        </div>
       </div>
 
       <div className="flex items-center gap-3">
         {/* Notifications bell */}
-        <button className="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg">
-          <BellIcon className="w-5 h-5" />
-        </button>
+        <NotificationBell />
 
         {/* User menu */}
         <div className="relative">
@@ -51,7 +45,7 @@ export default function Header({ onMenuToggle }: HeaderProps) {
             onClick={() => setDropdownOpen(!dropdownOpen)}
             className="flex items-center gap-2 p-1.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            <div className="w-8 h-8 bg-navy-800 rounded-full flex items-center justify-center text-white text-sm font-medium">
+            <div className="w-8 h-8 bg-brand-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
               {user?.firstName?.[0]}{user?.lastName?.[0]}
             </div>
             <div className="hidden sm:block text-left">

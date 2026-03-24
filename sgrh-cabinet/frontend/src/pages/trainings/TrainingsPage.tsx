@@ -63,7 +63,7 @@ export default function TrainingsPage() {
         </div>
         <div className="flex items-center gap-3">
           <select value={year} onChange={e => setYear(parseInt(e.target.value))} className="input w-28">
-            {[2022, 2023, 2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
+            {Array.from({ length: new Date().getFullYear() - 2022 + 1 }, (_, i) => 2022 + i).map(y => <option key={y} value={y}>{y}</option>)}
           </select>
           {canManage && (
             <button onClick={() => { setEditing(null); setShowModal(true); }} className="btn-primary">

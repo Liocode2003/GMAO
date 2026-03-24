@@ -2,7 +2,7 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --only=production && npm ci
+RUN npm install
 COPY tsconfig.json ./
 COPY src ./src
 RUN npm run build
@@ -13,10 +13,10 @@ RUN addgroup -S sgrh && adduser -S sgrh -G sgrh
 
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --only=production && npm cache clean --force
+RUN npm install --omit=dev && npm cache clean --force
 
 COPY --from=builder /app/dist ./dist
-RUN mkdir -p logs reports && chown -R sgrh:sgrh /app
+RUN mkdir -p logs reports uploads/photos && chown -R sgrh:sgrh /app
 
 USER sgrh
 EXPOSE 3001

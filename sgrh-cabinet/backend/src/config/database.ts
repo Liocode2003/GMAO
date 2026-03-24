@@ -1,15 +1,19 @@
 import { Pool, PoolConfig } from 'pg';
 import { logger } from '../utils/logger';
 
+if (!process.env.DB_PASSWORD) {
+  throw new Error('DB_PASSWORD environment variable is required');
+}
+
 const config: PoolConfig = {
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432'),
   database: process.env.DB_NAME || 'sgrh_cabinet',
   user: process.env.DB_USER || 'sgrh_user',
-  password: process.env.DB_PASSWORD || 'sgrh_pass',
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  password: process.env.DB_PASSWORD,
+  max: parseInt(process.env.DB_POOL_MAX || '20'),
+  idleTimeoutMillis: parseInt(process.env.DB_POOL_IDLE_TIMEOUT_MS || '30000'),
+  connectionTimeoutMillis: parseInt(process.env.DB_POOL_CONN_TIMEOUT_MS || '2000'),
 };
 
 export const pool = new Pool(config);

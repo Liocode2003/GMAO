@@ -1,8 +1,9 @@
 import cron from 'node-cron';
 import { query } from '../config/database';
-import { sendBirthdayAlert, sendContractExpiryAlert, sendMonthlyReport } from '../services/emailService';
+import { sendBirthdayAlert, sendContractExpiryAlert, sendMonthlyReport, sendLeaveEndAlert } from '../services/emailService';
 import { generateMonthlyReport } from '../services/reportService';
 import { logger } from '../utils/logger';
+import { yearEndRollover } from '../controllers/leavesController';
 
 // Récupère les emails DRH/Direction
 const getHREmails = async (): Promise<string[]> => {
@@ -26,7 +27,7 @@ export const scheduleBirthdayAlerts = () => {
       const tomorrow = await query(`
         SELECT first_name, last_name
         FROM employees
-        WHERE status = 'ACTIF'
+        WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE)
           AND TO_CHAR(birth_date, 'MM-DD') = TO_CHAR(CURRENT_DATE + INTERVAL '1 day', 'MM-DD')
       `);
 
@@ -38,7 +39,7 @@ export const scheduleBirthdayAlerts = () => {
         await query(
           `INSERT INTO alerts(type, employee_id, scheduled_date, status, message)
            SELECT 'BIRTHDAY', id, CURRENT_DATE + 1, 'SENT', 'Alerte anniversaire J-1 envoyée'
-           FROM employees WHERE first_name = $1 AND last_name = $2 AND status = 'ACTIF'`,
+           FROM employees WHERE first_name = $1 AND last_name = $2 AND (exit_date IS NULL OR exit_date > CURRENT_DATE)`,
           [emp.first_name, emp.last_name]
         );
       }
@@ -47,7 +48,7 @@ export const scheduleBirthdayAlerts = () => {
       const today = await query(`
         SELECT first_name, last_name
         FROM employees
-        WHERE status = 'ACTIF'
+        WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE)
           AND TO_CHAR(birth_date, 'MM-DD') = TO_CHAR(CURRENT_DATE, 'MM-DD')
       `);
 
@@ -78,23 +79,23 @@ export const scheduleContractAlerts = () => {
       // CDD: alertes à 60 et 30 jours
       const cddAlerts = await query(`
         SELECT id, matricule, first_name, last_name, contract_type, exit_date,
-          EXTRACT(DAY FROM exit_date - CURRENT_DATE) as days_remaining
+          (exit_date - CURRENT_DATE) as days_remaining
         FROM employees
-        WHERE status = 'ACTIF'
+        WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE)
           AND contract_type = 'CDD'
           AND exit_date IS NOT NULL
-          AND EXTRACT(DAY FROM exit_date - CURRENT_DATE) IN (60, 30)
+          AND (exit_date - CURRENT_DATE) IN (60, 30)
       `);
 
       // STAGE: alerte à 15 jours
       const stageAlerts = await query(`
         SELECT id, matricule, first_name, last_name, contract_type, exit_date,
-          EXTRACT(DAY FROM exit_date - CURRENT_DATE) as days_remaining
+          (exit_date - CURRENT_DATE) as days_remaining
         FROM employees
-        WHERE status = 'ACTIF'
+        WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE)
           AND contract_type = 'STAGE'
           AND exit_date IS NOT NULL
-          AND EXTRACT(DAY FROM exit_date - CURRENT_DATE) = 15
+          AND (exit_date - CURRENT_DATE) = 15
       `);
 
       const allAlerts = [...cddAlerts.rows, ...stageAlerts.rows];
@@ -164,9 +165,62 @@ export const scheduleMonthlyReport = () => {
   });
 };
 
+// ============================================================
+// REPORT FIN D'ANNÉE CONGÉS — 31 décembre à 23h00
+// ============================================================
+export const scheduleYearEndRollover = () => {
+  cron.schedule('0 23 31 12 *', async () => {
+    logger.info('[CRON] Report fin d\'année des congés...');
+    await yearEndRollover();
+  });
+};
+
+// ============================================================
+// ALERTE FIN DE CONGÉ — tous les jours à 8h30
+// ============================================================
+export const scheduleLeaveEndAlerts = () => {
+  cron.schedule('30 8 * * *', async () => {
+    logger.info('[CRON] Vérification fins de congés...');
+    try {
+      // Congés approuvés se terminant dans 3 jours
+      const in3days = await query(`
+        SELECT l.end_date,
+          e.first_name, e.last_name, e.email as employee_email,
+          u_mgr.email as manager_email
+        FROM leaves l
+        JOIN employees e ON e.id = l.employee_id
+        LEFT JOIN employees mgr ON mgr.id = e.manager_id
+        LEFT JOIN users u_mgr ON u_mgr.email = mgr.email
+        WHERE l.type = 'PLANIFIE' AND l.status = 'APPROUVE'
+          AND l.end_date = CURRENT_DATE + INTERVAL '3 days'
+      `);
+
+      for (const leave of in3days.rows) {
+        const name = `${leave.first_name} ${leave.last_name}`;
+        const endDateFr = new Date(leave.end_date).toLocaleDateString('fr-FR');
+
+        await sendLeaveEndAlert(
+          name,
+          endDateFr,
+          leave.manager_email || null,
+          leave.employee_email || null
+        );
+
+        logger.info(`[ALERTE] Fin de congé dans 3 jours: ${name} le ${leave.end_date}`);
+      }
+
+      logger.info(`[CRON] Alertes fins de congés: ${in3days.rows.length} envoyées`);
+    } catch (err) {
+      logger.error('[CRON] Erreur alerte fins de congés:', err);
+    }
+  });
+};
+
 export const initScheduler = () => {
   scheduleBirthdayAlerts();
   scheduleContractAlerts();
   scheduleMonthlyReport();
-  logger.info('Scheduler initialisé (anniversaires, contrats, rapports)');
+  scheduleYearEndRollover();
+  scheduleLeaveEndAlerts();
+  logger.info('Scheduler initialisé (anniversaires, contrats, rapports, congés)');
 };
