@@ -38,23 +38,30 @@ function workingDays(start: string, end: string): number {
   return count;
 }
 
-/** Calcul pro-rata : si l'employé a rejoint en cours d'année,
- *  il bénéficie de (jours restants dans l'année / jours de l'année) × 30 jours.
- *  Le nombre de jours de l'année tient compte des années bissextiles (366 j) ou communes (365 j).
- *  Résultat arrondi au demi-jour supérieur.
+/**
+ * Calcul du droit annuel de congés en jours calendaires.
+ *
+ * - Employé présent toute l'année  → daysInYear(year) (365 ou 366)
+ * - Employé arrivé en cours d'année → jours restants de sa date d'entrée au 31/12
+ * - Employé pas encore en poste    → 0
+ *
+ * Exemples :
+ *   2026 (365 j), arrivée 01/01 → 365
+ *   2026 (365 j), arrivée 01/07 → 184
+ *   2024 (366 j), arrivée 01/01 → 366
  */
 function proRataAllowance(entryDate: string, year: number): number {
   const entry = new Date(entryDate);
-  if (entry.getFullYear() < year) return 30; // déjà présent en début d'année
-  if (entry.getFullYear() > year) return 0;  // pas encore en poste cette année
+  const total = daysInYear(year); // 365 ou 366 selon l'année
 
-  // Calcul précis : jours restants à partir de la date d'entrée jusqu'au 31/12
-  const yearEnd = new Date(year, 11, 31); // 31 décembre de l'année
+  if (entry.getFullYear() < year) return total; // présent depuis au moins le 1er janv
+  if (entry.getFullYear() > year) return 0;     // pas encore en poste cette année
+
+  // Jours restants du jour d'entrée au 31 décembre (inclus)
+  const yearEnd = new Date(year, 11, 31);
   const diffMs = yearEnd.getTime() - entry.getTime();
-  const daysRemaining = Math.ceil(diffMs / (24 * 3600 * 1000)) + 1; // +1 pour inclure le jour d'entrée
-  const totalDays = daysInYear(year); // 365 ou 366 selon l'année
-  const raw = (daysRemaining / totalDays) * 30;
-  return Math.ceil(raw * 2) / 2; // arrondi au 0.5 supérieur
+  const daysRemaining = Math.ceil(diffMs / (24 * 3600 * 1000)) + 1;
+  return Math.min(daysRemaining, total);
 }
 
 async function getHREmails(): Promise<string[]> {
@@ -65,13 +72,13 @@ async function getHREmails(): Promise<string[]> {
 }
 
 async function ensureBalance(employeeId: string, year: number): Promise<void> {
-  // Récupère la date d'entrée pour le calcul pro-rata
   const empRes = await query(
     `SELECT entry_date FROM employees WHERE id = $1`,
     [employeeId]
   );
   const entryDate: string | undefined = empRes.rows[0]?.entry_date;
-  const allowance = entryDate ? proRataAllowance(entryDate, year) : 30;
+  // Droit = jours réels de l'année (365 ou 366) ou pro-rata si arrivée en cours d'année
+  const allowance = entryDate ? proRataAllowance(entryDate, year) : daysInYear(year);
 
   await query(
     `INSERT INTO leave_balances (employee_id, year, annual_allowance, carry_over, days_taken, days_unpaid)
@@ -118,28 +125,21 @@ export const getLeaveBalance = async (req: Request, res: Response) => {
     );
 
     const bal = balRes.rows[0] || null;
-    // Correction données corrompues : annual_allowance et carry_over ne peuvent
-    // pas dépasser le nombre de jours dans l'année (365 ou 366)
     if (bal) {
-      // annual_allowance ne peut jamais dépasser 30 jours (maximum légal)
-      // carry_over ne peut pas dépasser daysInYear (365 ou 366)
-      const maxAllowance = 30;
-      const maxCarry = daysInYear(year);
-      const needsFix =
-        Number(bal.annual_allowance) > maxAllowance ||
-        Number(bal.carry_over) > maxCarry;
-      if (needsFix) {
-        const fixedAllowance = Math.min(Number(bal.annual_allowance), maxAllowance);
-        const fixedCarry = Math.min(Number(bal.carry_over), maxCarry);
-        bal.annual_allowance = fixedAllowance;
-        bal.carry_over = fixedCarry;
+      // Recalcul du droit correct (365 ou 366 jours selon l'année, pro-rata si arrivée en cours d'année)
+      const correctAllowance = bal.entry_date
+        ? proRataAllowance(bal.entry_date, year)
+        : daysInYear(year);
+
+      // Correction automatique si la valeur en base est incorrecte (ex: 300, 30, valeur obsolète)
+      if (Number(bal.annual_allowance) !== correctAllowance) {
+        bal.annual_allowance = correctAllowance;
         await query(
-          `UPDATE leave_balances
-           SET annual_allowance = $1, carry_over = $2, updated_at = NOW()
-           WHERE employee_id = $3 AND year = $4`,
-          [fixedAllowance, fixedCarry, id, year]
+          `UPDATE leave_balances SET annual_allowance = $1, updated_at = NOW()
+           WHERE employee_id = $2 AND year = $3`,
+          [correctAllowance, id, year]
         );
-        logger.info(`Correction congés: annual_allowance=${fixedAllowance}, carry_over=${fixedCarry} pour employé ${id} année ${year}`);
+        logger.info(`Correction annual_allowance: ${Number(bal.annual_allowance)} → ${correctAllowance} (employé ${id}, année ${year})`);
       }
     }
     return res.json(bal);
@@ -422,16 +422,17 @@ export const yearEndRollover = async (): Promise<void> => {
     }
 
     // Initialiser les balances pour les nouveaux employés actifs sans solde
+    // annual_allowance = daysInYear(nextYear) : 365 ou 366 selon l'année
     await query(
       `INSERT INTO leave_balances (employee_id, year, annual_allowance, carry_over, days_taken, days_unpaid)
-       SELECT e.id, $1, 30, 0, 0, 0
+       SELECT e.id, $1, $2, 0, 0, 0
        FROM employees e
        WHERE (e.exit_date IS NULL OR e.exit_date > CURRENT_DATE)
          AND NOT EXISTS (
            SELECT 1 FROM leave_balances lb
            WHERE lb.employee_id = e.id AND lb.year = $1
          )`,
-      [nextYear]
+      [nextYear, daysInYear(nextYear)]
     );
 
     logger.info(`Report fin d'année ${currentYear} → ${nextYear} effectué (${balances.rows.length} employés)`);

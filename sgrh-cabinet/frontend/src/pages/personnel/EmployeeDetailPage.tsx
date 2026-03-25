@@ -467,9 +467,11 @@ export default function EmployeeDetailPage() {
         const currentYear = new Date().getFullYear();
         const yearOptions = Array.from({ length: 4 }, (_, i) => currentYear - i);
         const isLeapYear = (y: number) => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
-        const maxDaysInYear = isLeapYear(selectedLeaveYear) ? 366 : 365;
-        const rawAllowance = leaveBalance ? leaveBalance.annual_allowance + leaveBalance.carry_over : 30;
-        const totalAllowance = Math.min(rawAllowance, maxDaysInYear);
+        const yearDays = isLeapYear(selectedLeaveYear) ? 366 : 365;
+        // Droit total = annual_allowance (365 ou 366 j) + report N-1
+        const totalAllowance = leaveBalance
+          ? Number(leaveBalance.annual_allowance) + Number(leaveBalance.carry_over)
+          : yearDays;
         const balanceDisplay = leaveBalance ? Math.max(0, Number(leaveBalance.balance)) : 0;
 
         return (
