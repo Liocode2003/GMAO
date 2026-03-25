@@ -477,9 +477,13 @@ export default function EmployeeDetailPage() {
         const totalAllowance = leaveBalance
           ? Number(leaveBalance.annual_allowance) + Number(leaveBalance.carry_over)
           : 30;
-        // Solde réellement disponible = balance - jours en attente
-        const daysPending   = leaveBalance ? Number(leaveBalance.days_pending)   : 0;
-        const balanceDisplay = leaveBalance ? Math.max(0, Number(leaveBalance.balance) - daysPending) : 0;
+        const daysPending    = leaveBalance ? Number(leaveBalance.days_pending)  : 0;
+        const rawBalance     = leaveBalance ? Number(leaveBalance.balance) - daysPending : 0;
+        const balanceDisplay = rawBalance; // peut être négatif (dépassement)
+        const isOverdrawn    = rawBalance < 0;
+
+        // Formatage : affiche entier si pas de décimale, sinon 1 décimale
+        const fmt = (n: number) => Number.isInteger(n) ? String(n) : n.toFixed(1);
 
         return (
           <div className="space-y-4">
@@ -519,35 +523,38 @@ export default function EmployeeDetailPage() {
             {/* Cartes de solde */}
             {leaveBalance && (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                {/* Solde disponible (hors congés en attente) */}
-                <div className="card text-center">
-                  <p className="text-3xl font-bold text-brand-600">{balanceDisplay}</p>
+                {/* Solde disponible */}
+                <div className={`card text-center ${isOverdrawn ? 'bg-red-50 border border-red-200' : ''}`}>
+                  <p className={`text-3xl font-bold ${isOverdrawn ? 'text-red-600' : 'text-brand-600'}`}>
+                    {fmt(balanceDisplay)}
+                  </p>
                   <p className="text-xs text-gray-500 mt-1">Solde disponible</p>
-                  <p className="text-xs text-gray-400 mt-0.5">sur {totalAllowance} jours</p>
+                  <p className="text-xs text-gray-400 mt-0.5">sur {fmt(totalAllowance)} jours</p>
+                  {isOverdrawn && <p className="text-xs text-red-500 mt-0.5 font-semibold">⚠ Dépassement</p>}
                 </div>
-                {/* Congés validés pris */}
+                {/* Congés validés */}
                 <div className="card text-center">
-                  <p className="text-3xl font-bold text-blue-600">{leaveBalance.days_taken}</p>
+                  <p className="text-3xl font-bold text-blue-600">{fmt(Number(leaveBalance.days_taken))}</p>
                   <p className="text-xs text-gray-500 mt-1">Congés validés</p>
                 </div>
-                {/* Congés en attente de validation */}
+                {/* En attente */}
                 <div className="card text-center">
-                  <p className="text-3xl font-bold text-yellow-500">{daysPending}</p>
+                  <p className="text-3xl font-bold text-yellow-500">{fmt(daysPending)}</p>
                   <p className="text-xs text-gray-500 mt-1">En attente</p>
                   <p className="text-xs text-gray-400 mt-0.5">non déduits</p>
                 </div>
                 {/* Imprévus */}
                 <div className="card text-center">
-                  <p className="text-3xl font-bold text-orange-500">{leaveBalance.days_unplanned}</p>
+                  <p className="text-3xl font-bold text-orange-500">{fmt(Number(leaveBalance.days_unplanned))}</p>
                   <p className="text-xs text-gray-500 mt-1">Imprévus</p>
                   {Number(leaveBalance.days_unpaid) > 0 && (
-                    <p className="text-xs text-red-500 mt-0.5">dont {leaveBalance.days_unpaid}j dépassement</p>
+                    <p className="text-xs text-red-500 mt-0.5">dont {fmt(Number(leaveBalance.days_unpaid))}j dépassement</p>
                   )}
                 </div>
                 {/* Report N-1 */}
-                <div className={`card text-center ${Number(leaveBalance.carry_over) >= 0 ? '' : 'bg-red-50'}`}>
+                <div className={`card text-center ${Number(leaveBalance.carry_over) < 0 ? 'bg-red-50' : ''}`}>
                   <p className={`text-3xl font-bold ${Number(leaveBalance.carry_over) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {Number(leaveBalance.carry_over) >= 0 ? '+' : ''}{leaveBalance.carry_over}
+                    {Number(leaveBalance.carry_over) >= 0 ? '+' : ''}{fmt(Number(leaveBalance.carry_over))}
                   </p>
                   <p className="text-xs text-gray-500 mt-1">Report N-1</p>
                 </div>
@@ -559,38 +566,34 @@ export default function EmployeeDetailPage() {
               <div className="card">
                 <div className="flex justify-between text-xs text-gray-500 mb-2">
                   <span className="font-medium">Consommation {selectedLeaveYear}</span>
-                  <span>
-                    {Number(leaveBalance.days_taken) + Number(leaveBalance.days_unplanned) + daysPending} / {totalAllowance} jours
-                    {daysPending > 0 && <span className="text-yellow-500 ml-1">({daysPending}j en attente)</span>}
+                  <span className={isOverdrawn ? 'text-red-500 font-semibold' : ''}>
+                    {fmt(Number(leaveBalance.days_taken) + Number(leaveBalance.days_unplanned) + daysPending)} / {fmt(totalAllowance)} jours
+                    {isOverdrawn && ' ⚠ dépassement'}
                   </span>
                 </div>
-                <div className="w-full bg-gray-100 rounded-full h-2.5 relative overflow-hidden">
-                  {/* Congés validés — bleu */}
-                  <div
-                    className="bg-blue-500 h-full transition-all absolute left-0"
+                <div className={`w-full rounded-full h-2.5 relative overflow-hidden ${isOverdrawn ? 'bg-red-100' : 'bg-gray-100'}`}>
+                  <div className="bg-blue-500 h-full transition-all absolute left-0"
                     style={{ width: `${Math.min(100, (Number(leaveBalance.days_taken) / Math.max(totalAllowance, 1)) * 100)}%` }}
                   />
-                  {/* Imprévus — orange */}
-                  <div
-                    className="bg-orange-400 h-full transition-all absolute"
+                  <div className="bg-orange-400 h-full transition-all absolute"
                     style={{
                       left: `${Math.min(100, (Number(leaveBalance.days_taken) / Math.max(totalAllowance, 1)) * 100)}%`,
                       width: `${Math.min(100 - (Number(leaveBalance.days_taken) / Math.max(totalAllowance, 1)) * 100, (Number(leaveBalance.days_unplanned) / Math.max(totalAllowance, 1)) * 100)}%`,
                     }}
                   />
-                  {/* En attente — jaune */}
-                  <div
-                    className="bg-yellow-400 h-full transition-all absolute"
+                  <div className="bg-yellow-400 h-full transition-all absolute"
                     style={{
                       left: `${Math.min(100, ((Number(leaveBalance.days_taken) + Number(leaveBalance.days_unplanned)) / Math.max(totalAllowance, 1)) * 100)}%`,
                       width: `${Math.min(100 - ((Number(leaveBalance.days_taken) + Number(leaveBalance.days_unplanned)) / Math.max(totalAllowance, 1)) * 100, (daysPending / Math.max(totalAllowance, 1)) * 100)}%`,
                     }}
                   />
+                  {isOverdrawn && <div className="bg-red-500 h-full w-full absolute left-0 opacity-30" />}
                 </div>
                 <div className="flex gap-4 mt-2 text-xs text-gray-400">
                   <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500 inline-block" />Validés</span>
                   <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-400 inline-block" />Imprévus</span>
                   <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-yellow-400 inline-block" />En attente</span>
+                  {isOverdrawn && <span className="flex items-center gap-1 text-red-500"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" />Dépassement</span>}
                 </div>
               </div>
             )}
