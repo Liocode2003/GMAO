@@ -24,100 +24,34 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Panneau gauche — Forvis Mazars branding */}
-      <div
-        className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 relative overflow-hidden"
-        style={{ backgroundColor: '#1C2B4A' }}
-      >
-        {/* Formes géométriques décoratives en arrière-plan */}
-        <svg
-          className="absolute inset-0 w-full h-full"
-          xmlns="http://www.w3.org/2000/svg"
-          preserveAspectRatio="xMidYMid slice"
-          aria-hidden="true"
-        >
-          <circle cx="90%" cy="10%" r="220" fill="rgba(255,255,255,0.03)" />
-          <circle cx="10%" cy="85%" r="180" fill="rgba(255,255,255,0.03)" />
-          <circle cx="75%" cy="60%" r="120" fill="rgba(200,16,46,0.06)" />
-          <line x1="0" y1="100%" x2="100%" y2="0" stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
-          <line x1="0" y1="80%" x2="60%" y2="0" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
-        </svg>
+      {/* Panneau gauche — Photo équipe Forvis Mazars */}
+      <div className="hidden lg:flex lg:w-1/2 flex-col justify-between relative overflow-hidden">
+        {/* Photo de fond */}
+        <img
+          src="/team-photo.jpg"
+          alt="Équipe Forvis Mazars"
+          className="absolute inset-0 w-full h-full object-cover object-center"
+        />
+        {/* Overlay dégradé pour lisibilité du texte */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#1C2B4A]/90 via-[#1C2B4A]/30 to-[#1C2B4A]/50" />
 
-        {/* Logo Forvis Mazars */}
-        <div className="relative flex items-center">
+        {/* Logo */}
+        <div className="relative z-10 p-12">
           <img src="/logo-white.svg" alt="Forvis Mazars" className="h-10 w-auto object-contain" />
         </div>
 
-        {/* Illustration centrale — équipe RH */}
-        <div className="relative flex justify-center items-center">
-          <svg
-            viewBox="0 0 360 260"
-            xmlns="http://www.w3.org/2000/svg"
-            className="w-full max-w-xs opacity-90"
-            aria-hidden="true"
-          >
-            {/* Lignes de connexion réseau */}
-            <line x1="180" y1="90" x2="80" y2="160" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" strokeDasharray="4 3" />
-            <line x1="180" y1="90" x2="180" y2="170" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" strokeDasharray="4 3" />
-            <line x1="180" y1="90" x2="280" y2="160" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" strokeDasharray="4 3" />
-            <line x1="80" y1="160" x2="180" y2="170" stroke="rgba(255,255,255,0.08)" strokeWidth="1" strokeDasharray="4 3" />
-            <line x1="280" y1="160" x2="180" y2="170" stroke="rgba(255,255,255,0.08)" strokeWidth="1" strokeDasharray="4 3" />
-
-            {/* Personne centrale (DRH) */}
-            <circle cx="180" cy="52" r="22" fill="rgba(200,16,46,0.85)" />
-            <circle cx="180" cy="52" r="18" fill="rgba(200,16,46,0.4)" />
-            <text x="180" y="57" textAnchor="middle" fill="white" fontSize="14" fontWeight="bold">DRH</text>
-            <rect x="163" y="76" width="34" height="20" rx="4" fill="rgba(200,16,46,0.7)" />
-
-            {/* Personne gauche */}
-            <circle cx="80" cy="148" r="18" fill="rgba(255,255,255,0.15)" />
-            <circle cx="80" cy="148" r="14" fill="rgba(255,255,255,0.08)" />
-            <text x="80" y="153" textAnchor="middle" fill="rgba(255,255,255,0.8)" fontSize="10">MGR</text>
-            <rect x="66" y="168" width="28" height="16" rx="3" fill="rgba(255,255,255,0.1)" />
-
-            {/* Personne centre-bas */}
-            <circle cx="180" cy="158" r="18" fill="rgba(255,255,255,0.15)" />
-            <circle cx="180" cy="158" r="14" fill="rgba(255,255,255,0.08)" />
-            <text x="180" y="163" textAnchor="middle" fill="rgba(255,255,255,0.8)" fontSize="10">RH</text>
-            <rect x="166" y="178" width="28" height="16" rx="3" fill="rgba(255,255,255,0.1)" />
-
-            {/* Personne droite */}
-            <circle cx="280" cy="148" r="18" fill="rgba(255,255,255,0.15)" />
-            <circle cx="280" cy="148" r="14" fill="rgba(255,255,255,0.08)" />
-            <text x="280" y="153" textAnchor="middle" fill="rgba(255,255,255,0.8)" fontSize="10">ASS</text>
-            <rect x="266" y="168" width="28" height="16" rx="3" fill="rgba(255,255,255,0.1)" />
-
-            {/* Graphique bar — coin bas droit */}
-            <g transform="translate(270,200)">
-              <rect x="0" y="20" width="10" height="30" rx="2" fill="rgba(200,16,46,0.5)" />
-              <rect x="14" y="10" width="10" height="40" rx="2" fill="rgba(200,16,46,0.7)" />
-              <rect x="28" y="0" width="10" height="50" rx="2" fill="rgba(200,16,46,0.9)" />
-              <line x1="-2" y1="50" x2="42" y2="50" stroke="rgba(255,255,255,0.2)" strokeWidth="1" />
-            </g>
-
-            {/* Badge KPI — coin bas gauche */}
-            <g transform="translate(28,205)">
-              <rect x="0" y="0" width="72" height="36" rx="6" fill="rgba(255,255,255,0.07)" />
-              <text x="36" y="14" textAnchor="middle" fill="rgba(255,255,255,0.5)" fontSize="8">Effectifs</text>
-              <text x="36" y="28" textAnchor="middle" fill="rgba(255,255,255,0.9)" fontSize="13" fontWeight="bold">247</text>
-            </g>
-          </svg>
-        </div>
-
-        {/* Texte central */}
-        <div className="relative">
+        {/* Texte bas */}
+        <div className="relative z-10 p-12">
           <h1 className="text-4xl font-bold text-white leading-tight mb-4">
             Système de Gestion<br />des Ressources<br />Humaines
           </h1>
-          <p className="text-blue-200/70 text-base leading-relaxed max-w-sm">
+          <p className="text-blue-200/80 text-base leading-relaxed max-w-sm">
             Gérez vos collaborateurs, formations et indicateurs RH depuis une plateforme unifiée et sécurisée.
           </p>
+          <p className="text-blue-300/40 text-xs mt-6">
+            © {new Date().getFullYear()} Forvis Mazars — Tous droits réservés
+          </p>
         </div>
-
-        {/* Footer */}
-        <p className="relative text-blue-300/40 text-xs">
-          © {new Date().getFullYear()} Forvis Mazars — Tous droits réservés
-        </p>
       </div>
 
       {/* Panneau droit — Formulaire */}
