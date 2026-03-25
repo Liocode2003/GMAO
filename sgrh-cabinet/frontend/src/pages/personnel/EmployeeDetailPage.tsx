@@ -473,11 +473,13 @@ export default function EmployeeDetailPage() {
         // Nombre réel de jours dans l'année sélectionnée — mis à jour automatiquement
         const daysInSelectedYear: number = isLeapYear(selectedLeaveYear) ? 366 : 365;
 
-        // Droit de congés = annual_allowance (30 j légaux) + report N-1
+        // Droit total = annual_allowance (30 j légaux) + report N-1
         const totalAllowance = leaveBalance
           ? Number(leaveBalance.annual_allowance) + Number(leaveBalance.carry_over)
           : 30;
-        const balanceDisplay = leaveBalance ? Math.max(0, Number(leaveBalance.balance)) : 0;
+        // Solde réellement disponible = balance - jours en attente
+        const daysPending   = leaveBalance ? Number(leaveBalance.days_pending)   : 0;
+        const balanceDisplay = leaveBalance ? Math.max(0, Number(leaveBalance.balance) - daysPending) : 0;
 
         return (
           <div className="space-y-4">
@@ -516,28 +518,38 @@ export default function EmployeeDetailPage() {
 
             {/* Cartes de solde */}
             {leaveBalance && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                {/* Solde disponible (hors congés en attente) */}
                 <div className="card text-center">
                   <p className="text-3xl font-bold text-brand-600">{balanceDisplay}</p>
                   <p className="text-xs text-gray-500 mt-1">Solde disponible</p>
                   <p className="text-xs text-gray-400 mt-0.5">sur {totalAllowance} jours</p>
                 </div>
+                {/* Congés validés pris */}
                 <div className="card text-center">
                   <p className="text-3xl font-bold text-blue-600">{leaveBalance.days_taken}</p>
-                  <p className="text-xs text-gray-500 mt-1">Congés planifiés pris</p>
+                  <p className="text-xs text-gray-500 mt-1">Congés validés</p>
                 </div>
+                {/* Congés en attente de validation */}
+                <div className="card text-center">
+                  <p className="text-3xl font-bold text-yellow-500">{daysPending}</p>
+                  <p className="text-xs text-gray-500 mt-1">En attente</p>
+                  <p className="text-xs text-gray-400 mt-0.5">non déduits</p>
+                </div>
+                {/* Imprévus */}
                 <div className="card text-center">
                   <p className="text-3xl font-bold text-orange-500">{leaveBalance.days_unplanned}</p>
-                  <p className="text-xs text-gray-500 mt-1">Jours d'imprévus</p>
+                  <p className="text-xs text-gray-500 mt-1">Imprévus</p>
                   {Number(leaveBalance.days_unpaid) > 0 && (
                     <p className="text-xs text-red-500 mt-0.5">dont {leaveBalance.days_unpaid}j dépassement</p>
                   )}
                 </div>
+                {/* Report N-1 */}
                 <div className={`card text-center ${Number(leaveBalance.carry_over) >= 0 ? '' : 'bg-red-50'}`}>
                   <p className={`text-3xl font-bold ${Number(leaveBalance.carry_over) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                     {Number(leaveBalance.carry_over) >= 0 ? '+' : ''}{leaveBalance.carry_over}
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">Report année N-1</p>
+                  <p className="text-xs text-gray-500 mt-1">Report N-1</p>
                 </div>
               </div>
             )}
@@ -547,13 +559,18 @@ export default function EmployeeDetailPage() {
               <div className="card">
                 <div className="flex justify-between text-xs text-gray-500 mb-2">
                   <span className="font-medium">Consommation {selectedLeaveYear}</span>
-                  <span>{Number(leaveBalance.days_taken) + Number(leaveBalance.days_unplanned)} / {totalAllowance} jours utilisés</span>
+                  <span>
+                    {Number(leaveBalance.days_taken) + Number(leaveBalance.days_unplanned) + daysPending} / {totalAllowance} jours
+                    {daysPending > 0 && <span className="text-yellow-500 ml-1">({daysPending}j en attente)</span>}
+                  </span>
                 </div>
                 <div className="w-full bg-gray-100 rounded-full h-2.5 relative overflow-hidden">
+                  {/* Congés validés — bleu */}
                   <div
-                    className="bg-blue-500 h-full rounded-full transition-all absolute left-0"
+                    className="bg-blue-500 h-full transition-all absolute left-0"
                     style={{ width: `${Math.min(100, (Number(leaveBalance.days_taken) / Math.max(totalAllowance, 1)) * 100)}%` }}
                   />
+                  {/* Imprévus — orange */}
                   <div
                     className="bg-orange-400 h-full transition-all absolute"
                     style={{
@@ -561,10 +578,19 @@ export default function EmployeeDetailPage() {
                       width: `${Math.min(100 - (Number(leaveBalance.days_taken) / Math.max(totalAllowance, 1)) * 100, (Number(leaveBalance.days_unplanned) / Math.max(totalAllowance, 1)) * 100)}%`,
                     }}
                   />
+                  {/* En attente — jaune */}
+                  <div
+                    className="bg-yellow-400 h-full transition-all absolute"
+                    style={{
+                      left: `${Math.min(100, ((Number(leaveBalance.days_taken) + Number(leaveBalance.days_unplanned)) / Math.max(totalAllowance, 1)) * 100)}%`,
+                      width: `${Math.min(100 - ((Number(leaveBalance.days_taken) + Number(leaveBalance.days_unplanned)) / Math.max(totalAllowance, 1)) * 100, (daysPending / Math.max(totalAllowance, 1)) * 100)}%`,
+                    }}
+                  />
                 </div>
                 <div className="flex gap-4 mt-2 text-xs text-gray-400">
-                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500 inline-block" />Planifiés</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500 inline-block" />Validés</span>
                   <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-400 inline-block" />Imprévus</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-yellow-400 inline-block" />En attente</span>
                 </div>
               </div>
             )}

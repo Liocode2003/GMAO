@@ -112,7 +112,9 @@ export const getLeaveBalance = async (req: Request, res: Response) => {
       `SELECT lb.*,
          e.first_name, e.last_name, e.entry_date,
          (SELECT COALESCE(SUM(days),0) FROM leaves
-          WHERE employee_id = $1 AND year = $2 AND type = 'IMPRÉVU') as days_unplanned
+          WHERE employee_id = $1 AND year = $2 AND type = 'IMPRÉVU') as days_unplanned,
+         (SELECT COALESCE(SUM(days),0) FROM leaves
+          WHERE employee_id = $1 AND year = $2 AND status = 'EN_ATTENTE') as days_pending
        FROM leave_balances lb
        JOIN employees e ON e.id = lb.employee_id
        WHERE lb.employee_id = $1 AND lb.year = $2`,
