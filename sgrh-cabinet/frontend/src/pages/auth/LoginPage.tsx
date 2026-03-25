@@ -23,20 +23,33 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center">
-      {/* Photo de fond plein écran */}
-      <img
-        src="/team-photo.png"
-        alt=""
-        className="absolute inset-0 w-full h-full object-cover object-center"
-      />
-      {/* Overlay sombre pour lisibilité */}
-      <div className="absolute inset-0 bg-black/50" />
+    <div className="min-h-screen flex">
+      {/* Côté gauche — Photo */}
+      <div className="hidden lg:flex lg:w-1/2 relative">
+        <img
+          src="/team-photo.png"
+          alt="Équipe Forvis Mazars"
+          className="absolute inset-0 w-full h-full object-cover object-center"
+        />
+        {/* Overlay dégradé léger en bas pour lisibilité */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+        {/* Tagline en bas à gauche */}
+        <div className="absolute bottom-10 left-10 right-10 text-white">
+          <p className="text-2xl font-bold leading-snug">
+            Bienvenue dans votre<br />espace RH
+          </p>
+          <p className="text-sm mt-2 text-white/75">
+            Gérez vos collaborateurs, formations et performances
+          </p>
+        </div>
+      </div>
 
-      {/* Formulaire centré */}
-      <div className="relative z-10 w-full max-w-sm mx-4">
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
-          <div className="mb-7">
+      {/* Côté droit — Formulaire */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center bg-gray-50 px-8 py-12">
+        <div className="w-full max-w-sm">
+          {/* Logo */}
+          <div className="mb-8">
+            <img src="/logo.svg" alt="Logo" className="h-10 mb-6" />
             <h2 className="text-2xl font-bold text-gray-900">Connexion</h2>
             <p className="text-gray-500 text-sm mt-1">Accédez à votre espace RH</p>
           </div>
