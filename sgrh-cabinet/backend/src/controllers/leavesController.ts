@@ -117,7 +117,29 @@ export const getLeaveBalance = async (req: Request, res: Response) => {
       [id, year]
     );
 
-    return res.json(balRes.rows[0] || null);
+    const bal = balRes.rows[0] || null;
+    // Correction données corrompues : annual_allowance et carry_over ne peuvent
+    // pas dépasser le nombre de jours dans l'année (365 ou 366)
+    if (bal) {
+      const maxDays = daysInYear(year);
+      if (Number(bal.annual_allowance) > maxDays) {
+        bal.annual_allowance = 30; // reset à la valeur légale par défaut
+        await query(
+          `UPDATE leave_balances SET annual_allowance = 30, updated_at = NOW()
+           WHERE employee_id = $1 AND year = $2`,
+          [id, year]
+        );
+      }
+      if (Number(bal.carry_over) > maxDays) {
+        bal.carry_over = 0;
+        await query(
+          `UPDATE leave_balances SET carry_over = 0, updated_at = NOW()
+           WHERE employee_id = $1 AND year = $2`,
+          [id, year]
+        );
+      }
+    }
+    return res.json(bal);
   } catch (err) {
     logger.error('getLeaveBalance error', err);
     return res.status(500).json({ error: 'Erreur serveur' });
