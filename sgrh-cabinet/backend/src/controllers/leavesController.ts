@@ -121,22 +121,25 @@ export const getLeaveBalance = async (req: Request, res: Response) => {
     // Correction données corrompues : annual_allowance et carry_over ne peuvent
     // pas dépasser le nombre de jours dans l'année (365 ou 366)
     if (bal) {
-      const maxDays = daysInYear(year);
-      if (Number(bal.annual_allowance) > maxDays) {
-        bal.annual_allowance = 30; // reset à la valeur légale par défaut
+      // annual_allowance ne peut jamais dépasser 30 jours (maximum légal)
+      // carry_over ne peut pas dépasser daysInYear (365 ou 366)
+      const maxAllowance = 30;
+      const maxCarry = daysInYear(year);
+      const needsFix =
+        Number(bal.annual_allowance) > maxAllowance ||
+        Number(bal.carry_over) > maxCarry;
+      if (needsFix) {
+        const fixedAllowance = Math.min(Number(bal.annual_allowance), maxAllowance);
+        const fixedCarry = Math.min(Number(bal.carry_over), maxCarry);
+        bal.annual_allowance = fixedAllowance;
+        bal.carry_over = fixedCarry;
         await query(
-          `UPDATE leave_balances SET annual_allowance = 30, updated_at = NOW()
-           WHERE employee_id = $1 AND year = $2`,
-          [id, year]
+          `UPDATE leave_balances
+           SET annual_allowance = $1, carry_over = $2, updated_at = NOW()
+           WHERE employee_id = $3 AND year = $4`,
+          [fixedAllowance, fixedCarry, id, year]
         );
-      }
-      if (Number(bal.carry_over) > maxDays) {
-        bal.carry_over = 0;
-        await query(
-          `UPDATE leave_balances SET carry_over = 0, updated_at = NOW()
-           WHERE employee_id = $1 AND year = $2`,
-          [id, year]
-        );
+        logger.info(`Correction congés: annual_allowance=${fixedAllowance}, carry_over=${fixedCarry} pour employé ${id} année ${year}`);
       }
     }
     return res.json(bal);
