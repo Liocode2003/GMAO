@@ -83,7 +83,7 @@ export default function DashboardPage() {
       {/* Hero Banner */}
       <div className="relative rounded-xl overflow-hidden h-44 shadow-md">
         <img
-          src="/banner-dashboard.jpg"
+          src="/banner-dashboard.png"
           alt="Forvis Mazars Burkina Faso"
           className="absolute inset-0 w-full h-full object-cover object-center"
         />
