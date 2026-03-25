@@ -18,10 +18,10 @@ export interface MailOptions {
   cc?: string[];
 }
 
-export const sendEmail = async (options: MailOptions) => {
+export const sendEmail = async (options: MailOptions): Promise<boolean> => {
   if (!process.env.SMTP_USER) {
     logger.warn('SMTP non configuré — email non envoyé:', options.subject);
-    return;
+    return false;
   }
 
   try {
@@ -32,9 +32,11 @@ export const sendEmail = async (options: MailOptions) => {
       subject: options.subject,
       html: options.html,
     });
-    logger.info(`Email envoyé: ${options.subject}`);
+    logger.info(`Email envoyé: ${options.subject} → ${Array.isArray(options.to) ? options.to.join(', ') : options.to}`);
+    return true;
   } catch (err) {
-    logger.error('Erreur envoi email:', err);
+    logger.error(`Erreur envoi email "${options.subject}":`, err);
+    return false;
   }
 };
 
@@ -218,6 +220,37 @@ export const sendLeaveEndAlert = async (
           <p style="margin-top: 16px; color: #6b7280; font-size: 13px;">
             Pensez à préparer le retour du collaborateur.
           </p>
+        </div>
+        <div style="background: #f9fafb; padding: 10px; text-align: center; font-size: 12px; color: #6b7280; border-radius: 0 0 8px 8px;">
+          SGRH Cabinet — Système de Gestion des Ressources Humaines
+        </div>
+      </div>
+    `,
+  });
+};
+
+export const sendPasswordResetEmail = async (email: string, firstName: string, resetToken: string): Promise<boolean> => {
+  const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost'}/reset-password?token=${resetToken}`;
+
+  return sendEmail({
+    to: email,
+    subject: '🔐 Réinitialisation de votre mot de passe — SGRH Cabinet',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: #1e3a5f; padding: 20px; border-radius: 8px 8px 0 0;">
+          <h2 style="color: white; margin: 0;">SGRH Cabinet</h2>
+        </div>
+        <div style="padding: 20px; border: 1px solid #e5e7eb;">
+          <h3 style="color: #1e3a5f;">Réinitialisation de mot de passe</h3>
+          <p>Bonjour <strong>${firstName}</strong>,</p>
+          <p>Vous avez demandé la réinitialisation de votre mot de passe. Cliquez sur le bouton ci-dessous pour choisir un nouveau mot de passe.</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${resetUrl}" style="background: #C8102E; color: white; padding: 12px 28px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+              Réinitialiser mon mot de passe
+            </a>
+          </div>
+          <p style="color: #6b7280; font-size: 13px;">Ce lien expire dans <strong>1 heure</strong>. Si vous n'avez pas fait cette demande, ignorez cet email.</p>
+          <p style="color: #9ca3af; font-size: 11px; word-break: break-all;">Lien : ${resetUrl}</p>
         </div>
         <div style="background: #f9fafb; padding: 10px; text-align: center; font-size: 12px; color: #6b7280; border-radius: 0 0 8px 8px;">
           SGRH Cabinet — Système de Gestion des Ressources Humaines

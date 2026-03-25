@@ -43,17 +43,24 @@ export default function DashboardPage() {
   const canViewAmounts = CAN_VIEW_AMOUNTS.includes(user?.role || '');
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     api.get('/kpis/dashboard')
-      .then(res => setData(res.data))
-      .catch(() => {})
+      .then(res => { setData(res.data); setError(false); })
+      .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, []);
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <div className="animate-spin w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full" />
+    </div>
+  );
+
+  if (error) return (
+    <div className="flex items-center justify-center h-64 text-red-500 text-sm">
+      Impossible de charger le tableau de bord. Vérifiez votre connexion.
     </div>
   );
 

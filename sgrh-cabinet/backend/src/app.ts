@@ -1,6 +1,6 @@
 import 'dotenv/config';
 
-process.env.TZ = 'Africa/Ouagadougou';
+process.env.TZ = process.env.TZ || 'Africa/Ouagadougou';
 
 import express from 'express';
 import cors from 'cors';
@@ -9,16 +9,26 @@ import compression from 'compression';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
+import swaggerUi from 'swagger-ui-express';
 import routes from './routes';
 import { logger } from './utils/logger';
+import { swaggerSpec } from './config/swagger';
 
 const app = express();
 
 app.set('trust proxy', 1);
 
 app.use(helmet());
+const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:3000')
+  .split(',')
+  .map(o => o.trim())
+  .filter(Boolean);
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS: origine non autorisée: ${origin}`));
+  },
   credentials: true,
 }));
 
@@ -43,6 +53,13 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 app.use('/api', routes);
+
+// Documentation API — accessible en dev et prod
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customSiteTitle: 'SGRH Cabinet API',
+  swaggerOptions: { persistAuthorization: true },
+}));
+app.get('/api/docs.json', (_req, res) => res.json(swaggerSpec));
 
 app.get('/health', async (_req, res) => {
   try {
