@@ -12,6 +12,7 @@ import TrainingsPage from './pages/trainings/TrainingsPage';
 import ReportsPage from './pages/rapport/ReportsPage';
 import UsersPage from './pages/settings/UsersPage';
 import AuditLogsPage from './pages/settings/AuditLogsPage';
+import ProfilePage from './pages/settings/ProfilePage';
 import ReportingCommercialPage from './pages/commercial/ReportingCommercialPage';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
@@ -48,6 +49,8 @@ export default function App() {
         <Route path="rapports" element={<AdminRoute><ReportsPage /></AdminRoute>} />
         <Route path="parametres/utilisateurs" element={<AdminRoute><UsersPage /></AdminRoute>} />
         <Route path="parametres/audit" element={<AdminRoute><AuditLogsPage /></AdminRoute>} />
+        <Route path="parametres/profil" element={<ProfilePage />} />
+        <Route path="parametres/mot-de-passe" element={<ProfilePage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
