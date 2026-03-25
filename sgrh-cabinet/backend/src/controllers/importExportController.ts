@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import ExcelJS from 'exceljs';
 import PDFDocument from 'pdfkit';
 import multer from 'multer';
+import fs from 'fs';
+import path from 'path';
 import { query } from '../config/database';
 import { logger } from '../utils/logger';
 import { UserRole } from '../types';
@@ -557,13 +559,28 @@ export const exportEmployeePDF = async (req: Request, res: Response) => {
     doc.fontSize(20).fillColor('#FFFFFF').text('Fiche Collaborateur', 50, 20);
     doc.fontSize(10).fillColor('#93C5FD').text('SGRH Cabinet — Confidentiel', 50, 48);
 
-    // Avatar initiales
+    // Avatar : photo uploadée ou initiales
     const avatarX = doc.page.width - 120;
-    doc.circle(avatarX, 40, 28).fill('#C8102E');
-    doc.fillColor('#FFFFFF').fontSize(16).text(
-      `${emp.first_name[0]}${emp.last_name[0]}`,
-      avatarX - 14, 29
-    );
+    const avatarR = 28;
+    let photoDrawn = false;
+    if (emp.photo_url) {
+      const filename = path.basename(emp.photo_url);
+      const photoPath = path.join(process.cwd(), 'uploads', 'photos', filename);
+      if (fs.existsSync(photoPath)) {
+        doc.save();
+        doc.circle(avatarX, 40, avatarR).clip();
+        doc.image(photoPath, avatarX - avatarR, 40 - avatarR, { width: avatarR * 2, height: avatarR * 2 });
+        doc.restore();
+        photoDrawn = true;
+      }
+    }
+    if (!photoDrawn) {
+      doc.circle(avatarX, 40, avatarR).fill('#C8102E');
+      doc.fillColor('#FFFFFF').fontSize(16).text(
+        `${emp.first_name[0]}${emp.last_name[0]}`,
+        avatarX - 14, 29
+      );
+    }
 
     let y = 100;
     const lineH = 22;
