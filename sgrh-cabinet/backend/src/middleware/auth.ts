@@ -55,7 +55,9 @@ export const canViewSalary = (req: Request, res: Response, next: NextFunction) =
 
 export const auditLog = (action: string, resource: string) => {
   return async (req: Request, res: Response, next: NextFunction) => {
-    if (!req.user) return next();
+    // On appelle next() immédiatement pour ne jamais bloquer la requête
+    next();
+    if (!req.user) return;
     try {
       await query(
         `INSERT INTO audit_logs(user_id, user_email, action, resource_type, resource_id, ip_address, user_agent)
@@ -71,8 +73,7 @@ export const auditLog = (action: string, resource: string) => {
         ]
       );
     } catch (err) {
-      logger.error('Erreur audit log', err);
+      logger.error(`Erreur audit log — action=${action} resource=${resource} user=${req.user.email}:`, err);
     }
-    next();
   };
 };

@@ -70,12 +70,26 @@ export const employeeService = {
   },
 
   async checkDuplicate(firstName: string, lastName: string, birthDate: string, excludeId?: string) {
-    const params: unknown[] = [firstName, lastName, birthDate];
-    const condition = excludeId ? ' AND id != $4' : '';
+    // Normalise : retire les accents, espaces multiples, met en minuscule
+    const normalize = (s: string) =>
+      s.trim().toLowerCase()
+        .normalize('NFD').replace(/\p{Diacritic}/gu, '')
+        .replace(/\s+/g, ' ');
+
+    const normFirst = normalize(firstName);
+    const normLast  = normalize(lastName);
+
+    const excludeCond = excludeId ? ` AND id != $${4}` : '';
+    const params: unknown[] = [normFirst, normLast, birthDate];
     if (excludeId) params.push(excludeId);
+
+    // Cherche via comparaison normalisée côté SQL
     const result = await query(
-      `SELECT id FROM employees
-       WHERE LOWER(first_name) = LOWER($1) AND LOWER(last_name) = LOWER($2) AND birth_date = $3${condition}`,
+      `SELECT id, first_name, last_name FROM employees
+       WHERE LOWER(REGEXP_REPLACE(first_name, '[^a-zA-Z0-9 ]', '', 'g')) = $1
+         AND LOWER(REGEXP_REPLACE(last_name,  '[^a-zA-Z0-9 ]', '', 'g')) = $2
+         AND birth_date = $3
+         ${excludeCond}`,
       params
     );
     return result.rows[0] || null;
