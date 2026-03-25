@@ -44,43 +44,67 @@ export default function ReportsPage() {
   };
 
   return (
-    <div className="p-6 max-w-xl">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Rapports</h1>
-      <div className="bg-white rounded-lg shadow p-6 space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Mois</label>
-            <select
-              value={month}
-              onChange={e => setMonth(Number(e.target.value))}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {MONTHS.map(m => (
-                <option key={m.value} value={m.value}>{m.label}</option>
-              ))}
-            </select>
+    <div className="animate-fade-in flex flex-col lg:flex-row items-center gap-12 min-h-[60vh]">
+
+      {/* Colonne gauche — Formulaire */}
+      <div className="w-full lg:w-auto lg:min-w-[380px]">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Rapports</h1>
+        <p className="text-gray-500 text-sm mb-6">Générez et téléchargez vos rapports RH mensuels au format Excel.</p>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-5">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Mois</label>
+              <select
+                value={month}
+                onChange={e => setMonth(Number(e.target.value))}
+                className="input w-full"
+              >
+                {MONTHS.map(m => (
+                  <option key={m.value} value={m.value}>{m.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Année</label>
+              <select
+                value={year}
+                onChange={e => setYear(Number(e.target.value))}
+                className="input w-full"
+              >
+                {YEARS.map(y => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Année</label>
-            <select
-              value={year}
-              onChange={e => setYear(Number(e.target.value))}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {YEARS.map(y => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
-          </div>
+
+          <button
+            onClick={generate}
+            disabled={loading}
+            className="btn-primary w-full justify-center"
+          >
+            {loading ? 'Génération en cours...' : 'Générer le rapport Excel'}
+          </button>
+
+          <p className="text-xs text-gray-400 text-center flex items-center justify-center gap-1.5">
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            Données sécurisées et confidentielles
+          </p>
         </div>
-        <button
-          onClick={generate}
-          disabled={loading}
-          className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50"
-        >
-          {loading ? 'Génération...' : 'Générer le rapport Excel'}
-        </button>
       </div>
+
+      {/* Colonne droite — Illustration */}
+      <div className="hidden lg:flex flex-1 items-center justify-center">
+        <img
+          src="/reports-illustration.png"
+          alt="Génération de rapports Forvis Mazars"
+          className="w-full max-w-lg object-contain drop-shadow-lg"
+        />
+      </div>
+
     </div>
   );
 }

@@ -80,11 +80,22 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Company header */}
-      <div className="text-center py-4 bg-white rounded-xl shadow-sm border border-gray-100">
-        <h1 className="text-2xl font-bold" style={{ color: '#1E3A5F' }}>
-          Forvis Mazars West And Central Africa : BURKINA FASO
-        </h1>
+      {/* Hero Banner */}
+      <div className="relative rounded-xl overflow-hidden h-44 shadow-md">
+        <img
+          src="/banner-dashboard.jpg"
+          alt="Forvis Mazars Burkina Faso"
+          className="absolute inset-0 w-full h-full object-cover object-center"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent" />
+        <div className="relative z-10 flex flex-col justify-center h-full px-8">
+          <h1 className="text-2xl font-bold text-white leading-tight">
+            Forvis Mazars West And Central Africa
+          </h1>
+          <p className="text-white/75 text-sm mt-1 font-medium tracking-wide uppercase">
+            Burkina Faso
+          </p>
+        </div>
       </div>
 
       {/* Page title */}

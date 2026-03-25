@@ -107,7 +107,19 @@ export default function TrainingsPage() {
             {loading ? (
               <tr><td colSpan={8} className="text-center py-8">Chargement...</td></tr>
             ) : trainings.length === 0 ? (
-              <tr><td colSpan={8} className="text-center py-8 text-gray-400">Aucune formation enregistrée</td></tr>
+              <tr>
+                <td colSpan={8}>
+                  <div className="flex flex-col items-center justify-center py-16 gap-3">
+                    <img
+                      src="/trainings-empty.png"
+                      alt="Aucune formation"
+                      className="w-64 h-auto object-contain opacity-90"
+                    />
+                    <p className="text-gray-600 font-semibold text-base">Aucune formation enregistrée</p>
+                    <p className="text-gray-400 text-sm">pour l'année {year}</p>
+                  </div>
+                </td>
+              </tr>
             ) : trainings.map(t => (
               <tr key={t.id}>
                 <td><span className={`badge text-xs ${TYPE_COLORS[t.type] || 'badge-gray'}`}>{t.type}</span></td>
