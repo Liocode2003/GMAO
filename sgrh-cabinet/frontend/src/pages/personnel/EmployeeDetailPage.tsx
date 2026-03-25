@@ -520,7 +520,7 @@ export default function EmployeeDetailPage() {
                 <div className="card text-center">
                   <p className="text-3xl font-bold text-brand-600">{balanceDisplay}</p>
                   <p className="text-xs text-gray-500 mt-1">Solde disponible</p>
-                  <p className="text-xs text-gray-400 mt-0.5">sur {daysInSelectedYear} jours</p>
+                  <p className="text-xs text-gray-400 mt-0.5">sur {totalAllowance} jours</p>
                 </div>
                 <div className="card text-center">
                   <p className="text-3xl font-bold text-blue-600">{leaveBalance.days_taken}</p>
