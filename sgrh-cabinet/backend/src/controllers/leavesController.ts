@@ -25,17 +25,12 @@ function maxCarryOver(year: number): number {
   return daysInYear(year);
 }
 
-function workingDays(start: string, end: string): number {
+/** Nombre de jours calendaires entre deux dates (inclus) — weekends et jours fériés compris. */
+function calendarDays(start: string, end: string): number {
   const s = new Date(start);
   const e = new Date(end);
-  let count = 0;
-  const cur = new Date(s);
-  while (cur <= e) {
-    const day = cur.getDay();
-    if (day !== 0 && day !== 6) count++;
-    cur.setDate(cur.getDate() + 1);
-  }
-  return count;
+  const diffMs = e.getTime() - s.getTime();
+  return Math.round(diffMs / (24 * 3600 * 1000)) + 1; // +1 pour inclure le jour de début
 }
 
 /**
@@ -214,7 +209,7 @@ export const createLeave = async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Impossible de saisir un congé pour un collaborateur inactif' });
   }
 
-  const days = workingDays(start_date, end_date);
+  const days = calendarDays(start_date, end_date);
   if (days <= 0) return res.status(400).json({ error: 'Nombre de jours invalide' });
 
   const year = new Date(start_date).getFullYear();
