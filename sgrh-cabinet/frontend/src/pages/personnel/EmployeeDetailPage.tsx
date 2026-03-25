@@ -466,12 +466,17 @@ export default function EmployeeDetailPage() {
       {activeTab === 'leaves' && (() => {
         const currentYear = new Date().getFullYear();
         const yearOptions = Array.from({ length: 4 }, (_, i) => currentYear - i);
-        const isLeapYear = (y: number) => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
-        const yearDays = isLeapYear(selectedLeaveYear) ? 366 : 365;
-        // Droit total = annual_allowance (365 ou 366 j) + report N-1
+        // Détecte si une année est bissextile (366 jours) ou commune (365 jours)
+        const isLeapYear = (y: number): boolean =>
+          (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+
+        // Nombre réel de jours dans l'année sélectionnée — mis à jour automatiquement
+        const daysInSelectedYear: number = isLeapYear(selectedLeaveYear) ? 366 : 365;
+
+        // Droit de congés = annual_allowance (30 j légaux) + report N-1
         const totalAllowance = leaveBalance
           ? Number(leaveBalance.annual_allowance) + Number(leaveBalance.carry_over)
-          : yearDays;
+          : 30;
         const balanceDisplay = leaveBalance ? Math.max(0, Number(leaveBalance.balance)) : 0;
 
         return (
@@ -515,7 +520,7 @@ export default function EmployeeDetailPage() {
                 <div className="card text-center">
                   <p className="text-3xl font-bold text-brand-600">{balanceDisplay}</p>
                   <p className="text-xs text-gray-500 mt-1">Solde disponible</p>
-                  <p className="text-xs text-gray-400 mt-0.5">sur {totalAllowance} jours</p>
+                  <p className="text-xs text-gray-400 mt-0.5">sur {daysInSelectedYear} jours</p>
                 </div>
                 <div className="card text-center">
                   <p className="text-3xl font-bold text-blue-600">{leaveBalance.days_taken}</p>
