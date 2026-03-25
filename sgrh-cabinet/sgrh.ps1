@@ -109,7 +109,8 @@ switch ($Command.ToLower()) {
             "nginx"   { "nginx" }
             default   { "" }
         }
-        Write-Title "Logs en direct$(if ($service) { " — $service" })"
+        $titleSuffix = if ($service) { " - $service" } else { "" }
+        Write-Title "Logs en direct$titleSuffix"
         if ($service) {
             Run-Compose "logs -f $service"
         } else {
