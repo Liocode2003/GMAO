@@ -10,6 +10,21 @@ import {
 // UTILITAIRES
 // ============================================================
 
+/** Retourne true si l'année est bissextile (366 jours), false sinon (365 jours). */
+export function isLeapYear(year: number): boolean {
+  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+}
+
+/** Retourne le nombre de jours dans l'année : 366 si bissextile, 365 sinon. */
+export function daysInYear(year: number): number {
+  return isLeapYear(year) ? 366 : 365;
+}
+
+/** Nombre maximum de jours de congé reportables d'une année à l'autre (1 an complet). */
+function maxCarryOver(year: number): number {
+  return daysInYear(year);
+}
+
 function workingDays(start: string, end: string): number {
   const s = new Date(start);
   const e = new Date(end);
@@ -24,7 +39,8 @@ function workingDays(start: string, end: string): number {
 }
 
 /** Calcul pro-rata : si l'employé a rejoint en cours d'année,
- *  il bénéficie de (mois restants dans l'année / 12) × 30 jours.
+ *  il bénéficie de (jours restants dans l'année / jours de l'année) × 30 jours.
+ *  Le nombre de jours de l'année tient compte des années bissextiles (366 j) ou communes (365 j).
  *  Résultat arrondi au demi-jour supérieur.
  */
 function proRataAllowance(entryDate: string, year: number): number {
@@ -32,9 +48,12 @@ function proRataAllowance(entryDate: string, year: number): number {
   if (entry.getFullYear() < year) return 30; // déjà présent en début d'année
   if (entry.getFullYear() > year) return 0;  // pas encore en poste cette année
 
-  // Mois restants (le mois d'entrée compte entier)
-  const monthsRemaining = 12 - entry.getMonth(); // getMonth() : 0=janvier → janv=12, déc=1
-  const raw = (monthsRemaining / 12) * 30;
+  // Calcul précis : jours restants à partir de la date d'entrée jusqu'au 31/12
+  const yearEnd = new Date(year, 11, 31); // 31 décembre de l'année
+  const diffMs = yearEnd.getTime() - entry.getTime();
+  const daysRemaining = Math.ceil(diffMs / (24 * 3600 * 1000)) + 1; // +1 pour inclure le jour d'entrée
+  const totalDays = daysInYear(year); // 365 ou 366 selon l'année
+  const raw = (daysRemaining / totalDays) * 30;
   return Math.ceil(raw * 2) / 2; // arrondi au 0.5 supérieur
 }
 
@@ -363,7 +382,9 @@ export const yearEndRollover = async (): Promise<void> => {
       const remaining = parseFloat(bal.balance);
       const unpaid = parseFloat(bal.days_unpaid);
       // Jours non utilisés → ajoutés ; dépassement imprévus → soustraits
-      const carryOver = remaining - unpaid;
+      // Le report est plafonné au nombre de jours de l'année suivante (365 ou 366)
+      const rawCarryOver = remaining - unpaid;
+      const carryOver = Math.min(rawCarryOver, maxCarryOver(nextYear));
 
       const nextAllowance = proRataAllowance(bal.entry_date, nextYear);
 
