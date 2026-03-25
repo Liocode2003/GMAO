@@ -44,10 +44,10 @@ export default function ReportsPage() {
   };
 
   return (
-    <div className="animate-fade-in flex flex-col lg:flex-row items-center gap-12 min-h-[60vh]">
+    <div className="animate-fade-in">
 
-      {/* Colonne gauche — Formulaire */}
-      <div className="w-full lg:w-auto lg:min-w-[380px]">
+      {/* Formulaire */}
+      <div className="w-full max-w-md">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Rapports</h1>
         <p className="text-gray-500 text-sm mb-6">Générez et téléchargez vos rapports RH mensuels au format Excel.</p>
 
@@ -94,15 +94,6 @@ export default function ReportsPage() {
             Données sécurisées et confidentielles
           </p>
         </div>
-      </div>
-
-      {/* Colonne droite — Illustration */}
-      <div className="hidden lg:flex flex-1 items-center justify-center">
-        <img
-          src="/reports-illustration.png"
-          alt="Génération de rapports Forvis Mazars"
-          className="w-full max-w-lg object-contain drop-shadow-lg"
-        />
       </div>
 
     </div>

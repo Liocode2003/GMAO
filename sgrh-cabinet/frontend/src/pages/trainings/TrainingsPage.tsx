@@ -56,29 +56,21 @@ export default function TrainingsPage() {
 
   return (
     <div className="space-y-4 animate-fade-in">
-      {/* Bannière Formations */}
-      <div className="relative rounded-xl overflow-hidden h-44 shadow-md">
-        <img
-          src="/formations-banner.png"
-          alt="Formations Forvis Mazars"
-          className="absolute inset-0 w-full h-full object-cover object-center"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/55 via-black/20 to-transparent" />
-        <div className="relative z-10 flex items-center justify-between h-full px-8">
-          <div>
-            <h2 className="text-2xl font-bold text-white">Formations</h2>
-            <p className="text-white/75 text-sm mt-1">{trainings.length} formation(s) — {totalHours.toFixed(0)}h au total</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <select value={year} onChange={e => setYear(parseInt(e.target.value))} className="input w-28 bg-white/90">
-              {Array.from({ length: new Date().getFullYear() - 2022 + 1 }, (_, i) => 2022 + i).map(y => <option key={y} value={y}>{y}</option>)}
-            </select>
-            {canManage && (
-              <button onClick={() => { setEditing(null); setShowModal(true); }} className="btn-primary">
-                <PlusIcon className="w-4 h-4" /> Nouvelle formation
-              </button>
-            )}
-          </div>
+      {/* En-tête */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800">Formations</h2>
+          <p className="text-gray-500 text-sm mt-1">{trainings.length} formation(s) — {totalHours.toFixed(0)}h au total</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <select value={year} onChange={e => setYear(parseInt(e.target.value))} className="input w-28">
+            {Array.from({ length: new Date().getFullYear() - 2022 + 1 }, (_, i) => 2022 + i).map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+          {canManage && (
+            <button onClick={() => { setEditing(null); setShowModal(true); }} className="btn-primary">
+              <PlusIcon className="w-4 h-4" /> Nouvelle formation
+            </button>
+          )}
         </div>
       </div>
 
@@ -118,12 +110,7 @@ export default function TrainingsPage() {
             ) : trainings.length === 0 ? (
               <tr>
                 <td colSpan={8}>
-                  <div className="flex flex-col items-center justify-center py-16 gap-3">
-                    <img
-                      src="/trainings-empty.png"
-                      alt="Aucune formation"
-                      className="w-64 h-auto object-contain opacity-90"
-                    />
+                  <div className="flex flex-col items-center justify-center py-16 gap-2">
                     <p className="text-gray-600 font-semibold text-base">Aucune formation enregistrée</p>
                     <p className="text-gray-400 text-sm">pour l'année {year}</p>
                   </div>

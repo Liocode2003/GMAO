@@ -80,24 +80,6 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Hero Banner */}
-      <div className="relative rounded-xl overflow-hidden h-44 shadow-md">
-        <img
-          src="/banner-dashboard.png"
-          alt="Forvis Mazars Burkina Faso"
-          className="absolute inset-0 w-full h-full object-cover object-center"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent" />
-        <div className="relative z-10 flex flex-col justify-center h-full px-8">
-          <h1 className="text-2xl font-bold text-white leading-tight">
-            Forvis Mazars West And Central Africa
-          </h1>
-          <p className="text-white/75 text-sm mt-1 font-medium tracking-wide uppercase">
-            Burkina Faso
-          </p>
-        </div>
-      </div>
-
       {/* Page title */}
       <div>
         <h2 className="text-2xl font-bold text-gray-800">Tableau de bord</h2>
