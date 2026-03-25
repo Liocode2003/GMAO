@@ -28,7 +28,7 @@ export default function LoginPage() {
       <div className="hidden lg:flex lg:w-1/2 flex-col justify-between relative overflow-hidden">
         {/* Photo de fond */}
         <img
-          src="/team-photo.jpg"
+          src="/team-photo.png"
           alt="Équipe Forvis Mazars"
           className="absolute inset-0 w-full h-full object-cover object-center"
         />
