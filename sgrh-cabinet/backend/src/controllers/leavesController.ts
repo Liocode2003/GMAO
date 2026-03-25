@@ -209,7 +209,6 @@ export const createLeave = async (req: Request, res: Response) => {
       const balance = parseFloat(balRes.rows[0]?.balance ?? '0');
       if (balance < days) {
         await client.query('ROLLBACK');
-        client.release();
         return res.status(400).json({
           error: `Solde insuffisant. Disponible: ${balance} jour(s), demandé: ${days} jour(s)`,
         });
