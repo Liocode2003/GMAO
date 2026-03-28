@@ -10,9 +10,9 @@
     "migrate": "node dist/config/migrate.js",
     "seed": "node dist/config/seed.js",
     "lint": "eslint src --ext .ts",
-    "test": "jest --config jest.config.ts",
-    "test:watch": "jest --config jest.config.ts --watch",
-    "test:coverage": "jest --config jest.config.ts --coverage"
+    "test": "jest --config jest.config.js",
+    "test:watch": "jest --config jest.config.js --watch",
+    "test:coverage": "jest --config jest.config.js --coverage"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
