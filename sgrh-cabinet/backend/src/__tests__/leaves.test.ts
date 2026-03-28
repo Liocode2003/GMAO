@@ -434,3 +434,110 @@ describe('DELETE /api/leaves/:leaveId', () => {
     expect(res.status).toBe(200);
   });
 });
+
+// ============================================================
+// TESTS UNITAIRES — isLeapYear, daysInYear, proRataAllowance
+// ============================================================
+
+import { isLeapYear, daysInYear } from '../controllers/leavesController';
+
+describe('isLeapYear', () => {
+  it('2024 est bissextile', () => expect(isLeapYear(2024)).toBe(true));
+  it('2000 est bissextile', () => expect(isLeapYear(2000)).toBe(true));
+  it('1900 n\'est pas bissextile (div 100 mais pas 400)', () => expect(isLeapYear(1900)).toBe(false));
+  it('2023 n\'est pas bissextile', () => expect(isLeapYear(2023)).toBe(false));
+  it('2025 n\'est pas bissextile', () => expect(isLeapYear(2025)).toBe(false));
+  it('2400 est bissextile', () => expect(isLeapYear(2400)).toBe(true));
+});
+
+describe('daysInYear', () => {
+  it('2024 → 366 jours', () => expect(daysInYear(2024)).toBe(366));
+  it('2023 → 365 jours', () => expect(daysInYear(2023)).toBe(365));
+  it('2000 → 366 jours', () => expect(daysInYear(2000)).toBe(366));
+  it('1900 → 365 jours', () => expect(daysInYear(1900)).toBe(365));
+});
+
+// ============================================================
+// PATCH /api/leaves/:id/approve — approbation/refus
+// ============================================================
+
+describe('PATCH /api/leaves/:id/approve', () => {
+  beforeEach(() => {
+    mockQuery.mockReset();
+    mockGetClient.mockReset();
+  });
+
+  it('retourne 401 sans token', async () => {
+    const res = await request(app)
+      .patch('/api/leaves/leave-1/approve')
+      .send({ status: 'APPROUVE' });
+    expect(res.status).toBe(401);
+  });
+
+  it('retourne 403 si rôle UTILISATEUR', async () => {
+    const res = await request(app)
+      .patch('/api/leaves/leave-1/approve')
+      .set('Authorization', `Bearer ${makeToken('UTILISATEUR')}`)
+      .send({ status: 'APPROUVE' });
+    expect(res.status).toBe(403);
+  });
+
+  it('retourne 400 si statut invalide', async () => {
+    const res = await request(app)
+      .patch('/api/leaves/leave-1/approve')
+      .set('Authorization', `Bearer ${makeToken()}`)
+      .send({ status: 'INVALIDE' });
+    expect(res.status).toBe(400);
+  });
+
+  it('retourne 404 si congé inexistant', async () => {
+    mockQuery.mockResolvedValueOnce(makeResult([]));
+    const res = await request(app)
+      .patch('/api/leaves/leave-1/approve')
+      .set('Authorization', `Bearer ${makeToken()}`)
+      .send({ status: 'APPROUVE' });
+    expect(res.status).toBe(404);
+  });
+
+  it('approuve un congé EN_ATTENTE', async () => {
+    mockQuery
+      .mockResolvedValueOnce(makeResult([fakeLeave]))   // SELECT leave
+      .mockResolvedValueOnce(makeResult([{}]))           // UPDATE status
+      .mockResolvedValueOnce(makeResult([{ days_taken: 5 }])) // recalcBalance SUM
+      .mockResolvedValueOnce(makeResult([{}]))           // recalcBalance UPDATE
+      .mockResolvedValueOnce(makeResult([{ first_name: 'Jean', last_name: 'Dupont', email: null, approved_by_name: 'DRH' }])); // email query
+
+    const res = await request(app)
+      .patch('/api/leaves/leave-1/approve')
+      .set('Authorization', `Bearer ${makeToken()}`)
+      .send({ status: 'APPROUVE' });
+    expect(res.status).toBe(200);
+    expect(res.body.message).toContain('approuvé');
+  });
+
+  it('refuse un congé EN_ATTENTE', async () => {
+    mockQuery
+      .mockResolvedValueOnce(makeResult([fakeLeave]))   // SELECT leave
+      .mockResolvedValueOnce(makeResult([{}]))           // UPDATE status
+      .mockResolvedValueOnce(makeResult([{ first_name: 'Jean', last_name: 'Dupont', email: null, approved_by_name: 'DRH' }])); // email query
+
+    const res = await request(app)
+      .patch('/api/leaves/leave-1/approve')
+      .set('Authorization', `Bearer ${makeToken()}`)
+      .send({ status: 'REFUSE' });
+    expect(res.status).toBe(200);
+    expect(res.body.message).toContain('refusé');
+  });
+
+  it('retourne 400 si congé déjà traité', async () => {
+    const approvedLeave = { ...fakeLeave, status: 'APPROUVE' };
+    mockQuery.mockResolvedValueOnce(makeResult([approvedLeave]));
+
+    const res = await request(app)
+      .patch('/api/leaves/leave-1/approve')
+      .set('Authorization', `Bearer ${makeToken()}`)
+      .send({ status: 'APPROUVE' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('déjà été traité');
+  });
+});

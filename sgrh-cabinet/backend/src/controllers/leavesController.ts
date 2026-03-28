@@ -4,6 +4,7 @@ import { logger } from '../utils/logger';
 import {
   sendUnplannedLeaveAlert,
   sendLeaveBalanceAlert,
+  sendLeaveStatusEmail,
 } from '../services/emailService';
 
 // ============================================================
@@ -339,6 +340,28 @@ export const approveLeave = async (req: Request, res: Response) => {
     if (status === 'APPROUVE') {
       await recalcBalance(leave.employee_id, leave.year);
     }
+
+    // Email notification à l'employé
+    try {
+      const empRes = await query(
+        `SELECT e.first_name, e.last_name, e.email,
+                u.first_name || ' ' || u.last_name as approved_by_name
+         FROM employees e
+         LEFT JOIN users u ON u.id = $2
+         WHERE e.id = $1`,
+        [leave.employee_id, req.user?.userId]
+      );
+      const emp = empRes.rows[0];
+      if (emp?.email) {
+        sendLeaveStatusEmail(
+          emp.email, `${emp.first_name} ${emp.last_name}`,
+          status, leave.type,
+          leave.start_date, leave.end_date, leave.days,
+          emp.approved_by_name || req.user?.email || 'RH',
+          notes
+        ).catch(err => logger.warn('Email notification congé échoué:', err));
+      }
+    } catch { /* silencieux */ }
 
     logger.info(`Congé ${leaveId} ${status} par ${req.user?.email}`);
     return res.json({ message: `Congé ${status === 'APPROUVE' ? 'approuvé' : 'refusé'}` });
