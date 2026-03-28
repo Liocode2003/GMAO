@@ -30,6 +30,21 @@ services:
     networks:
       - sgrh_network
 
+  backend-test:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: builder
+    container_name: sgrh_backend_test
+    profiles: [test]
+    working_dir: /app
+    command: npm test
+    environment:
+      NODE_ENV: test
+      JWT_SECRET: test_secret_key_for_jest
+    networks:
+      - sgrh_network
+
   backend:
     build:
       context: ./backend
