@@ -377,7 +377,7 @@ function CandidateModal({ candidate, onClose, onSaved }: {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label">Statut</label>
-              <select className="input" value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))}>
+              <select className="input" value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value as CandidateStatus }))}>
                 {(Object.keys(STATUS_CONFIG) as CandidateStatus[]).map(s => (
                   <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>
                 ))}
