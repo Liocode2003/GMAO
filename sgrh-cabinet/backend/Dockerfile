@@ -16,7 +16,7 @@ COPY package*.json ./
 RUN npm install --omit=dev && npm cache clean --force
 
 COPY --from=builder /app/dist ./dist
-RUN mkdir -p logs reports uploads/photos && chown -R sgrh:sgrh /app
+RUN mkdir -p logs reports uploads/photos uploads/documents && chown -R sgrh:sgrh /app
 
 USER sgrh
 EXPOSE 3001

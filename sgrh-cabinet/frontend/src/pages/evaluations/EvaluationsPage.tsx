@@ -19,6 +19,7 @@ interface Evaluation {
   skills_score: number | null;
   behavior_score: number | null;
   comments: string | null;
+  objectives: string | null;
   strengths: string | null;
   improvements: string | null;
   created_at: string;
@@ -245,6 +246,7 @@ function EvaluationModal({ evaluation, year, onClose, onSaved }: {
     skills_score: evaluation?.skills_score ?? '',
     behavior_score: evaluation?.behavior_score ?? '',
     comments: evaluation?.comments || '',
+    objectives: evaluation?.objectives || '',
     strengths: evaluation?.strengths || '',
     improvements: evaluation?.improvements || '',
   });
@@ -350,6 +352,11 @@ function EvaluationModal({ evaluation, year, onClose, onSaved }: {
             )}
           </div>
 
+          <div>
+            <label className="label">Objectifs fixés</label>
+            <textarea className="input h-20 resize-none" value={form.objectives}
+              onChange={e => setForm(p => ({ ...p, objectives: e.target.value }))} placeholder="Objectifs du collaborateur pour la période..." />
+          </div>
           <div>
             <label className="label">Points forts</label>
             <textarea className="input h-20 resize-none" value={form.strengths}
