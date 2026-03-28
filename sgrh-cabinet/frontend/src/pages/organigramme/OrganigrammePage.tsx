@@ -62,7 +62,7 @@ function EmployeeCard({ emp, depth }: { emp: EmployeeNode; depth: number }) {
           depth === 0 ? 'border-brand-400' : 'border-gray-200'
         }`}>
           {emp.photo_url ? (
-            <img src={`/api/employees/${emp.id}/photo/file/${emp.photo_url}`}
+            <img src={emp.photo_url}
               alt="" className="w-full h-full object-cover" />
           ) : (
             <div className={`w-full h-full flex items-center justify-center text-lg font-bold ${
