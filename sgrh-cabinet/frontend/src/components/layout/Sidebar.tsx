@@ -10,6 +10,10 @@ import {
   UserGroupIcon,
   XMarkIcon,
   BriefcaseIcon,
+  StarIcon,
+  MagnifyingGlassIcon,
+  CalendarDaysIcon,
+  BuildingOffice2Icon,
 } from '@heroicons/react/24/outline';
 
 interface NavItem {
@@ -22,8 +26,12 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { to: '/', icon: HomeIcon, label: 'Tableau de bord' },
   { to: '/personnel', icon: UsersIcon, label: 'Personnel' },
+  { to: '/organigramme', icon: BuildingOffice2Icon, label: 'Organigramme' },
   { to: '/kpis', icon: ChartBarIcon, label: 'KPIs & Statistiques' },
   { to: '/formations', icon: AcademicCapIcon, label: 'Formations' },
+  { to: '/evaluations', icon: StarIcon, label: 'Évaluations', roles: ['DRH', 'DIRECTION_GENERALE', 'MANAGER'] },
+  { to: '/recrutement', icon: MagnifyingGlassIcon, label: 'Recrutement', roles: ['DRH', 'DIRECTION_GENERALE', 'MANAGER'] },
+  { to: '/calendrier', icon: CalendarDaysIcon, label: 'Calendrier équipe' },
   { to: '/commercial', icon: BriefcaseIcon, label: 'Reporting Commercial' },
   { to: '/rapports', icon: DocumentChartBarIcon, label: 'Rapports', roles: ['DRH', 'DIRECTION_GENERALE'] },
 ];

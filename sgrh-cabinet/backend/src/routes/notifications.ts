@@ -13,17 +13,27 @@ router.use(authenticate);
  */
 router.get('/', async (req: Request, res: Response) => {
   try {
-    // Anniversaires cette semaine
+    // Anniversaires cette semaine (correction: comparaison DOY robuste, gère le passage fin d'année)
     const birthdays = await query(`
       SELECT id, first_name, last_name, birth_date,
              TO_CHAR(birth_date, 'DD/MM') as birth_day_month,
              DATE_PART('year', AGE(birth_date)) + 1 as upcoming_age
       FROM employees
-      WHERE exit_date IS NULL OR exit_date > CURRENT_DATE
-        AND TO_CHAR(birth_date, 'MM-DD') BETWEEN
-            TO_CHAR(CURRENT_DATE, 'MM-DD') AND
-            TO_CHAR(CURRENT_DATE + INTERVAL '7 days', 'MM-DD')
-      ORDER BY TO_CHAR(birth_date, 'MM-DD')
+      WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE)
+        AND birth_date IS NOT NULL
+        AND (
+          MAKE_DATE(EXTRACT(YEAR FROM CURRENT_DATE)::int, EXTRACT(MONTH FROM birth_date)::int, EXTRACT(DAY FROM birth_date)::int)
+            BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '7 days'
+          OR
+          MAKE_DATE(EXTRACT(YEAR FROM CURRENT_DATE)::int + 1, EXTRACT(MONTH FROM birth_date)::int, EXTRACT(DAY FROM birth_date)::int)
+            BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '7 days'
+        )
+      ORDER BY
+        CASE
+          WHEN MAKE_DATE(EXTRACT(YEAR FROM CURRENT_DATE)::int, EXTRACT(MONTH FROM birth_date)::int, EXTRACT(DAY FROM birth_date)::int) >= CURRENT_DATE
+          THEN MAKE_DATE(EXTRACT(YEAR FROM CURRENT_DATE)::int, EXTRACT(MONTH FROM birth_date)::int, EXTRACT(DAY FROM birth_date)::int)
+          ELSE MAKE_DATE(EXTRACT(YEAR FROM CURRENT_DATE)::int + 1, EXTRACT(MONTH FROM birth_date)::int, EXTRACT(DAY FROM birth_date)::int)
+        END
       LIMIT 20
     `);
 

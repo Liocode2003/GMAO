@@ -19,6 +19,9 @@ services:
       - ./database/migration_commercial.sql:/docker-entrypoint-initdb.d/05_migration_commercial.sql:ro
       - ./database/migration_leaves_v2.sql:/docker-entrypoint-initdb.d/06_migration_leaves_v2.sql:ro
       - ./database/update_user.sql:/docker-entrypoint-initdb.d/07_update_user.sql:ro
+      - ./database/migrations/009_evaluations.sql:/docker-entrypoint-initdb.d/09_evaluations.sql:ro
+      - ./database/migrations/010_recruitment.sql:/docker-entrypoint-initdb.d/10_recruitment.sql:ro
+      - ./database/migrations/011_employee_documents.sql:/docker-entrypoint-initdb.d/11_employee_documents.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-sgrh_user} -d ${DB_NAME:-sgrh_cabinet}"]
       interval: 10s
