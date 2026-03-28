@@ -19,6 +19,7 @@ interface Employee {
   id: string;
   first_name: string;
   last_name: string;
+  service_line: string;
 }
 
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
@@ -54,10 +55,11 @@ export default function TeamCalendarPage() {
     setLoading(true);
     try {
       const res = await api.get('/employees', { params: { limit: 500, status: 'ACTIF' } });
-      const emps: Employee[] = (res.data.data || []).map((e: { id: string; first_name: string; last_name: string }) => ({
+      const emps: Employee[] = (res.data.data || []).map((e: { id: string; first_name: string; last_name: string; service_line: string }) => ({
         id: e.id,
         first_name: e.first_name,
         last_name: e.last_name,
+        service_line: e.service_line || '',
       }));
       setEmployees(emps);
 
@@ -82,7 +84,7 @@ export default function TeamCalendarPage() {
             .map((l: Leave) => ({
               ...l,
               employee_name: `${emp.first_name} ${emp.last_name}`,
-              service_line: '',
+              service_line: emp.service_line,
             }));
           allLeaves.push(...empLeaves);
         } catch { /* skip */ }
@@ -119,6 +121,7 @@ export default function TeamCalendarPage() {
       return d >= start && d <= end;
     }).filter(l => {
       if (filterEmployee && l.employee_id !== filterEmployee) return false;
+      if (filterSL && l.service_line !== filterSL) return false;
       return true;
     });
   };
