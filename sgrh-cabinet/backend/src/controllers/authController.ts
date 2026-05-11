@@ -3,6 +3,7 @@ import { query } from '../config/database';
 import { logger } from '../utils/logger';
 import { JwtPayload } from '../types';
 import { authService } from '../services/authService';
+import { sendPasswordResetEmail } from '../services/emailService';
 
 export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body;
@@ -95,6 +96,40 @@ export const getProfile = async (req: Request, res: Response) => {
     );
     return res.json(result.rows[0]);
   } catch {
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
+
+export const forgotPassword = async (req: Request, res: Response) => {
+  const { email } = req.body;
+  try {
+    const result = await authService.createPasswordResetToken(email);
+    if (result) {
+      const sent = await sendPasswordResetEmail(result.user.email, result.user.first_name, result.token);
+      if (!sent) {
+        logger.warn(`Email de réinitialisation non envoyé pour ${email} (SMTP non configuré)`);
+      }
+      logger.info(`Demande de réinitialisation de mot de passe: ${email}`);
+    }
+    // Toujours renvoyer 200 pour éviter l'énumération d'emails
+    return res.json({ message: 'Si cet email existe, un lien de réinitialisation a été envoyé.' });
+  } catch (err) {
+    logger.error('Erreur forgotPassword', err);
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
+
+export const resetPassword = async (req: Request, res: Response) => {
+  const { token, newPassword } = req.body;
+  try {
+    const success = await authService.resetPassword(token, newPassword);
+    if (!success) {
+      return res.status(400).json({ error: 'Token invalide ou expiré' });
+    }
+    logger.info(`Mot de passe réinitialisé via token`);
+    return res.json({ message: 'Mot de passe réinitialisé avec succès' });
+  } catch (err) {
+    logger.error('Erreur resetPassword', err);
     return res.status(500).json({ error: 'Erreur serveur' });
   }
 };

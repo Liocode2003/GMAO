@@ -11,6 +11,7 @@ import {
   ArrowLeftIcon, PencilIcon, NoSymbolIcon, ClockIcon,
   UserIcon, BriefcaseIcon, AcademicCapIcon, CurrencyDollarIcon,
   DocumentArrowDownIcon, CalendarDaysIcon, PlusIcon, CheckIcon, XMarkIcon,
+  FolderIcon, DocumentIcon, ArrowDownTrayIcon, TrashIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
@@ -41,7 +42,7 @@ export default function EmployeeDetailPage() {
   const [salaryHistory, setSalaryHistory] = useState<SalaryHistory[]>([]);
   const [leaves, setLeaves] = useState<Leave[]>([]);
   const [leaveBalance, setLeaveBalance] = useState<LeaveBalance | null>(null);
-  const [activeTab, setActiveTab] = useState<'info' | 'history' | 'salary' | 'leaves'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'history' | 'salary' | 'leaves' | 'documents'>('info');
   const [loading, setLoading] = useState(true);
   const [deactivating, setDeactivating] = useState(false);
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
@@ -52,6 +53,13 @@ export default function EmployeeDetailPage() {
     type: 'PLANIFIE', absence_subtype: '', start_date: '', end_date: '', notes: '',
   });
   const [submittingLeave, setSubmittingLeave] = useState(false);
+  const [documents, setDocuments] = useState<Array<{
+    id: string; name: string; type: string; file_path: string;
+    file_size: number; mime_type: string; uploaded_by_name: string; created_at: string;
+  }>>([]);
+  const [docForm, setDocForm] = useState({ name: '', type: 'CONTRAT', file: null as File | null });
+  const [showDocForm, setShowDocForm] = useState(false);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
 
   const canManage = ['DRH', 'DIRECTION_GENERALE'].includes(user?.role || '');
   const canViewSalary = ['DRH', 'DIRECTION_GENERALE', 'ASSOCIE'].includes(user?.role || '');
@@ -81,7 +89,55 @@ export default function EmployeeDetailPage() {
     }).finally(() => setLoading(false));
 
     loadLeaves(selectedLeaveYear);
+    loadDocuments();
   }, [id, canManage, canViewSalary]);
+
+  const loadDocuments = async () => {
+    try {
+      const res = await api.get(`/documents/employee/${id}`);
+      setDocuments((res as { data: typeof documents }).data);
+    } catch { /* silencieux */ }
+  };
+
+  const handleUploadDoc = async () => {
+    if (!docForm.name || !docForm.file) { toast.error('Nom et fichier requis'); return; }
+    setUploadingDoc(true);
+    try {
+      const fd = new FormData();
+      fd.append('name', docForm.name);
+      fd.append('type', docForm.type);
+      fd.append('file', docForm.file);
+      await api.post(`/documents/employee/${id}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      toast.success('Document uploadé');
+      setShowDocForm(false);
+      setDocForm({ name: '', type: 'CONTRAT', file: null });
+      await loadDocuments();
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      toast.error(msg || 'Erreur upload');
+    } finally {
+      setUploadingDoc(false);
+    }
+  };
+
+  const handleDeleteDoc = async (docId: string) => {
+    try {
+      await api.delete(`/documents/${docId}`);
+      toast.success('Document supprimé');
+      await loadDocuments();
+    } catch { toast.error('Erreur'); }
+  };
+
+  const handleDownloadDoc = async (docId: string, name: string) => {
+    try {
+      const res = await api.get(`/documents/${docId}/download`, { responseType: 'blob' });
+      const blob = new Blob([res.data as BlobPart]);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = name; a.click();
+      URL.revokeObjectURL(url);
+    } catch { toast.error('Erreur téléchargement'); }
+  };
 
   const handleSubmitLeave = async () => {
     if (!leaveForm.start_date || !leaveForm.end_date) {
@@ -158,9 +214,10 @@ export default function EmployeeDetailPage() {
 
   const tabs = [
     { id: 'info', icon: UserIcon, label: 'Informations' },
+    { id: 'leaves', icon: CalendarDaysIcon, label: 'Congés' },
+    { id: 'documents', icon: FolderIcon, label: 'Documents' },
     { id: 'history', icon: ClockIcon, label: 'Historique' },
     ...(canViewSalary ? [{ id: 'salary', icon: CurrencyDollarIcon, label: 'Salaires' }] : []),
-    { id: 'leaves', icon: CalendarDaysIcon, label: 'Congés' },
   ];
 
   return (
@@ -375,6 +432,104 @@ export default function EmployeeDetailPage() {
         </div>
       )}
 
+      {/* Onglet Documents */}
+      {activeTab === 'documents' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-gray-700">Documents RH ({documents.length})</h3>
+            {canManage && (
+              <button onClick={() => setShowDocForm(v => !v)} className="btn-primary text-sm">
+                <PlusIcon className="w-4 h-4" /> Ajouter un document
+              </button>
+            )}
+          </div>
+
+          {showDocForm && (
+            <div className="card border-2 border-brand-200">
+              <h4 className="font-semibold text-gray-700 mb-4">Nouveau document</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="label">Nom du document *</label>
+                  <input className="input" placeholder="Ex: Contrat CDI 2024" value={docForm.name}
+                    onChange={e => setDocForm(f => ({ ...f, name: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="label">Type</label>
+                  <select className="input" value={docForm.type}
+                    onChange={e => setDocForm(f => ({ ...f, type: e.target.value }))}>
+                    <option value="CONTRAT">Contrat</option>
+                    <option value="AVENANT">Avenant</option>
+                    <option value="ATTESTATION">Attestation</option>
+                    <option value="DIPLOME">Diplôme</option>
+                    <option value="AUTRE">Autre</option>
+                  </select>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="label">Fichier * <span className="text-gray-400 font-normal">(PDF, Word, JPG — max 10 Mo)</span></label>
+                  <input type="file" className="input" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                    onChange={e => setDocForm(f => ({ ...f, file: e.target.files?.[0] || null }))} />
+                </div>
+              </div>
+              <div className="flex gap-2 mt-4 justify-end">
+                <button onClick={() => { setShowDocForm(false); setDocForm({ name: '', type: 'CONTRAT', file: null }); }}
+                  className="btn-secondary text-sm">Annuler</button>
+                <button onClick={handleUploadDoc} disabled={uploadingDoc} className="btn-primary text-sm">
+                  {uploadingDoc ? 'Upload...' : 'Enregistrer'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {documents.length === 0 ? (
+            <div className="card flex flex-col items-center py-16 gap-3 text-gray-400">
+              <FolderIcon className="w-12 h-12" />
+              <p className="font-medium">Aucun document</p>
+              {canManage && <p className="text-sm">Cliquez sur "Ajouter un document" pour uploader contrats, diplômes...</p>}
+            </div>
+          ) : (
+            <div className="card">
+              <div className="space-y-2">
+                {documents.map(doc => {
+                  const typeColors: Record<string, string> = {
+                    CONTRAT: 'badge-blue', AVENANT: 'badge-yellow', ATTESTATION: 'badge-green',
+                    DIPLOME: 'badge-purple', AUTRE: 'badge-gray',
+                  };
+                  return (
+                    <div key={doc.id} className="flex items-center justify-between py-2.5 border-b border-gray-50 last:border-0">
+                      <div className="flex items-center gap-3">
+                        <DocumentIcon className="w-8 h-8 text-gray-300 flex-shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium text-gray-800">{doc.name}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className={`badge text-xs ${typeColors[doc.type] || 'badge-gray'}`}>{doc.type}</span>
+                            <span className="text-xs text-gray-400">
+                              {doc.file_size ? `${(doc.file_size / 1024).toFixed(0)} Ko` : ''} · {new Date(doc.created_at).toLocaleDateString('fr-FR')}
+                            </span>
+                            {doc.uploaded_by_name && <span className="text-xs text-gray-400">par {doc.uploaded_by_name}</span>}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-1">
+                        <button onClick={() => handleDownloadDoc(doc.id, doc.name)}
+                          className="p-1.5 text-gray-400 hover:text-brand-600 hover:bg-brand-50 rounded" title="Télécharger">
+                          <ArrowDownTrayIcon className="w-4 h-4" />
+                        </button>
+                        {canManage && (
+                          <button onClick={() => handleDeleteDoc(doc.id)}
+                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded" title="Supprimer">
+                            <TrashIcon className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Onglet Historique modifications */}
       {activeTab === 'history' && (
         <div className="card">
@@ -466,8 +621,24 @@ export default function EmployeeDetailPage() {
       {activeTab === 'leaves' && (() => {
         const currentYear = new Date().getFullYear();
         const yearOptions = Array.from({ length: 4 }, (_, i) => currentYear - i);
-        const totalAllowance = leaveBalance ? leaveBalance.annual_allowance + leaveBalance.carry_over : 30;
-        const balanceDisplay = leaveBalance ? Math.max(0, Number(leaveBalance.balance)) : 0;
+        // Détecte si une année est bissextile (366 jours) ou commune (365 jours)
+        const isLeapYear = (y: number): boolean =>
+          (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+
+        // Nombre réel de jours dans l'année sélectionnée — mis à jour automatiquement
+        const daysInSelectedYear: number = isLeapYear(selectedLeaveYear) ? 366 : 365;
+
+        // Droit total = annual_allowance (30 j légaux) + report N-1
+        const totalAllowance = leaveBalance
+          ? Number(leaveBalance.annual_allowance) + Number(leaveBalance.carry_over)
+          : 30;
+        const daysPending    = leaveBalance ? Number(leaveBalance.days_pending)  : 0;
+        const rawBalance     = leaveBalance ? Number(leaveBalance.balance) - daysPending : 0;
+        const balanceDisplay = rawBalance; // peut être négatif (dépassement)
+        const isOverdrawn    = rawBalance < 0;
+
+        // Formatage : affiche entier si pas de décimale, sinon 1 décimale
+        const fmt = (n: number) => Number.isInteger(n) ? String(n) : n.toFixed(1);
 
         return (
           <div className="space-y-4">
@@ -506,28 +677,41 @@ export default function EmployeeDetailPage() {
 
             {/* Cartes de solde */}
             {leaveBalance && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="card text-center">
-                  <p className="text-3xl font-bold text-brand-600">{balanceDisplay}</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                {/* Solde disponible */}
+                <div className={`card text-center ${isOverdrawn ? 'bg-red-50 border border-red-200' : ''}`}>
+                  <p className={`text-3xl font-bold ${isOverdrawn ? 'text-red-600' : 'text-brand-600'}`}>
+                    {fmt(balanceDisplay)}
+                  </p>
                   <p className="text-xs text-gray-500 mt-1">Solde disponible</p>
-                  <p className="text-xs text-gray-400 mt-0.5">sur {totalAllowance} jours</p>
+                  <p className="text-xs text-gray-400 mt-0.5">sur {fmt(totalAllowance)} jours</p>
+                  {isOverdrawn && <p className="text-xs text-red-500 mt-0.5 font-semibold">⚠ Dépassement</p>}
                 </div>
+                {/* Congés validés */}
                 <div className="card text-center">
-                  <p className="text-3xl font-bold text-blue-600">{leaveBalance.days_taken}</p>
-                  <p className="text-xs text-gray-500 mt-1">Congés planifiés pris</p>
+                  <p className="text-3xl font-bold text-blue-600">{fmt(Number(leaveBalance.days_taken))}</p>
+                  <p className="text-xs text-gray-500 mt-1">Congés validés</p>
                 </div>
+                {/* En attente */}
                 <div className="card text-center">
-                  <p className="text-3xl font-bold text-orange-500">{leaveBalance.days_unplanned}</p>
-                  <p className="text-xs text-gray-500 mt-1">Jours d'imprévus</p>
+                  <p className="text-3xl font-bold text-yellow-500">{fmt(daysPending)}</p>
+                  <p className="text-xs text-gray-500 mt-1">En attente</p>
+                  <p className="text-xs text-gray-400 mt-0.5">non déduits</p>
+                </div>
+                {/* Imprévus */}
+                <div className="card text-center">
+                  <p className="text-3xl font-bold text-orange-500">{fmt(Number(leaveBalance.days_unplanned))}</p>
+                  <p className="text-xs text-gray-500 mt-1">Imprévus</p>
                   {Number(leaveBalance.days_unpaid) > 0 && (
-                    <p className="text-xs text-red-500 mt-0.5">dont {leaveBalance.days_unpaid}j dépassement</p>
+                    <p className="text-xs text-red-500 mt-0.5">dont {fmt(Number(leaveBalance.days_unpaid))}j dépassement</p>
                   )}
                 </div>
-                <div className={`card text-center ${Number(leaveBalance.carry_over) >= 0 ? '' : 'bg-red-50'}`}>
+                {/* Report N-1 */}
+                <div className={`card text-center ${Number(leaveBalance.carry_over) < 0 ? 'bg-red-50' : ''}`}>
                   <p className={`text-3xl font-bold ${Number(leaveBalance.carry_over) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {Number(leaveBalance.carry_over) >= 0 ? '+' : ''}{leaveBalance.carry_over}
+                    {Number(leaveBalance.carry_over) >= 0 ? '+' : ''}{fmt(Number(leaveBalance.carry_over))}
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">Report année N-1</p>
+                  <p className="text-xs text-gray-500 mt-1">Report N-1</p>
                 </div>
               </div>
             )}
@@ -537,24 +721,34 @@ export default function EmployeeDetailPage() {
               <div className="card">
                 <div className="flex justify-between text-xs text-gray-500 mb-2">
                   <span className="font-medium">Consommation {selectedLeaveYear}</span>
-                  <span>{Number(leaveBalance.days_taken) + Number(leaveBalance.days_unplanned)} / {totalAllowance} jours utilisés</span>
+                  <span className={isOverdrawn ? 'text-red-500 font-semibold' : ''}>
+                    {fmt(Number(leaveBalance.days_taken) + Number(leaveBalance.days_unplanned) + daysPending)} / {fmt(totalAllowance)} jours
+                    {isOverdrawn && ' ⚠ dépassement'}
+                  </span>
                 </div>
-                <div className="w-full bg-gray-100 rounded-full h-2.5 relative overflow-hidden">
-                  <div
-                    className="bg-blue-500 h-full rounded-full transition-all absolute left-0"
+                <div className={`w-full rounded-full h-2.5 relative overflow-hidden ${isOverdrawn ? 'bg-red-100' : 'bg-gray-100'}`}>
+                  <div className="bg-blue-500 h-full transition-all absolute left-0"
                     style={{ width: `${Math.min(100, (Number(leaveBalance.days_taken) / Math.max(totalAllowance, 1)) * 100)}%` }}
                   />
-                  <div
-                    className="bg-orange-400 h-full transition-all absolute"
+                  <div className="bg-orange-400 h-full transition-all absolute"
                     style={{
                       left: `${Math.min(100, (Number(leaveBalance.days_taken) / Math.max(totalAllowance, 1)) * 100)}%`,
                       width: `${Math.min(100 - (Number(leaveBalance.days_taken) / Math.max(totalAllowance, 1)) * 100, (Number(leaveBalance.days_unplanned) / Math.max(totalAllowance, 1)) * 100)}%`,
                     }}
                   />
+                  <div className="bg-yellow-400 h-full transition-all absolute"
+                    style={{
+                      left: `${Math.min(100, ((Number(leaveBalance.days_taken) + Number(leaveBalance.days_unplanned)) / Math.max(totalAllowance, 1)) * 100)}%`,
+                      width: `${Math.min(100 - ((Number(leaveBalance.days_taken) + Number(leaveBalance.days_unplanned)) / Math.max(totalAllowance, 1)) * 100, (daysPending / Math.max(totalAllowance, 1)) * 100)}%`,
+                    }}
+                  />
+                  {isOverdrawn && <div className="bg-red-500 h-full w-full absolute left-0 opacity-30" />}
                 </div>
                 <div className="flex gap-4 mt-2 text-xs text-gray-400">
-                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500 inline-block" />Planifiés</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500 inline-block" />Validés</span>
                   <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-400 inline-block" />Imprévus</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-yellow-400 inline-block" />En attente</span>
+                  {isOverdrawn && <span className="flex items-center gap-1 text-red-500"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" />Dépassement</span>}
                 </div>
               </div>
             )}

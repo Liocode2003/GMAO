@@ -10,6 +10,13 @@
 - **Alertes automatiques** — Anniversaires (J-1 et J), échéances CDD (J-60, J-30) et stages (J-15) via cron jobs + email
 - **Rapports Excel** — Génération automatique mensuelle du 1er au 5 du mois (4 onglets : KPI, Effectifs, Formations)
 - **Gestion des droits** — 5 rôles (DRH, Direction, Associé, Manager, Utilisateur), journal d'audit complet
+- **Évaluations** — Notes 0-20 par critères (technique, comportemental, globale), historique par collaborateur
+- **Recrutement** — Pipeline Kanban (Nouveau → En cours → Entretien → Offre → Embauché / Refusé), stats en temps réel
+- **Organigramme** — Arbre hiérarchique interactif (expand/collapse), coloré par ligne de service
+- **Calendrier équipe** — Vue mensuelle des congés approuvés, filtre par employé
+- **Documents RH** — Upload/download par collaborateur (contrat, avenant, attestation, diplôme), max 10 Mo
+- **Notifications congés** — Email automatique à l'employé lors de l'approbation/refus de sa demande
+- **Alerte fin de congé** — Email J-3 avant la reprise (employé + manager)
 
 ## Stack technique
 
@@ -176,6 +183,176 @@ Tous les accès aux données sensibles sont tracés dans le journal d'audit (qui
 | Anniversaires | Quotidien 8h00 | Alerte J-1 et J (email DRH) |
 | Contrats | Quotidien 9h00 | CDD à J-60 et J-30, Stages à J-15 |
 | Rapport mensuel | 1-5 du mois 7h00 | Génération + envoi rapport Excel |
+| Alerte fin de congé | Quotidien 8h30 | Email J-3 avant reprise (employé + manager) |
+| Report fin d'année | 31 décembre 23h00 | Bascule automatique des congés non pris N→N+1 |
+| Purge tokens | Quotidien 2h00 | Suppression des tokens de réinitialisation expirés |
+
+---
+
+## Schéma de base de données (ERD)
+
+```mermaid
+erDiagram
+    users {
+        uuid id PK
+        varchar email UK
+        varchar password_hash
+        varchar first_name
+        varchar last_name
+        varchar role
+        boolean is_active
+        timestamptz created_at
+    }
+
+    employees {
+        uuid id PK
+        varchar matricule UK
+        varchar first_name
+        varchar last_name
+        varchar email
+        date birth_date
+        date hire_date
+        date exit_date
+        varchar contract_type
+        varchar grade
+        varchar service_line
+        varchar position
+        decimal salary
+        uuid manager_id FK
+    }
+
+    leaves {
+        uuid id PK
+        uuid employee_id FK
+        varchar type
+        date start_date
+        date end_date
+        integer days
+        varchar status
+        text notes
+        uuid approved_by FK
+        timestamptz created_at
+    }
+
+    leave_balances {
+        uuid id PK
+        uuid employee_id FK
+        integer year
+        numeric balance_days
+        numeric used_days
+        numeric carried_over
+    }
+
+    evaluations {
+        uuid id PK
+        uuid employee_id FK
+        uuid evaluator_id FK
+        integer year
+        numeric score_technical
+        numeric score_behavioral
+        numeric score_overall
+        varchar status
+        text comments
+        timestamptz created_at
+    }
+
+    candidates {
+        uuid id PK
+        varchar first_name
+        varchar last_name
+        varchar email
+        varchar position
+        varchar status
+        text notes
+        varchar cv_path
+        timestamptz applied_at
+    }
+
+    employee_documents {
+        uuid id PK
+        uuid employee_id FK
+        varchar name
+        varchar type
+        varchar file_path
+        bigint file_size
+        uuid uploaded_by FK
+        timestamptz uploaded_at
+    }
+
+    trainings {
+        uuid id PK
+        uuid employee_id FK
+        varchar title
+        varchar category
+        date start_date
+        date end_date
+        integer hours
+        varchar status
+    }
+
+    commercial_submissions {
+        uuid id PK
+        uuid employee_id FK
+        integer year
+        integer month
+        decimal revenue
+        varchar status
+        timestamptz created_at
+    }
+
+    alerts {
+        uuid id PK
+        varchar type
+        uuid employee_id FK
+        date scheduled_date
+        varchar status
+        text message
+    }
+
+    reports {
+        uuid id PK
+        varchar name
+        integer year
+        integer month
+        varchar file_path
+        timestamptz generated_at
+        timestamptz sent_at
+        varchar status
+    }
+
+    password_reset_tokens {
+        uuid id PK
+        uuid user_id FK
+        varchar token
+        timestamptz expires_at
+        boolean used
+    }
+
+    employees ||--o{ leaves : "a des congés"
+    employees ||--o{ leave_balances : "a des soldes"
+    employees ||--o{ evaluations : "est évalué"
+    employees ||--o{ employee_documents : "a des documents"
+    employees ||--o{ trainings : "suit des formations"
+    employees ||--o{ commercial_submissions : "a des soumissions"
+    employees ||--o{ alerts : "reçoit des alertes"
+    employees }o--o| employees : "manager_id"
+    users ||--o{ evaluations : "évalue"
+    users ||--o{ leaves : "approuve"
+    users ||--o{ employee_documents : "uploade"
+    users ||--o{ password_reset_tokens : "a des tokens"
+```
+
+---
+
+## Nouveaux modules (v2)
+
+| Module | Accès | Description |
+|--------|-------|-------------|
+| Évaluations | DRH, Direction, Manager | Notes par critères, historique annuel |
+| Recrutement | DRH, Direction, Manager | Pipeline Kanban 6 étapes |
+| Organigramme | Tous | Arbre hiérarchique par manager_id |
+| Calendrier équipe | Tous | Congés approuvés vue mensuelle |
+| Documents RH | Voir: tous — Upload/Delete: DRH, Direction | Fichiers attachés aux collaborateurs |
 
 ---
 

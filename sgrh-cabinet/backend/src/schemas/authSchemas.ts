@@ -13,3 +13,12 @@ export const changePasswordSchema = z.object({
 export const refreshTokenSchema = z.object({
   refreshToken: z.string().min(1, 'Token de rafraîchissement requis'),
 });
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().email('Email invalide').toLowerCase(),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1, 'Token requis'),
+  newPassword: z.string().min(8, 'Le nouveau mot de passe doit contenir au moins 8 caractères'),
+});

@@ -18,10 +18,10 @@ export interface MailOptions {
   cc?: string[];
 }
 
-export const sendEmail = async (options: MailOptions) => {
+export const sendEmail = async (options: MailOptions): Promise<boolean> => {
   if (!process.env.SMTP_USER) {
     logger.warn('SMTP non configuré — email non envoyé:', options.subject);
-    return;
+    return false;
   }
 
   try {
@@ -32,9 +32,11 @@ export const sendEmail = async (options: MailOptions) => {
       subject: options.subject,
       html: options.html,
     });
-    logger.info(`Email envoyé: ${options.subject}`);
+    logger.info(`Email envoyé: ${options.subject} → ${Array.isArray(options.to) ? options.to.join(', ') : options.to}`);
+    return true;
   } catch (err) {
-    logger.error('Erreur envoi email:', err);
+    logger.error(`Erreur envoi email "${options.subject}":`, err);
+    return false;
   }
 };
 
@@ -227,6 +229,37 @@ export const sendLeaveEndAlert = async (
   });
 };
 
+export const sendPasswordResetEmail = async (email: string, firstName: string, resetToken: string): Promise<boolean> => {
+  const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost'}/reset-password?token=${resetToken}`;
+
+  return sendEmail({
+    to: email,
+    subject: '🔐 Réinitialisation de votre mot de passe — SGRH Cabinet',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: #1e3a5f; padding: 20px; border-radius: 8px 8px 0 0;">
+          <h2 style="color: white; margin: 0;">SGRH Cabinet</h2>
+        </div>
+        <div style="padding: 20px; border: 1px solid #e5e7eb;">
+          <h3 style="color: #1e3a5f;">Réinitialisation de mot de passe</h3>
+          <p>Bonjour <strong>${firstName}</strong>,</p>
+          <p>Vous avez demandé la réinitialisation de votre mot de passe. Cliquez sur le bouton ci-dessous pour choisir un nouveau mot de passe.</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${resetUrl}" style="background: #C8102E; color: white; padding: 12px 28px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+              Réinitialiser mon mot de passe
+            </a>
+          </div>
+          <p style="color: #6b7280; font-size: 13px;">Ce lien expire dans <strong>1 heure</strong>. Si vous n'avez pas fait cette demande, ignorez cet email.</p>
+          <p style="color: #9ca3af; font-size: 11px; word-break: break-all;">Lien : ${resetUrl}</p>
+        </div>
+        <div style="background: #f9fafb; padding: 10px; text-align: center; font-size: 12px; color: #6b7280; border-radius: 0 0 8px 8px;">
+          SGRH Cabinet — Système de Gestion des Ressources Humaines
+        </div>
+      </div>
+    `,
+  });
+};
+
 export const sendMonthlyReport = async (year: number, month: number, filePath: string, recipients: string[]) => {
   const monthNames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
   const monthName = monthNames[month - 1];
@@ -251,6 +284,56 @@ export const sendMonthlyReport = async (year: number, month: number, filePath: s
         </div>
         <div style="background: #f9fafb; padding: 10px; text-align: center; font-size: 12px; color: #6b7280; border-radius: 0 0 8px 8px;">
           SGRH Cabinet — Rapport généré automatiquement
+        </div>
+      </div>
+    `,
+  });
+};
+
+export const sendLeaveStatusEmail = async (
+  employeeEmail: string,
+  employeeName: string,
+  status: 'APPROUVE' | 'REFUSE',
+  leaveType: string,
+  startDate: string,
+  endDate: string,
+  days: number,
+  approvedByName: string,
+  notes?: string
+): Promise<void> => {
+  if (!employeeEmail) return;
+
+  const isApproved = status === 'APPROUVE';
+  const statusColor = isApproved ? '#059669' : '#dc2626';
+  const statusBg = isApproved ? '#ecfdf5' : '#fff5f5';
+  const typeLabel = leaveType === 'PLANIFIE' ? 'Congé planifié' : 'Absence imprévue';
+  const startFr = new Date(startDate).toLocaleDateString('fr-FR');
+  const endFr = new Date(endDate).toLocaleDateString('fr-FR');
+
+  await sendEmail({
+    to: employeeEmail,
+    subject: `${isApproved ? '✅' : '❌'} Congé ${isApproved ? 'approuvé' : 'refusé'} — ${startFr} au ${endFr}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: #1e3a5f; padding: 20px; border-radius: 8px 8px 0 0;">
+          <h2 style="color: white; margin: 0;">SGRH Cabinet</h2>
+        </div>
+        <div style="padding: 24px; border: 1px solid #e5e7eb; background: ${statusBg};">
+          <h3 style="color: ${statusColor}; margin-top: 0;">
+            Votre demande de congé a été ${isApproved ? 'approuvée ✅' : 'refusée ❌'}
+          </h3>
+          <p>Bonjour <strong>${employeeName}</strong>,</p>
+          <p>Votre demande a été traitée par <strong>${approvedByName}</strong>.</p>
+          <table style="width:100%;border-collapse:collapse;margin:16px 0;background:white;border-radius:8px;overflow:hidden;">
+            <tr style="background:#f3f4f6;"><td style="padding:10px 14px;font-weight:600;color:#374151;width:40%;">Type</td><td style="padding:10px 14px;">${typeLabel}</td></tr>
+            <tr><td style="padding:10px 14px;font-weight:600;color:#374151;">Du</td><td style="padding:10px 14px;">${startFr}</td></tr>
+            <tr style="background:#f3f4f6;"><td style="padding:10px 14px;font-weight:600;color:#374151;">Au</td><td style="padding:10px 14px;">${endFr}</td></tr>
+            <tr><td style="padding:10px 14px;font-weight:600;color:#374151;">Durée</td><td style="padding:10px 14px;"><strong>${days} jour(s)</strong></td></tr>
+            ${notes ? `<tr style="background:#f3f4f6;"><td style="padding:10px 14px;font-weight:600;color:#374151;">Commentaire</td><td style="padding:10px 14px;">${notes}</td></tr>` : ''}
+          </table>
+        </div>
+        <div style="background:#f9fafb;padding:10px;text-align:center;font-size:12px;color:#6b7280;border-radius:0 0 8px 8px;">
+          SGRH Cabinet — Système de Gestion des Ressources Humaines
         </div>
       </div>
     `,

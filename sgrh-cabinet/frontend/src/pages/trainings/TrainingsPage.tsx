@@ -56,10 +56,11 @@ export default function TrainingsPage() {
 
   return (
     <div className="space-y-4 animate-fade-in">
+      {/* En-tête */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Formations</h2>
-          <p className="text-gray-500 text-sm">{trainings.length} formation(s) — {totalHours.toFixed(0)}h au total</p>
+          <p className="text-gray-500 text-sm mt-1">{trainings.length} formation(s) — {totalHours.toFixed(0)}h au total</p>
         </div>
         <div className="flex items-center gap-3">
           <select value={year} onChange={e => setYear(parseInt(e.target.value))} className="input w-28">
@@ -107,7 +108,14 @@ export default function TrainingsPage() {
             {loading ? (
               <tr><td colSpan={8} className="text-center py-8">Chargement...</td></tr>
             ) : trainings.length === 0 ? (
-              <tr><td colSpan={8} className="text-center py-8 text-gray-400">Aucune formation enregistrée</td></tr>
+              <tr>
+                <td colSpan={8}>
+                  <div className="flex flex-col items-center justify-center py-16 gap-2">
+                    <p className="text-gray-600 font-semibold text-base">Aucune formation enregistrée</p>
+                    <p className="text-gray-400 text-sm">pour l'année {year}</p>
+                  </div>
+                </td>
+              </tr>
             ) : trainings.map(t => (
               <tr key={t.id}>
                 <td><span className={`badge text-xs ${TYPE_COLORS[t.type] || 'badge-gray'}`}>{t.type}</span></td>

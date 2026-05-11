@@ -108,10 +108,10 @@ describe('GET /api/employees/:id', () => {
   beforeEach(() => mockQuery.mockReset());
 
   it('retourne 404 si collaborateur inexistant', async () => {
-    // auditLog middleware runs first, then getEmployee
+    // auditLog calls next() first → findById query runs before auditLog INSERT
     mockQuery
-      .mockResolvedValueOnce(makeResult([{}]))  // auditLog middleware
-      .mockResolvedValueOnce(makeResult([]));   // SELECT employee → vide
+      .mockResolvedValueOnce(makeResult([]))    // 1st: SELECT employee → vide → 404
+      .mockResolvedValueOnce(makeResult([{}])); // 2nd: auditLog INSERT (runs after next())
 
     const res = await request(app)
       .get('/api/employees/non-existent-id')
@@ -122,12 +122,12 @@ describe('GET /api/employees/:id', () => {
   });
 
   it('retourne les détails du collaborateur', async () => {
-    // Ordre: 1) auditLog middleware INSERT, 2) SELECT employee, 3) SELECT diplomas, 4) audit salary INSERT (DRH)
+    // Ordre réel: 1) SELECT employee (findById), 2) auditLog INSERT, 3) SELECT diplomas, 4) audit salary INSERT
     mockQuery
-      .mockResolvedValueOnce(makeResult([{}]))             // auditLog middleware
-      .mockResolvedValueOnce(makeResult([fakeEmployee]))   // SELECT employee
-      .mockResolvedValueOnce(makeResult([]))               // SELECT diplomas
-      .mockResolvedValueOnce(makeResult([{}]));            // audit_log salary (DRH)
+      .mockResolvedValueOnce(makeResult([fakeEmployee]))   // 1st: SELECT employee
+      .mockResolvedValueOnce(makeResult([{}]))             // 2nd: auditLog INSERT
+      .mockResolvedValueOnce(makeResult([]))               // 3rd: SELECT diplomas
+      .mockResolvedValueOnce(makeResult([{}]));            // 4th: audit_log salary (DRH)
 
     const res = await request(app)
       .get(`/api/employees/${fakeEmployee.id}`)
@@ -141,10 +141,10 @@ describe('GET /api/employees/:id', () => {
 
   it('crée un audit_log lors de la consultation du salaire par un DRH', async () => {
     mockQuery
-      .mockResolvedValueOnce(makeResult([{}]))             // auditLog middleware
-      .mockResolvedValueOnce(makeResult([fakeEmployee]))   // SELECT employee
-      .mockResolvedValueOnce(makeResult([]))               // diplomas
-      .mockResolvedValueOnce(makeResult([{}]));            // audit salary
+      .mockResolvedValueOnce(makeResult([fakeEmployee]))   // 1st: SELECT employee
+      .mockResolvedValueOnce(makeResult([{}]))             // 2nd: auditLog INSERT
+      .mockResolvedValueOnce(makeResult([]))               // 3rd: diplomas
+      .mockResolvedValueOnce(makeResult([{}]));            // 4th: audit salary
 
     await request(app)
       .get(`/api/employees/${fakeEmployee.id}`)

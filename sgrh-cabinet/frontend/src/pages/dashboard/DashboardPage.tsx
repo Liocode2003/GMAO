@@ -43,17 +43,24 @@ export default function DashboardPage() {
   const canViewAmounts = CAN_VIEW_AMOUNTS.includes(user?.role || '');
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     api.get('/kpis/dashboard')
-      .then(res => setData(res.data))
-      .catch(() => {})
+      .then(res => { setData(res.data); setError(false); })
+      .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, []);
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <div className="animate-spin w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full" />
+    </div>
+  );
+
+  if (error) return (
+    <div className="flex items-center justify-center h-64 text-red-500 text-sm">
+      Impossible de charger le tableau de bord. Vérifiez votre connexion.
     </div>
   );
 
@@ -80,13 +87,6 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Company header */}
-      <div className="text-center py-4 bg-white rounded-xl shadow-sm border border-gray-100">
-        <h1 className="text-2xl font-bold" style={{ color: '#1E3A5F' }}>
-          Forvis Mazars West And Central Africa : BURKINA FASO
-        </h1>
-      </div>
-
       {/* Page title */}
       <div>
         <h2 className="text-2xl font-bold text-gray-800">Tableau de bord</h2>

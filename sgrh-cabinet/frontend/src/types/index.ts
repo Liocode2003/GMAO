@@ -106,6 +106,7 @@ export interface LeaveBalance {
   days_unpaid: number;
   balance: number;
   days_unplanned: number;
+  days_pending: number; // congés planifiés en attente de validation
 }
 
 export const LEAVE_STATUS_LABELS: Record<LeaveStatus, string> = {

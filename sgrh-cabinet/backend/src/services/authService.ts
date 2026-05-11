@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
 import { query } from '../config/database';
 import { JwtPayload } from '../types';
 
@@ -79,5 +80,42 @@ export const authService = {
 
   async verifyPassword(password: string, hash: string): Promise<boolean> {
     return bcrypt.compare(password, hash);
+  },
+
+  async createPasswordResetToken(email: string): Promise<{ token: string; user: { id: string; email: string; first_name: string } } | null> {
+    const result = await query(
+      'SELECT id, email, first_name FROM users WHERE email = $1 AND is_active = true',
+      [email.toLowerCase()]
+    );
+    const user = result.rows[0];
+    if (!user) return null;
+
+    // Invalider les anciens tokens
+    await query('DELETE FROM password_reset_tokens WHERE user_id = $1', [user.id]);
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 heure
+    await query(
+      'INSERT INTO password_reset_tokens(user_id, token, expires_at) VALUES($1,$2,$3)',
+      [user.id, token, expiresAt]
+    );
+    return { token, user };
+  },
+
+  async resetPassword(token: string, newPassword: string): Promise<boolean> {
+    const result = await query(
+      `SELECT prt.user_id FROM password_reset_tokens prt
+       WHERE prt.token = $1 AND prt.expires_at > NOW() AND prt.used = false`,
+      [token]
+    );
+    if (!result.rows[0]) return false;
+
+    const { user_id } = result.rows[0];
+    const hash = await bcrypt.hash(newPassword, 12);
+
+    await query('UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2', [hash, user_id]);
+    await query('UPDATE password_reset_tokens SET used = true WHERE token = $1', [token]);
+
+    return true;
   },
 };

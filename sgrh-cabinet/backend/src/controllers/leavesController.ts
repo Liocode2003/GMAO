@@ -4,38 +4,61 @@ import { logger } from '../utils/logger';
 import {
   sendUnplannedLeaveAlert,
   sendLeaveBalanceAlert,
+  sendLeaveStatusEmail,
 } from '../services/emailService';
 
 // ============================================================
 // UTILITAIRES
 // ============================================================
 
-function workingDays(start: string, end: string): number {
-  const s = new Date(start);
-  const e = new Date(end);
-  let count = 0;
-  const cur = new Date(s);
-  while (cur <= e) {
-    const day = cur.getDay();
-    if (day !== 0 && day !== 6) count++;
-    cur.setDate(cur.getDate() + 1);
-  }
-  return count;
+/** Retourne true si l'année est bissextile (366 jours), false sinon (365 jours). */
+export function isLeapYear(year: number): boolean {
+  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
 }
 
-/** Calcul pro-rata : si l'employé a rejoint en cours d'année,
- *  il bénéficie de (mois restants dans l'année / 12) × 30 jours.
- *  Résultat arrondi au demi-jour supérieur.
+/** Retourne le nombre de jours dans l'année : 366 si bissextile, 365 sinon. */
+export function daysInYear(year: number): number {
+  return isLeapYear(year) ? 366 : 365;
+}
+
+/** Nombre maximum de jours de congé reportables d'une année à l'autre (1 an complet). */
+function maxCarryOver(year: number): number {
+  return daysInYear(year);
+}
+
+/** Nombre de jours calendaires entre deux dates (inclus) — weekends et jours fériés compris. */
+function calendarDays(start: string, end: string): number {
+  const s = new Date(start);
+  const e = new Date(end);
+  const diffMs = e.getTime() - s.getTime();
+  return Math.round(diffMs / (24 * 3600 * 1000)) + 1; // +1 pour inclure le jour de début
+}
+
+/**
+ * Calcul pro-rata du droit annuel de congés (base légale : 30 jours ouvrables/an).
+ *
+ * - Employé présent depuis le 1er janvier → 30 jours
+ * - Employé arrivé en cours d'année       → (mois restants / 12) × 30, arrondi au 0.5 supérieur
+ * - Employé pas encore en poste           → 0
+ *
+ * Le calcul tient compte du nombre réel de jours dans l'année (365 ou 366)
+ * pour une précision maximale lors d'une arrivée en cours d'année.
  */
 function proRataAllowance(entryDate: string, year: number): number {
   const entry = new Date(entryDate);
-  if (entry.getFullYear() < year) return 30; // déjà présent en début d'année
+  const total = daysInYear(year); // 365 ou 366 selon que l'année est bissextile
+
+  if (entry.getFullYear() < year) return 30; // présent depuis le 1er janvier → droit complet
   if (entry.getFullYear() > year) return 0;  // pas encore en poste cette année
 
-  // Mois restants (le mois d'entrée compte entier)
-  const monthsRemaining = 12 - entry.getMonth(); // getMonth() : 0=janvier → janv=12, déc=1
-  const raw = (monthsRemaining / 12) * 30;
-  return Math.ceil(raw * 2) / 2; // arrondi au 0.5 supérieur
+  // Jours restants du jour d'entrée au 31 décembre (inclus)
+  const yearEnd = new Date(year, 11, 31);
+  const diffMs = yearEnd.getTime() - entry.getTime();
+  const daysRemaining = Math.ceil(diffMs / (24 * 3600 * 1000)) + 1;
+
+  // Pro-rata précis basé sur les jours réels de l'année (365 ou 366)
+  const raw = (daysRemaining / total) * 30;
+  return Math.ceil(raw * 2) / 2; // arrondi au demi-jour supérieur
 }
 
 async function getHREmails(): Promise<string[]> {
@@ -46,7 +69,6 @@ async function getHREmails(): Promise<string[]> {
 }
 
 async function ensureBalance(employeeId: string, year: number): Promise<void> {
-  // Récupère la date d'entrée pour le calcul pro-rata
   const empRes = await query(
     `SELECT entry_date FROM employees WHERE id = $1`,
     [employeeId]
@@ -91,14 +113,34 @@ export const getLeaveBalance = async (req: Request, res: Response) => {
       `SELECT lb.*,
          e.first_name, e.last_name, e.entry_date,
          (SELECT COALESCE(SUM(days),0) FROM leaves
-          WHERE employee_id = $1 AND year = $2 AND type = 'IMPRÉVU') as days_unplanned
+          WHERE employee_id = $1 AND year = $2 AND type = 'IMPRÉVU') as days_unplanned,
+         (SELECT COALESCE(SUM(days),0) FROM leaves
+          WHERE employee_id = $1 AND year = $2 AND status = 'EN_ATTENTE') as days_pending
        FROM leave_balances lb
        JOIN employees e ON e.id = lb.employee_id
        WHERE lb.employee_id = $1 AND lb.year = $2`,
       [id, year]
     );
 
-    return res.json(balRes.rows[0] || null);
+    const bal = balRes.rows[0] || null;
+    if (bal) {
+      // Correction automatique des données corrompues :
+      // annual_allowance doit être entre 0 et 30 jours (droit légal max = 30 j/an)
+      const MAX_LEGAL_ALLOWANCE = 30;
+      if (Number(bal.annual_allowance) > MAX_LEGAL_ALLOWANCE) {
+        const corrected = bal.entry_date
+          ? proRataAllowance(bal.entry_date, year)
+          : MAX_LEGAL_ALLOWANCE;
+        bal.annual_allowance = corrected;
+        await query(
+          `UPDATE leave_balances SET annual_allowance = $1, updated_at = NOW()
+           WHERE employee_id = $2 AND year = $3`,
+          [corrected, id, year]
+        );
+        logger.info(`Correction annual_allowance: valeur corrompue → ${corrected} (employé ${id}, année ${year})`);
+      }
+    }
+    return res.json(bal);
   } catch (err) {
     logger.error('getLeaveBalance error', err);
     return res.status(500).json({ error: 'Erreur serveur' });
@@ -141,6 +183,71 @@ export const listLeaves = async (req: Request, res: Response) => {
 };
 
 // ============================================================
+// DEMANDES EN ATTENTE (DRH / Direction uniquement)
+// ============================================================
+
+export const listPendingLeaves = async (req: Request, res: Response) => {
+  try {
+    const result = await query(
+      `SELECT l.*,
+         e.first_name || ' ' || e.last_name  AS employee_name,
+         e.service_line,
+         e.function                           AS employee_function,
+         u.first_name || ' ' || u.last_name  AS created_by_name,
+         mgr.first_name || ' ' || mgr.last_name AS manager_name
+       FROM leaves l
+       JOIN employees e   ON e.id  = l.employee_id
+       LEFT JOIN users u  ON u.id  = l.created_by
+       LEFT JOIN employees mgr ON mgr.id = e.manager_id
+       WHERE l.status = 'EN_ATTENTE'
+       ORDER BY l.created_at ASC`
+    );
+    return res.json(result.rows);
+  } catch (err) {
+    logger.error('listPendingLeaves error', err);
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
+
+// ============================================================
+// CONGÉS DE L'ÉQUIPE (Manager uniquement)
+// ============================================================
+
+export const listTeamLeaves = async (req: Request, res: Response) => {
+  const year = parseInt(req.query.year as string) || new Date().getFullYear();
+  try {
+    // Trouver l'employé correspondant au manager connecté (par email)
+    const managerEmpRes = await query(
+      `SELECT id FROM employees WHERE email = $1`,
+      [req.user?.email]
+    );
+    const managerEmpId = managerEmpRes.rows[0]?.id;
+    if (!managerEmpId) {
+      return res.status(403).json({ error: 'Votre compte n\'est pas lié à un profil collaborateur' });
+    }
+
+    const result = await query(
+      `SELECT l.*,
+         e.first_name || ' ' || e.last_name AS employee_name,
+         e.service_line,
+         u.first_name || ' ' || u.last_name AS created_by_name,
+         a.first_name || ' ' || a.last_name AS approved_by_name
+       FROM leaves l
+       JOIN employees e  ON e.id = l.employee_id
+       LEFT JOIN users u ON u.id = l.created_by
+       LEFT JOIN users a ON a.id = l.approved_by
+       WHERE e.manager_id = $1 AND l.year = $2
+       ORDER BY l.created_at DESC`,
+      [managerEmpId, year]
+    );
+    return res.json(result.rows);
+  } catch (err) {
+    logger.error('listTeamLeaves error', err);
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
+
+// ============================================================
 // CRÉER UNE DEMANDE DE CONGÉ
 // ============================================================
 
@@ -159,7 +266,7 @@ export const createLeave = async (req: Request, res: Response) => {
 
   // Vérification : collaborateur actif uniquement
   const empRes = await query(
-    `SELECT first_name, last_name, email,
+    `SELECT first_name, last_name, email, manager_id,
        CASE WHEN exit_date IS NULL OR exit_date > CURRENT_DATE THEN 'ACTIF' ELSE 'INACTIF' END as status
      FROM employees WHERE id = $1`,
     [id]
@@ -170,7 +277,22 @@ export const createLeave = async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Impossible de saisir un congé pour un collaborateur inactif' });
   }
 
-  const days = workingDays(start_date, end_date);
+  // Vérification hiérarchique : un MANAGER ne peut soumettre que pour ses collaborateurs directs
+  if (req.user?.role === 'MANAGER') {
+    const managerEmpRes = await query(
+      `SELECT id FROM employees WHERE email = $1`,
+      [req.user.email]
+    );
+    const managerEmpId = managerEmpRes.rows[0]?.id;
+    if (!managerEmpId) {
+      return res.status(403).json({ error: 'Votre compte n\'est pas lié à un profil collaborateur' });
+    }
+    if (emp.manager_id !== managerEmpId) {
+      return res.status(403).json({ error: 'Vous ne pouvez soumettre des demandes que pour vos collaborateurs directs' });
+    }
+  }
+
+  const days = calendarDays(start_date, end_date);
   if (days <= 0) return res.status(400).json({ error: 'Nombre de jours invalide' });
 
   const year = new Date(start_date).getFullYear();
@@ -190,7 +312,6 @@ export const createLeave = async (req: Request, res: Response) => {
       const balance = parseFloat(balRes.rows[0]?.balance ?? '0');
       if (balance < days) {
         await client.query('ROLLBACK');
-        client.release();
         return res.status(400).json({
           error: `Solde insuffisant. Disponible: ${balance} jour(s), demandé: ${days} jour(s)`,
         });
@@ -300,6 +421,28 @@ export const approveLeave = async (req: Request, res: Response) => {
       await recalcBalance(leave.employee_id, leave.year);
     }
 
+    // Email notification à l'employé
+    try {
+      const empRes = await query(
+        `SELECT e.first_name, e.last_name, e.email,
+                u.first_name || ' ' || u.last_name as approved_by_name
+         FROM employees e
+         LEFT JOIN users u ON u.id = $2
+         WHERE e.id = $1`,
+        [leave.employee_id, req.user?.userId]
+      );
+      const emp = empRes.rows[0];
+      if (emp?.email) {
+        sendLeaveStatusEmail(
+          emp.email, `${emp.first_name} ${emp.last_name}`,
+          status, leave.type,
+          leave.start_date, leave.end_date, leave.days,
+          emp.approved_by_name || req.user?.email || 'RH',
+          notes
+        ).catch(err => logger.warn('Email notification congé échoué:', err));
+      }
+    } catch { /* silencieux */ }
+
     logger.info(`Congé ${leaveId} ${status} par ${req.user?.email}`);
     return res.json({ message: `Congé ${status === 'APPROUVE' ? 'approuvé' : 'refusé'}` });
   } catch (err) {
@@ -363,7 +506,9 @@ export const yearEndRollover = async (): Promise<void> => {
       const remaining = parseFloat(bal.balance);
       const unpaid = parseFloat(bal.days_unpaid);
       // Jours non utilisés → ajoutés ; dépassement imprévus → soustraits
-      const carryOver = remaining - unpaid;
+      // Le report est plafonné au nombre de jours de l'année suivante (365 ou 366)
+      const rawCarryOver = remaining - unpaid;
+      const carryOver = Math.min(rawCarryOver, maxCarryOver(nextYear));
 
       const nextAllowance = proRataAllowance(bal.entry_date, nextYear);
 
@@ -377,6 +522,7 @@ export const yearEndRollover = async (): Promise<void> => {
     }
 
     // Initialiser les balances pour les nouveaux employés actifs sans solde
+    // annual_allowance = 30 jours (droit légal annuel)
     await query(
       `INSERT INTO leave_balances (employee_id, year, annual_allowance, carry_over, days_taken, days_unpaid)
        SELECT e.id, $1, 30, 0, 0, 0

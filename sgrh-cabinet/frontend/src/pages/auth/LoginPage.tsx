@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
@@ -24,41 +24,32 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Panneau gauche — Forvis Mazars branding */}
-      <div
-        className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12"
-        style={{ backgroundColor: '#1C2B4A' }}
-      >
-        {/* Logo Forvis Mazars */}
-        <div className="flex items-center">
-          <img src="/logo-white.svg" alt="Forvis Mazars" className="h-10 w-auto object-contain" />
-        </div>
-
-        {/* Texte central */}
-        <div>
-          <h1 className="text-4xl font-bold text-white leading-tight mb-4">
-            Système de Gestion<br />des Ressources<br />Humaines
-          </h1>
-          <p className="text-blue-200/70 text-base leading-relaxed max-w-sm">
-            Gérez vos collaborateurs, formations et indicateurs RH depuis une plateforme unifiée et sécurisée.
+      {/* Côté gauche — Photo */}
+      <div className="hidden lg:flex lg:w-1/2 relative">
+        <img
+          src="/team-photo.png"
+          alt="Équipe Forvis Mazars"
+          className="absolute inset-0 w-full h-full object-cover object-center"
+        />
+        {/* Overlay dégradé léger en bas pour lisibilité */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+        {/* Tagline en bas à gauche */}
+        <div className="absolute bottom-10 left-10 right-10 text-white">
+          <p className="text-2xl font-bold leading-snug">
+            Bienvenue dans votre<br />espace RH
+          </p>
+          <p className="text-sm mt-2 text-white/75">
+            Gérez vos collaborateurs, formations et performances
           </p>
         </div>
-
-        {/* Footer */}
-        <p className="text-blue-300/40 text-xs">
-          © {new Date().getFullYear()} Forvis Mazars — Tous droits réservés
-        </p>
       </div>
 
-      {/* Panneau droit — Formulaire */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-gray-50">
+      {/* Côté droit — Formulaire */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center bg-gray-50 px-8 py-12">
         <div className="w-full max-w-sm">
-          {/* Logo mobile */}
-          <div className="lg:hidden mb-10">
-            <img src="/logo.svg" alt="Forvis Mazars" className="h-9 w-auto object-contain" />
-          </div>
-
+          {/* Logo */}
           <div className="mb-8">
+            <img src="/logo.svg" alt="Logo" className="h-10 mb-6" />
             <h2 className="text-2xl font-bold text-gray-900">Connexion</h2>
             <p className="text-gray-500 text-sm mt-1">Accédez à votre espace RH</p>
           </div>
@@ -70,8 +61,7 @@ export default function LoginPage() {
               </label>
               <input
                 type="email"
-                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 bg-white focus:outline-none focus:ring-2 focus:border-transparent transition"
-                style={{ '--tw-ring-color': '#C8102E' } as React.CSSProperties}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 bg-white focus:outline-none transition"
                 onFocus={e => (e.target.style.boxShadow = '0 0 0 2px #C8102E33')}
                 onBlur={e => (e.target.style.boxShadow = '')}
                 placeholder="votre@email.com"
@@ -107,6 +97,12 @@ export default function LoginPage() {
               </div>
             </div>
 
+            <div className="flex justify-end">
+              <Link to="/forgot-password" className="text-xs text-gray-500 hover:underline" style={{ color: '#C8102E' }}>
+                Mot de passe oublié ?
+              </Link>
+            </div>
+
             <button
               type="submit"
               disabled={isLoading}
@@ -128,11 +124,6 @@ export default function LoginPage() {
               )}
             </button>
           </form>
-
-          <div className="mt-8 pt-6 border-t border-gray-200">
-            <p className="text-xs text-gray-400 text-center">
-            </p>
-          </div>
         </div>
       </div>
     </div>

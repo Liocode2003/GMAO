@@ -216,11 +216,29 @@ export const scheduleLeaveEndAlerts = () => {
   });
 };
 
+// ============================================================
+// PURGE TOKENS EXPIRÉS — toutes les nuits à 2h00
+// ============================================================
+export const schedulePurgeExpiredTokens = () => {
+  cron.schedule('0 2 * * *', async () => {
+    logger.info('[CRON] Purge des tokens expirés...');
+    try {
+      const result = await query(
+        `DELETE FROM password_reset_tokens WHERE expires_at < NOW() OR used = true`
+      );
+      logger.info(`[CRON] Tokens purgés: ${result.rowCount} supprimés`);
+    } catch (err) {
+      logger.error('[CRON] Erreur purge tokens:', err);
+    }
+  });
+};
+
 export const initScheduler = () => {
   scheduleBirthdayAlerts();
   scheduleContractAlerts();
   scheduleMonthlyReport();
   scheduleYearEndRollover();
   scheduleLeaveEndAlerts();
-  logger.info('Scheduler initialisé (anniversaires, contrats, rapports, congés)');
+  schedulePurgeExpiredTokens();
+  logger.info('Scheduler initialisé (anniversaires, contrats, rapports, congés, purge tokens)');
 };
