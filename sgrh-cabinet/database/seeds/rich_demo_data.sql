@@ -142,14 +142,31 @@ VALUES
   ((SELECT id FROM employees WHERE matricule='MAT-2021-010'),'PLANIFIE','2026-03-30','2026-04-03', 5,2026,'EN_ATTENTE',NULL,NULL,'a0000001-0000-0000-0000-000000000001');
 
 -- ============================================================
--- 6. ÉVALUATIONS 2025 (TERMINE) + 2026 (EN_COURS / BROUILLON)
+-- 6. ÉVALUATIONS — 2 fois par an (MI_ANNUEL + ANNUEL) par employé
 -- ============================================================
 
--- Annuel 2025 — terminées
+-- ── 2025 MI_ANNUEL (TERMINE — bilan de mi-parcours) ──────────
+INSERT INTO evaluations (employee_id, evaluator_id, year, period, status, overall_score, objectives_score, skills_score, behavior_score, strengths, improvements, objectives)
+VALUES
+  ((SELECT id FROM employees WHERE matricule='MAT-2019-001'),'a0000001-0000-0000-0000-000000000001',2025,'MI_ANNUEL','TERMINE',15.5,16.0,15.0,15.5,'Bonne progression sur les missions Audit.','Renforcer la supervision des juniors.','Atteindre 80% des objectifs S1.'),
+  ((SELECT id FROM employees WHERE matricule='MAT-2020-002'),'a0000001-0000-0000-0000-000000000001',2025,'MI_ANNUEL','TERMINE',14.0,13.5,14.5,14.0,'Montée en compétence visible.','Prendre plus d''initiatives.','Conduire une mission en autonomie.'),
+  ((SELECT id FROM employees WHERE matricule='MAT-2021-003'),'a0000001-0000-0000-0000-000000000001',2025,'MI_ANNUEL','TERMINE',13.5,13.5,13.5,13.5,'Solide maîtrise du droit fiscal local.','Améliorer la communication écrite.','Produire 3 mémos fiscaux de qualité.'),
+  ((SELECT id FROM employees WHERE matricule='MAT-2018-004'),'a0000001-0000-0000-0000-000000000001',2025,'MI_ANNUEL','TERMINE',17.0,17.5,16.5,17.0,'Gestion rigoureuse des projets clients.','Développer la délégation.','Signer 2 nouveaux contrats clients.'),
+  ((SELECT id FROM employees WHERE matricule='MAT-2017-006'),'a0000001-0000-0000-0000-000000000001',2025,'MI_ANNUEL','TERMINE',17.5,17.5,17.5,17.5,'Pilotage exemplaire du département.','Renforcer le reporting à la direction.','Recruter 2 profils expérimentés.'),
+  ((SELECT id FROM employees WHERE matricule='MAT-2020-007'),'a0000001-0000-0000-0000-000000000001',2025,'MI_ANNUEL','TERMINE',13.0,12.5,13.5,13.0,'Fiabilité des systèmes maintenue.','Documenter davantage les procédures IT.','Déployer la solution de sauvegarde cloud.'),
+  ((SELECT id FROM employees WHERE matricule='MAT-2016-009'),'a0000001-0000-0000-0000-000000000001',2025,'MI_ANNUEL','TERMINE',18.5,18.5,18.5,18.5,'Leadership stratégique remarquable.','Déléguer les décisions opérationnelles.','Finaliser la stratégie régionale S2.'),
+  ((SELECT id FROM employees WHERE matricule='MAT-2022-011'),'a0000001-0000-0000-0000-000000000001',2025,'MI_ANNUEL','TERMINE',15.0,14.5,15.5,15.0,'Rigueur dans les dossiers contentieux.','Améliorer la réactivité client.','Traiter 20 dossiers fiscaux.'),
+  ((SELECT id FROM employees WHERE matricule='MAT-2019-012'),'a0000001-0000-0000-0000-000000000001',2025,'MI_ANNUEL','TERMINE',14.0,13.5,14.5,14.0,'Fiabilité administrative excellente.','Développer l''utilisation des outils RH.','Digitaliser 3 processus administratifs.'),
+  ((SELECT id FROM employees WHERE matricule='MAT-2018-015'),'a0000001-0000-0000-0000-000000000001',2025,'MI_ANNUEL','TERMINE',16.5,16.5,16.5,16.5,'Encadrement de qualité des équipes.','Renforcer le suivi budgétaire.','Superviser 4 missions simultanément.'),
+  ((SELECT id FROM employees WHERE matricule='MAT-2020-014'),'a0000001-0000-0000-0000-000000000001',2025,'MI_ANNUEL','TERMINE',13.0,13.0,13.0,13.0,'Bonne adaptation au département Outsourcing.','Améliorer la maîtrise des outils SAGE.','Gérer 5 dossiers clients en autonomie.'),
+  ((SELECT id FROM employees WHERE matricule='MAT-2021-010'),'a0000001-0000-0000-0000-000000000001',2025,'MI_ANNUEL','TERMINE',13.5,13.0,14.0,13.5,'Sérieux et implication dans les missions.','Développer l''autonomie.','Réduire les délais de rendu de 20%.')
+ON CONFLICT (employee_id, year, period) DO NOTHING;
+
+-- ── 2025 ANNUEL (TERMINE — bilan de fin d'année) ─────────────
 INSERT INTO evaluations (employee_id, evaluator_id, year, period, status, overall_score, objectives_score, skills_score, behavior_score, strengths, improvements, objectives)
 VALUES
   ((SELECT id FROM employees WHERE matricule='MAT-2019-001'),'a0000001-0000-0000-0000-000000000001',2025,'ANNUEL','TERMINE',16.5,17.0,16.0,16.5,'Excellente maîtrise des normes IFRS, autonomie.','Renforcer les compétences en management.','Certifier 2 collaborateurs juniors ; conduire 3 missions en chef de mission.'),
-  ((SELECT id FROM employees WHERE matricule='MAT-2020-002'),'a0000001-0000-0000-0000-000000000001',2025,'ANNUEL','TERMINE',15.0,14.5,15.5,15.0,'Rigueur et sérieux dans les missions.','Développer la prise d'initiative.','Passer au grade Senior d''ici fin 2026.'),
+  ((SELECT id FROM employees WHERE matricule='MAT-2020-002'),'a0000001-0000-0000-0000-000000000001',2025,'ANNUEL','TERMINE',15.0,14.5,15.5,15.0,'Rigueur et sérieux dans les missions.','Développer la prise d''initiative.','Passer au grade Senior d''ici fin 2026.'),
   ((SELECT id FROM employees WHERE matricule='MAT-2021-003'),'a0000001-0000-0000-0000-000000000001',2025,'ANNUEL','TERMINE',14.0,14.0,14.0,14.0,'Bonne connaissance de la fiscalité locale.','Améliorer la rédaction des rapports.','Suivre une formation fiscalité internationale.'),
   ((SELECT id FROM employees WHERE matricule='MAT-2018-004'),'a0000001-0000-0000-0000-000000000001',2025,'ANNUEL','TERMINE',17.5,18.0,17.0,17.5,'Leadership exemplaire, excellente gestion de projet.','Déléguer davantage aux juniors.','Développer 2 nouveaux clients institutionnels.'),
   ((SELECT id FROM employees WHERE matricule='MAT-2017-006'),'a0000001-0000-0000-0000-000000000001',2025,'ANNUEL','TERMINE',18.0,18.0,18.0,18.0,'Vision stratégique et excellente gestion des équipes.','Optimiser les processus internes.','Atteindre 15% de croissance du département Outsourcing.'),
@@ -157,30 +174,56 @@ VALUES
   ((SELECT id FROM employees WHERE matricule='MAT-2016-009'),'a0000001-0000-0000-0000-000000000001',2025,'ANNUEL','TERMINE',19.0,19.0,19.0,19.0,'Référence du cabinet, vision d''ensemble remarquable.','Transmettre davantage aux managers.','Développer deux nouveaux marchés régionaux.'),
   ((SELECT id FROM employees WHERE matricule='MAT-2022-011'),'a0000001-0000-0000-0000-000000000001',2025,'ANNUEL','TERMINE',15.5,15.0,16.0,15.5,'Rigueur juridique et fiscale.','Améliorer la communication client.','Obtenir une certification en droit OHADA.'),
   ((SELECT id FROM employees WHERE matricule='MAT-2019-012'),'a0000001-0000-0000-0000-000000000001',2025,'ANNUEL','TERMINE',14.5,14.0,15.0,14.5,'Organisation et fiabilité administratives.','Prendre plus de responsabilités.','Automatiser 3 processus RH récurrents.'),
-  ((SELECT id FROM employees WHERE matricule='MAT-2018-015'),'a0000001-0000-0000-0000-000000000001',2025,'ANNUEL','TERMINE',17.0,17.0,17.0,17.0,'Capacité à encadrer et motiver les équipes.','Renforcer la relation avec les clients.','Superviser 5 missions en simultané.')
+  ((SELECT id FROM employees WHERE matricule='MAT-2018-015'),'a0000001-0000-0000-0000-000000000001',2025,'ANNUEL','TERMINE',17.0,17.0,17.0,17.0,'Capacité à encadrer et motiver les équipes.','Renforcer la relation avec les clients.','Superviser 5 missions en simultané.'),
+  ((SELECT id FROM employees WHERE matricule='MAT-2020-014'),'a0000001-0000-0000-0000-000000000001',2025,'ANNUEL','TERMINE',13.5,13.0,14.0,13.5,'Sérieux et engagement dans les missions.','Développer la polyvalence.','Gérer 8 dossiers clients en autonomie.'),
+  ((SELECT id FROM employees WHERE matricule='MAT-2021-010'),'a0000001-0000-0000-0000-000000000001',2025,'ANNUEL','TERMINE',14.0,13.5,14.5,14.0,'Implication et rigueur.','Améliorer la rapidité d''exécution.','Réduire les délais de 25% sur S2.')
 ON CONFLICT (employee_id, year, period) DO NOTHING;
 
--- Probatoire 2025 — stagiaires
+-- ── 2025 PROBATOIRE — stagiaires ─────────────────────────────
 INSERT INTO evaluations (employee_id, evaluator_id, year, period, status, overall_score, objectives_score, skills_score, behavior_score, strengths, improvements)
 VALUES
   ((SELECT id FROM employees WHERE matricule='MAT-2022-005'),'a0000001-0000-0000-0000-000000000001',2025,'PROBATOIRE','TERMINE',13.0,13.0,13.0,13.0,'Bon esprit d''équipe, volonté d''apprendre.','Acquérir plus d''autonomie.'),
-  ((SELECT id FROM employees WHERE matricule='MAT-2023-008'),'a0000001-0000-0000-0000-000000000001',2025,'PROBATOIRE','TERMINE',14.0,14.0,14.0,14.0,'Bonne intégration, curieux.','Renforcer la maîtrise des outils.')
+  ((SELECT id FROM employees WHERE matricule='MAT-2023-008'),'a0000001-0000-0000-0000-000000000001',2025,'PROBATOIRE','TERMINE',14.0,14.0,14.0,14.0,'Bonne intégration, curieux.','Renforcer la maîtrise des outils.'),
+  ((SELECT id FROM employees WHERE matricule='MAT-2023-013'),'a0000001-0000-0000-0000-000000000001',2025,'PROBATOIRE','TERMINE',12.5,12.0,13.0,12.5,'Motivé et assidu.','Améliorer la rigueur dans les dossiers.')
 ON CONFLICT (employee_id, year, period) DO NOTHING;
 
--- Mi-annuel 2026 — en cours
+-- ── 2026 MI_ANNUEL (EN_COURS pour les plus avancés, BROUILLON pour les autres)
+--    Nous sommes en mars 2026 → les entretiens de mi-année débutent
 INSERT INTO evaluations (employee_id, evaluator_id, year, period, status, objectives_score, skills_score, behavior_score, objectives)
 VALUES
   ((SELECT id FROM employees WHERE matricule='MAT-2019-001'),'a0000001-0000-0000-0000-000000000001',2026,'MI_ANNUEL','EN_COURS',16.0,15.5,16.0,'Conduire 2 missions complexes et encadrer les juniors.'),
   ((SELECT id FROM employees WHERE matricule='MAT-2018-004'),'a0000001-0000-0000-0000-000000000001',2026,'MI_ANNUEL','EN_COURS',17.0,17.0,17.5,'Développer le portefeuille clients de 20%.'),
-  ((SELECT id FROM employees WHERE matricule='MAT-2016-009'),'a0000001-0000-0000-0000-000000000001',2026,'MI_ANNUEL','EN_COURS',19.0,19.0,19.0,'Valider la stratégie de croissance régionale.')
+  ((SELECT id FROM employees WHERE matricule='MAT-2016-009'),'a0000001-0000-0000-0000-000000000001',2026,'MI_ANNUEL','EN_COURS',19.0,19.0,19.0,'Valider la stratégie de croissance régionale.'),
+  ((SELECT id FROM employees WHERE matricule='MAT-2017-006'),'a0000001-0000-0000-0000-000000000001',2026,'MI_ANNUEL','EN_COURS',17.5,17.5,18.0,'Finaliser le plan de recrutement Outsourcing.')
 ON CONFLICT (employee_id, year, period) DO NOTHING;
 
--- Annuel 2026 — brouillons
+INSERT INTO evaluations (employee_id, evaluator_id, year, period, status, objectives)
+VALUES
+  ((SELECT id FROM employees WHERE matricule='MAT-2020-002'),'a0000001-0000-0000-0000-000000000001',2026,'MI_ANNUEL','BROUILLON','Conduire une mission en chef de mission.'),
+  ((SELECT id FROM employees WHERE matricule='MAT-2021-003'),'a0000001-0000-0000-0000-000000000001',2026,'MI_ANNUEL','BROUILLON','Produire 3 mémos fiscaux de qualité.'),
+  ((SELECT id FROM employees WHERE matricule='MAT-2020-007'),'a0000001-0000-0000-0000-000000000001',2026,'MI_ANNUEL','BROUILLON','Déployer la solution de sauvegarde cloud.'),
+  ((SELECT id FROM employees WHERE matricule='MAT-2022-011'),'a0000001-0000-0000-0000-000000000001',2026,'MI_ANNUEL','BROUILLON','Traiter 25 dossiers fiscaux et contentieux.'),
+  ((SELECT id FROM employees WHERE matricule='MAT-2019-012'),'a0000001-0000-0000-0000-000000000001',2026,'MI_ANNUEL','BROUILLON','Digitaliser 2 nouveaux processus RH.'),
+  ((SELECT id FROM employees WHERE matricule='MAT-2018-015'),'a0000001-0000-0000-0000-000000000001',2026,'MI_ANNUEL','BROUILLON','Superviser 5 missions simultanément.'),
+  ((SELECT id FROM employees WHERE matricule='MAT-2020-014'),'a0000001-0000-0000-0000-000000000001',2026,'MI_ANNUEL','BROUILLON','Gérer 6 dossiers clients en autonomie.'),
+  ((SELECT id FROM employees WHERE matricule='MAT-2021-010'),'a0000001-0000-0000-0000-000000000001',2026,'MI_ANNUEL','BROUILLON','Réduire les délais de rendu de 30%.')
+ON CONFLICT (employee_id, year, period) DO NOTHING;
+
+-- ── 2026 ANNUEL (BROUILLON — fin d'année pas encore atteinte)
 INSERT INTO evaluations (employee_id, evaluator_id, year, period, status)
 VALUES
+  ((SELECT id FROM employees WHERE matricule='MAT-2019-001'),'a0000001-0000-0000-0000-000000000001',2026,'ANNUEL','BROUILLON'),
   ((SELECT id FROM employees WHERE matricule='MAT-2020-002'),'a0000001-0000-0000-0000-000000000001',2026,'ANNUEL','BROUILLON'),
+  ((SELECT id FROM employees WHERE matricule='MAT-2021-003'),'a0000001-0000-0000-0000-000000000001',2026,'ANNUEL','BROUILLON'),
+  ((SELECT id FROM employees WHERE matricule='MAT-2018-004'),'a0000001-0000-0000-0000-000000000001',2026,'ANNUEL','BROUILLON'),
+  ((SELECT id FROM employees WHERE matricule='MAT-2017-006'),'a0000001-0000-0000-0000-000000000001',2026,'ANNUEL','BROUILLON'),
+  ((SELECT id FROM employees WHERE matricule='MAT-2020-007'),'a0000001-0000-0000-0000-000000000001',2026,'ANNUEL','BROUILLON'),
+  ((SELECT id FROM employees WHERE matricule='MAT-2016-009'),'a0000001-0000-0000-0000-000000000001',2026,'ANNUEL','BROUILLON'),
   ((SELECT id FROM employees WHERE matricule='MAT-2022-011'),'a0000001-0000-0000-0000-000000000001',2026,'ANNUEL','BROUILLON'),
-  ((SELECT id FROM employees WHERE matricule='MAT-2018-015'),'a0000001-0000-0000-0000-000000000001',2026,'ANNUEL','BROUILLON')
+  ((SELECT id FROM employees WHERE matricule='MAT-2019-012'),'a0000001-0000-0000-0000-000000000001',2026,'ANNUEL','BROUILLON'),
+  ((SELECT id FROM employees WHERE matricule='MAT-2018-015'),'a0000001-0000-0000-0000-000000000001',2026,'ANNUEL','BROUILLON'),
+  ((SELECT id FROM employees WHERE matricule='MAT-2020-014'),'a0000001-0000-0000-0000-000000000001',2026,'ANNUEL','BROUILLON'),
+  ((SELECT id FROM employees WHERE matricule='MAT-2021-010'),'a0000001-0000-0000-0000-000000000001',2026,'ANNUEL','BROUILLON')
 ON CONFLICT (employee_id, year, period) DO NOTHING;
 
 -- ============================================================
