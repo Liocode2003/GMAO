@@ -27,6 +27,8 @@ interface Employee {
   last_name: string;
   service_line: string;
   status: string;
+  email?: string;
+  manager_id?: string | null;
 }
 
 interface NewLeaveForm {
@@ -108,6 +110,7 @@ export default function TeamCalendarPage() {
       const allEmps: Employee[] = (empRes.data.data || []).map((e: Employee) => ({
         id: e.id, first_name: e.first_name, last_name: e.last_name,
         service_line: e.service_line || '', status: e.status,
+        email: e.email, manager_id: e.manager_id,
       }));
       setEmployees(allEmps);
 
@@ -225,8 +228,16 @@ export default function TeamCalendarPage() {
   };
 
   // ── Dropdown employee list (filtered for managers) ──────────────────────────
-  // For managers: only show employees of same team by filtering calendar leaves
-  const selectableEmployees = employees.filter(e => e.status === 'ACTIF');
+  // For managers: find their own employee record by email, then show only direct reports
+  const managerEmployeeId = isManager
+    ? employees.find(e => e.email === user?.email)?.id ?? null
+    : null;
+
+  const selectableEmployees = employees.filter(e => {
+    if (e.status !== 'ACTIF') return false;
+    if (isManager && managerEmployeeId) return e.manager_id === managerEmployeeId;
+    return true;
+  });
 
   // ── Stats ───────────────────────────────────────────────────────────────────
 
