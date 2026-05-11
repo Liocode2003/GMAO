@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import { authenticate, authorize } from '../middleware/auth';
-import { getLeaveBalance, listLeaves, createLeave, approveLeave, deleteLeave } from '../controllers/leavesController';
+import {
+  getLeaveBalance, listLeaves, createLeave, approveLeave, deleteLeave,
+  listPendingLeaves, listTeamLeaves,
+} from '../controllers/leavesController';
 import { validate } from '../middleware/validate';
 import { createLeaveSchema, approveLeaveSchema } from '../schemas/leaveSchemas';
 
@@ -72,6 +75,12 @@ router.get('/employee/:id/balance', authenticate, getLeaveBalance);
  */
 router.get('/employee/:id', authenticate, listLeaves);
 router.post('/employee/:id', authenticate, authorize('DRH', 'DIRECTION_GENERALE', 'MANAGER'), validate(createLeaveSchema), createLeave);
+
+// Demandes EN_ATTENTE — visibles par DRH/Direction uniquement
+router.get('/pending', authenticate, authorize('DRH', 'DIRECTION_GENERALE'), listPendingLeaves);
+
+// Congés de l'équipe du manager connecté
+router.get('/team', authenticate, authorize('MANAGER', 'DRH', 'DIRECTION_GENERALE'), listTeamLeaves);
 
 /**
  * @swagger

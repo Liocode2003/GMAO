@@ -183,6 +183,71 @@ export const listLeaves = async (req: Request, res: Response) => {
 };
 
 // ============================================================
+// DEMANDES EN ATTENTE (DRH / Direction uniquement)
+// ============================================================
+
+export const listPendingLeaves = async (req: Request, res: Response) => {
+  try {
+    const result = await query(
+      `SELECT l.*,
+         e.first_name || ' ' || e.last_name  AS employee_name,
+         e.service_line,
+         e.function                           AS employee_function,
+         u.first_name || ' ' || u.last_name  AS created_by_name,
+         mgr.first_name || ' ' || mgr.last_name AS manager_name
+       FROM leaves l
+       JOIN employees e   ON e.id  = l.employee_id
+       LEFT JOIN users u  ON u.id  = l.created_by
+       LEFT JOIN employees mgr ON mgr.id = e.manager_id
+       WHERE l.status = 'EN_ATTENTE'
+       ORDER BY l.created_at ASC`
+    );
+    return res.json(result.rows);
+  } catch (err) {
+    logger.error('listPendingLeaves error', err);
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
+
+// ============================================================
+// CONGÉS DE L'ÉQUIPE (Manager uniquement)
+// ============================================================
+
+export const listTeamLeaves = async (req: Request, res: Response) => {
+  const year = parseInt(req.query.year as string) || new Date().getFullYear();
+  try {
+    // Trouver l'employé correspondant au manager connecté (par email)
+    const managerEmpRes = await query(
+      `SELECT id FROM employees WHERE email = $1`,
+      [req.user?.email]
+    );
+    const managerEmpId = managerEmpRes.rows[0]?.id;
+    if (!managerEmpId) {
+      return res.status(403).json({ error: 'Votre compte n\'est pas lié à un profil collaborateur' });
+    }
+
+    const result = await query(
+      `SELECT l.*,
+         e.first_name || ' ' || e.last_name AS employee_name,
+         e.service_line,
+         u.first_name || ' ' || u.last_name AS created_by_name,
+         a.first_name || ' ' || a.last_name AS approved_by_name
+       FROM leaves l
+       JOIN employees e  ON e.id = l.employee_id
+       LEFT JOIN users u ON u.id = l.created_by
+       LEFT JOIN users a ON a.id = l.approved_by
+       WHERE e.manager_id = $1 AND l.year = $2
+       ORDER BY l.created_at DESC`,
+      [managerEmpId, year]
+    );
+    return res.json(result.rows);
+  } catch (err) {
+    logger.error('listTeamLeaves error', err);
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
+
+// ============================================================
 // CRÉER UNE DEMANDE DE CONGÉ
 // ============================================================
 
@@ -201,7 +266,7 @@ export const createLeave = async (req: Request, res: Response) => {
 
   // Vérification : collaborateur actif uniquement
   const empRes = await query(
-    `SELECT first_name, last_name, email,
+    `SELECT first_name, last_name, email, manager_id,
        CASE WHEN exit_date IS NULL OR exit_date > CURRENT_DATE THEN 'ACTIF' ELSE 'INACTIF' END as status
      FROM employees WHERE id = $1`,
     [id]
@@ -210,6 +275,21 @@ export const createLeave = async (req: Request, res: Response) => {
   if (!emp) return res.status(404).json({ error: 'Collaborateur non trouvé' });
   if (emp.status !== 'ACTIF') {
     return res.status(400).json({ error: 'Impossible de saisir un congé pour un collaborateur inactif' });
+  }
+
+  // Vérification hiérarchique : un MANAGER ne peut soumettre que pour ses collaborateurs directs
+  if (req.user?.role === 'MANAGER') {
+    const managerEmpRes = await query(
+      `SELECT id FROM employees WHERE email = $1`,
+      [req.user.email]
+    );
+    const managerEmpId = managerEmpRes.rows[0]?.id;
+    if (!managerEmpId) {
+      return res.status(403).json({ error: 'Votre compte n\'est pas lié à un profil collaborateur' });
+    }
+    if (emp.manager_id !== managerEmpId) {
+      return res.status(403).json({ error: 'Vous ne pouvez soumettre des demandes que pour vos collaborateurs directs' });
+    }
   }
 
   const days = calendarDays(start_date, end_date);
