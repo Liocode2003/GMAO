@@ -89,7 +89,8 @@ export const downloadDocument = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Fichier introuvable sur le serveur' });
     }
 
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(doc.name)}${path.extname(safeName)}"`);
+    res.setHeader('Content-Type', doc.mime_type || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(doc.name)}${path.extname(safeName)}"`);
     return res.sendFile(filePath);
   } catch (err) {
     logger.error('downloadDocument error', err);
