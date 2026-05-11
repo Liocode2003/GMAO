@@ -11,7 +11,7 @@ import {
   ArrowLeftIcon, PencilIcon, NoSymbolIcon, ClockIcon,
   UserIcon, BriefcaseIcon, AcademicCapIcon, CurrencyDollarIcon,
   DocumentArrowDownIcon, CalendarDaysIcon, PlusIcon, CheckIcon, XMarkIcon,
-  FolderIcon, DocumentIcon, ArrowDownTrayIcon, TrashIcon,
+  FolderIcon, DocumentIcon, ArrowDownTrayIcon, TrashIcon, CameraIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
@@ -44,6 +44,7 @@ export default function EmployeeDetailPage() {
   const [leaveBalance, setLeaveBalance] = useState<LeaveBalance | null>(null);
   const [activeTab, setActiveTab] = useState<'info' | 'history' | 'salary' | 'leaves' | 'documents'>('info');
   const [loading, setLoading] = useState(true);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [deactivating, setDeactivating] = useState(false);
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
   const [exitDate, setExitDate] = useState(new Date().toISOString().split('T')[0]);
@@ -204,6 +205,28 @@ export default function EmployeeDetailPage() {
     }
   };
 
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append('photo', file);
+      const res = await api.post(`/employees/${id}/photo`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setEmployee(prev => prev ? { ...prev, photo_url: res.data.photo_url } : prev);
+      toast.success('Photo mise à jour');
+    } catch {
+      toast.error('Erreur lors de l\'upload');
+    } finally {
+      setUploadingPhoto(false);
+      e.target.value = '';
+    }
+  };
+
+  const canEditPhoto = user?.role === 'DRH' || user?.role === 'DIRECTION_GENERALE';
+
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <div className="animate-spin w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full" />
@@ -268,17 +291,33 @@ export default function EmployeeDetailPage() {
         <div className="flex items-center">
           {/* Photo / initiales */}
           <div className="px-6 py-5 flex-shrink-0">
-            {employee.photo_url ? (
-              <img
-                src={employee.photo_url}
-                alt={`${employee.first_name} ${employee.last_name}`}
-                className="w-14 h-14 rounded-xl object-cover border-2 border-white/20"
-              />
-            ) : (
-              <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-white text-xl font-bold ${employee.gender === 'M' ? 'bg-blue-500' : 'bg-purple-500'}`}>
-                {employee.first_name[0]}{employee.last_name[0]}
-              </div>
-            )}
+            <label className={`relative group block w-14 h-14 ${canEditPhoto ? 'cursor-pointer' : ''}`}>
+              {employee.photo_url ? (
+                <img
+                  src={employee.photo_url}
+                  alt={`${employee.first_name} ${employee.last_name}`}
+                  className="w-14 h-14 rounded-xl object-cover border-2 border-white/20"
+                />
+              ) : (
+                <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-white text-xl font-bold ${employee.gender === 'M' ? 'bg-blue-500' : 'bg-purple-500'}`}>
+                  {uploadingPhoto
+                    ? <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
+                    : <>{employee.first_name[0]}{employee.last_name[0]}</>
+                  }
+                </div>
+              )}
+              {canEditPhoto && (
+                <>
+                  <div className="absolute inset-0 rounded-xl bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    {uploadingPhoto
+                      ? <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
+                      : <CameraIcon className="w-5 h-5 text-white" />
+                    }
+                  </div>
+                  <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} disabled={uploadingPhoto} />
+                </>
+              )}
+            </label>
           </div>
 
           {/* Fonction + matricule */}
