@@ -1,7 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../../services/api';
-import { useAuthStore } from '../../store/authStore';
-import { UserIcon, PencilIcon, XMarkIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { UserIcon } from '@heroicons/react/24/outline';
 import { Link } from 'react-router-dom';
 
 interface EmployeeNode {
@@ -14,11 +13,6 @@ interface EmployeeNode {
   manager_id: string | null;
   photo_url: string | null;
   children?: EmployeeNode[];
-}
-
-interface EditModal {
-  emp: EmployeeNode;
-  newManagerId: string;
 }
 
 const SERVICE_LINE_COLORS: Record<string, string> = {
@@ -51,34 +45,16 @@ function buildTree(employees: EmployeeNode[]): EmployeeNode[] {
   return roots;
 }
 
-function EmployeeCard({
-  emp, depth, canEdit, onEdit,
-}: {
-  emp: EmployeeNode;
-  depth: number;
-  canEdit: boolean;
-  onEdit: (emp: EmployeeNode) => void;
-}) {
+function EmployeeCard({ emp, depth }: { emp: EmployeeNode; depth: number }) {
   const [expanded, setExpanded] = useState(depth < 2);
   const hasChildren = (emp.children?.length || 0) > 0;
   const colorClass = SERVICE_LINE_COLORS[emp.service_line] || 'bg-gray-100 text-gray-700 border-gray-200';
 
   return (
     <div className="flex flex-col items-center">
-      <div className={`relative border-2 rounded-xl p-3 bg-white shadow-sm w-44 text-center transition-all hover:shadow-md group ${
+      <div className={`relative border-2 rounded-xl p-3 bg-white shadow-sm w-44 text-center transition-all hover:shadow-md ${
         depth === 0 ? 'border-brand-400 shadow-brand-100' : 'border-gray-200'
       }`}>
-        {/* Bouton modifier (DRH uniquement) */}
-        {canEdit && (
-          <button
-            onClick={() => onEdit(emp)}
-            title="Modifier le manager"
-            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 rounded-full bg-gray-100 hover:bg-brand-100 flex items-center justify-center text-gray-400 hover:text-brand-600"
-          >
-            <PencilIcon className="w-3 h-3" />
-          </button>
-        )}
-
         {/* Avatar */}
         <div className={`w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center overflow-hidden border-2 ${
           depth === 0 ? 'border-brand-400' : 'border-gray-200'
@@ -125,13 +101,13 @@ function EmployeeCard({
                 {emp.children!.map(child => (
                   <div key={child.id} className="flex flex-col items-center">
                     <div className="w-0.5 h-3 bg-gray-300" />
-                    <EmployeeCard emp={child} depth={depth + 1} canEdit={canEdit} onEdit={onEdit} />
+                    <EmployeeCard emp={child} depth={depth + 1} />
                   </div>
                 ))}
               </div>
             </div>
           ) : (
-            <EmployeeCard emp={emp.children![0]} depth={depth + 1} canEdit={canEdit} onEdit={onEdit} />
+            <EmployeeCard emp={emp.children![0]} depth={depth + 1} />
           )}
         </div>
       )}
@@ -140,17 +116,11 @@ function EmployeeCard({
 }
 
 export default function OrganigrammePage() {
-  const { user } = useAuthStore();
-  const canEdit = user?.role === 'DRH' || user?.role === 'DIRECTION_GENERALE';
-
   const [employees, setEmployees] = useState<EmployeeNode[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterSL, setFilterSL] = useState('');
-  const [modal, setModal] = useState<EditModal | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState('');
 
-  const fetchEmployees = useCallback(async () => {
+  const fetchEmployees = async () => {
     setLoading(true);
     try {
       const res = await api.get('/employees', { params: { limit: 500, status: 'ACTIF' } });
@@ -160,38 +130,12 @@ export default function OrganigrammePage() {
         manager_id: e.manager_id, photo_url: e.photo_url,
       })));
     } finally { setLoading(false); }
-  }, []);
-
-  useEffect(() => { fetchEmployees(); }, [fetchEmployees]);
-
-  const openEdit = (emp: EmployeeNode) => {
-    setModal({ emp, newManagerId: emp.manager_id || '' });
-    setSaveError('');
   };
 
-  const handleSave = async () => {
-    if (!modal) return;
-    setSaving(true);
-    setSaveError('');
-    try {
-      await api.put(`/employees/${modal.emp.id}`, {
-        manager_id: modal.newManagerId || null,
-      });
-      setModal(null);
-      await fetchEmployees();
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      setSaveError(msg || 'Erreur lors de la sauvegarde.');
-    } finally { setSaving(false); }
-  };
+  useEffect(() => { fetchEmployees(); }, []);
 
   const filtered = filterSL ? employees.filter(e => e.service_line === filterSL) : employees;
   const tree = buildTree(filtered);
-
-  // Candidats manager disponibles (tous sauf l'employé lui-même)
-  const managerOptions = modal
-    ? employees.filter(e => e.id !== modal.emp.id)
-    : [];
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -202,9 +146,6 @@ export default function OrganigrammePage() {
           <p className="text-gray-500 text-sm mt-1">{filtered.length} collaborateurs actifs</p>
         </div>
         <div className="flex items-center gap-2">
-          {canEdit && (
-            <p className="text-xs text-gray-400 italic">Survolez une carte pour modifier le manager</p>
-          )}
           <select value={filterSL} onChange={e => setFilterSL(e.target.value)} className="input w-48">
             <option value="">Toutes les lignes</option>
             <option value="AUDIT_ASSURANCE">Audit & Assurance</option>
@@ -230,7 +171,7 @@ export default function OrganigrammePage() {
         <div className="overflow-auto">
           <div className="flex flex-wrap gap-12 justify-start p-8 min-w-max">
             {tree.map(root => (
-              <EmployeeCard key={root.id} emp={root} depth={0} canEdit={canEdit} onEdit={openEdit} />
+              <EmployeeCard key={root.id} emp={root} depth={0} />
             ))}
           </div>
         </div>
@@ -244,59 +185,6 @@ export default function OrganigrammePage() {
           </span>
         ))}
       </div>
-
-      {/* Modal modifier manager */}
-      {modal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-800">Modifier le manager</h3>
-                <p className="text-sm text-gray-500 mt-0.5">
-                  {modal.emp.first_name} {modal.emp.last_name}
-                </p>
-              </div>
-              <button onClick={() => setModal(null)} className="text-gray-400 hover:text-gray-600">
-                <XMarkIcon className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="label">Manager direct</label>
-                <select
-                  value={modal.newManagerId}
-                  onChange={e => setModal(m => m ? { ...m, newManagerId: e.target.value } : m)}
-                  className="input w-full"
-                >
-                  <option value="">— Aucun manager (racine) —</option>
-                  {managerOptions.map(e => (
-                    <option key={e.id} value={e.id}>
-                      {e.first_name} {e.last_name} — {e.function?.replace(/_/g, ' ')}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {saveError && (
-                <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-                  {saveError}
-                </p>
-              )}
-            </div>
-            <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
-              <button onClick={() => setModal(null)} className="btn-secondary text-sm" disabled={saving}>
-                Annuler
-              </button>
-              <button onClick={handleSave} disabled={saving} className="btn-primary text-sm flex items-center gap-2">
-                {saving
-                  ? <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                  : <CheckIcon className="w-4 h-4" />
-                }
-                Enregistrer
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
