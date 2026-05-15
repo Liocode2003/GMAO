@@ -146,7 +146,7 @@ export interface DashboardData {
   byContractType: Array<{ contract_type: string; count: string }>;
   byAgeGroup: Array<{ age_group: string; count: string }>;
   bySeason: Array<{ season: string; count: string }>;
-  turnover: { rate: number; exits: number; entries: number };
+  turnover?: { rate: number; exits: number; entries: number };
   birthdaysThisMonth: Array<{
     id: string;
     first_name: string;
