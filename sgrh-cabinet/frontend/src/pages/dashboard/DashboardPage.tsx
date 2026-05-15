@@ -108,10 +108,10 @@ export default function DashboardPage() {
         />
         <StatCard
           title="Taux de turnover"
-          value={`${data.turnover.rate}%`}
+          value={`${data.turnover?.rate ?? 0}%`}
           icon={ArrowTrendingUpIcon}
-          color={data.turnover.rate > 15 ? 'bg-red-500' : data.turnover.rate > 8 ? 'bg-amber-500' : 'bg-green-600'}
-          subtitle={`${data.turnover.exits} départ(s) — ${new Date().getFullYear()}`}
+          color={(data.turnover?.rate ?? 0) > 15 ? 'bg-red-500' : (data.turnover?.rate ?? 0) > 8 ? 'bg-amber-500' : 'bg-green-600'}
+          subtitle={`${data.turnover?.exits ?? 0} départ(s) — ${new Date().getFullYear()}`}
         />
         <StatCard
           title="Anniversaires ce mois"
