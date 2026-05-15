@@ -3,8 +3,9 @@
 -- ============================================================
 
 -- Utilisateurs
+-- Mot de passe DRH : Mazars2025!
 INSERT INTO users (id, email, password_hash, first_name, last_name, role) VALUES
-  ('a0000001-0000-0000-0000-000000000001', 'catherine.sawadogo@forvismazars.com', '$2b$12$/nf6N1Ja1sLFf911RLqSueJ0IR0YsDEdWzISwNyrFEfmNk5d/OcBi', 'Catherine', 'Sawadogo', 'DRH');
+  ('a0000001-0000-0000-0000-000000000001', 'catherine.sawadogo@forvismazars.com', '$2a$12$HDRDnIHuC0SlfX/rD2zhyOof9nohTt93P/ZwRF649LOzwdQs40x7.', 'Catherine', 'Sawadogo', 'DRH');
 
 -- Collaborateurs
 INSERT INTO employees (matricule, first_name, last_name, gender, email, phone, birth_date, function, service_line, grade, contract_type, entry_date, salary, status, has_dec_french, is_expatriate, department) VALUES
