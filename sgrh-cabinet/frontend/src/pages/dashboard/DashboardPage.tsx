@@ -7,11 +7,11 @@ import api from '../../services/api';
 import { DashboardData, SERVICE_LINE_LABELS } from '../../types';
 import {
   UsersIcon,
-  EnvelopeIcon,
   CakeIcon,
   ExclamationTriangleIcon,
   BriefcaseIcon,
   TrophyIcon,
+  ArrowTrendingUpIcon,
 } from '@heroicons/react/24/outline';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
@@ -77,13 +77,15 @@ export default function DashboardPage() {
     percentage: g.percentage,
   }));
 
-  const ageChart = data.byAgeGroup.map(ag => ({
-    name: ag.age_group === 'moins_25' ? '<25 ans'
-      : ag.age_group === '25_35' ? '25-35 ans'
-      : ag.age_group === '36_45' ? '36-45 ans'
-      : '>45 ans',
-    count: parseInt(ag.count),
-  }));
+  const AGE_LABELS: Record<string, string> = {
+    '20_30': '20-30 ans',
+    '30_40': '30-40 ans',
+    '40_50': '40-50 ans',
+    'plus_50': '+50 ans',
+  };
+  const ageChart = data.byAgeGroup
+    .map(ag => ({ name: AGE_LABELS[ag.age_group] ?? ag.age_group, count: parseInt(ag.count) }))
+    .sort((a, b) => Object.values(AGE_LABELS).indexOf(a.name) - Object.values(AGE_LABELS).indexOf(b.name));
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -105,11 +107,11 @@ export default function DashboardPage() {
           subtitle="Collaborateurs actifs"
         />
         <StatCard
-          title="Avec email"
-          value={data.withEmail}
-          icon={EnvelopeIcon}
-          color="bg-cyan-600"
-          subtitle={`${data.totalActive > 0 ? Math.round(data.withEmail / data.totalActive * 100) : 0}% de l'effectif`}
+          title="Taux de turnover"
+          value={`${data.turnover.rate}%`}
+          icon={ArrowTrendingUpIcon}
+          color={data.turnover.rate > 15 ? 'bg-red-500' : data.turnover.rate > 8 ? 'bg-amber-500' : 'bg-green-600'}
+          subtitle={`${data.turnover.exits} départ(s) — ${new Date().getFullYear()}`}
         />
         <StatCard
           title="Anniversaires ce mois"

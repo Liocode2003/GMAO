@@ -146,7 +146,7 @@ export interface DashboardData {
   byContractType: Array<{ contract_type: string; count: string }>;
   byAgeGroup: Array<{ age_group: string; count: string }>;
   bySeason: Array<{ season: string; count: string }>;
-  withEmail: number;
+  turnover: { rate: number; exits: number; entries: number };
   birthdaysThisMonth: Array<{
     id: string;
     first_name: string;
@@ -199,7 +199,7 @@ export const SERVICE_LINE_LABELS: Record<ServiceLine, string> = {
   CONSULTING_FA: 'Consulting & FA',
   OUTSOURCING: 'Outsourcing',
   ADMINISTRATION: 'Administration',
-  JURIDIQUE_FISCALITE: 'Juridique & Fiscalité',
+  JURIDIQUE_FISCALITE: 'Tax & Legal',
 };
 
 export const FUNCTION_LABELS: Record<EmployeeFunction, string> = {

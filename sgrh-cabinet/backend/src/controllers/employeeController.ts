@@ -6,6 +6,19 @@ import { query } from '../config/database';
 import { logger } from '../utils/logger';
 import { employeeService, sanitizeEmployee, calcSeniority, canViewSalary } from '../services/employeeService';
 
+async function hasCircularManagerRef(employeeId: string, newManagerId: string): Promise<boolean> {
+  let currentId: string | null = newManagerId;
+  const visited = new Set<string>();
+  while (currentId) {
+    if (currentId === employeeId) return true;
+    if (visited.has(currentId)) return true;
+    visited.add(currentId);
+    const res = await query('SELECT manager_id FROM employees WHERE id = $1', [currentId]);
+    currentId = res.rows[0]?.manager_id ?? null;
+  }
+  return false;
+}
+
 // ============================================================
 // LISTE DES COLLABORATEURS
 // ============================================================
@@ -206,14 +219,23 @@ export const updateEmployee = async (req: Request, res: Response) => {
   // Extraire les diplômes avant de construire la requête SQL
   const diplomasToUpdate = updates.diplomas;
 
-  // Supprimer les champs calculés / non-colonnes
-  for (const f of ['id', 'created_at', 'updated_at', 'created_by', 'status',
-                    'age', 'season', 'seniority', 'manager_name', 'diplomas']) {
-    delete updates[f];
+  // Whitelist stricte des colonnes autorisées (protection injection SQL)
+  const ALLOWED_COLUMNS = new Set([
+    'first_name', 'last_name', 'gender', 'email', 'phone', 'birth_date',
+    'function', 'service_line', 'grade', 'contract_type', 'entry_date', 'exit_date',
+    'salary', 'notes', 'has_dec_french', 'has_decofi', 'has_other_dec', 'has_cisa', 'has_cfa',
+    'department', 'is_expatriate', 'manager_id', 'marital_status', 'spouse_name', 'spouse_phone',
+    'children_count', 'leave_balance', 'matricule',
+  ]);
+
+  // Ne garder que les colonnes autorisées
+  const filtered: Record<string, unknown> = {};
+  for (const key of Object.keys(updates)) {
+    if (ALLOWED_COLUMNS.has(key)) filtered[key] = updates[key];
   }
 
   // Gérer le changement de salaire → historique
-  const salaryChanged = 'salary' in updates;
+  const salaryChanged = 'salary' in filtered;
   let oldSalary: number | null = null;
 
   if (salaryChanged) {
@@ -223,11 +245,19 @@ export const updateEmployee = async (req: Request, res: Response) => {
     } catch {}
   }
 
-  const fields = Object.keys(updates);
+  const fields = Object.keys(filtered);
   if (fields.length === 0) return res.status(400).json({ error: 'Aucune modification' });
 
+  // Vérification anti-boucle circulaire dans la hiérarchie
+  if (filtered.manager_id) {
+    const circular = await hasCircularManagerRef(id, filtered.manager_id as string);
+    if (circular) {
+      return res.status(400).json({ error: 'Hiérarchie invalide : ce choix crée une boucle circulaire (A manage B qui manage A)' });
+    }
+  }
+
   const setClauses = fields.map((f, i) => `${f} = $${i + 1}`).join(', ');
-  const values = fields.map((f) => updates[f]);
+  const values = fields.map((f) => filtered[f]);
 
   try {
     const result = await query(
@@ -237,11 +267,11 @@ export const updateEmployee = async (req: Request, res: Response) => {
     if (!result.rows[0]) return res.status(404).json({ error: 'Collaborateur non trouvé' });
 
     // Enregistrer historique salaire si changement
-    if (salaryChanged && updates.salary !== oldSalary) {
+    if (salaryChanged && filtered.salary !== oldSalary) {
       await query(
         `INSERT INTO salary_history (employee_id, old_salary, new_salary, effective_date, created_by)
          VALUES ($1, $2, $3, CURRENT_DATE, $4)`,
-        [id, oldSalary, updates.salary, req.user?.userId]
+        [id, oldSalary, filtered.salary, req.user?.userId]
       );
     }
 

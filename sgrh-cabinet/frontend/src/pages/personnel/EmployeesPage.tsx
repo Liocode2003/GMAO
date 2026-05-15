@@ -341,7 +341,6 @@ export default function EmployeesPage() {
     contract_type: '',
     status: 'ACTIF',
     gender: '',
-    has_email: '',
     season: '',
   });
 
@@ -499,13 +498,8 @@ export default function EmployeesPage() {
               <option value="M">Homme</option>
               <option value="F">Femme</option>
             </select>
-            <select className="input text-sm" value={filters.has_email} onChange={(e) => handleFilterChange('has_email', e.target.value)}>
-              <option value="">Email / Sans email</option>
-              <option value="true">Avec email</option>
-              <option value="false">Sans email</option>
-            </select>
             <button
-              onClick={() => setFilters({ search: '', service_line: '', grade: '', contract_type: '', status: '', gender: '', has_email: '', season: '' })}
+              onClick={() => setFilters({ search: '', service_line: '', grade: '', contract_type: '', status: '', gender: '', season: '' })}
               className="col-span-full btn-secondary text-sm text-red-600 hover:bg-red-50 border-red-200 gap-1"
             >
               <XMarkIcon className="w-4 h-4" />
@@ -578,6 +572,7 @@ export default function EmployeesPage() {
                     emp.contract_type === 'CDI' ? 'badge-green'
                     : emp.contract_type === 'CDD' ? 'badge-yellow'
                     : emp.contract_type === 'STAGE' ? 'badge-purple'
+                    : emp.contract_type === 'CONSULTANT' ? 'badge-blue'
                     : 'badge-gray'
                   }`}>
                     {CONTRACT_LABELS[emp.contract_type] || emp.contract_type}

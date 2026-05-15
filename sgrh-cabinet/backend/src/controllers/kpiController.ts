@@ -11,17 +11,17 @@ export const getDashboard = async (req: Request, res: Response) => {
       byContractType,
       byAgeGroup,
       bySeason,
-      withEmail,
       birthdaysThisMonth,
       contractsToRenew,
+      turnoverData,
     ] = await Promise.all([
-      // Total actif
-      query(`SELECT COUNT(*) as total FROM employees WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE)`),
+      // Total actif (hors stagiaires)
+      query(`SELECT COUNT(*) as total FROM employees WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE) AND contract_type != 'STAGE'`),
 
-      // Par ligne de service
+      // Par ligne de service (hors stagiaires)
       query(`
         SELECT service_line, COUNT(*) as count
-        FROM employees WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE)
+        FROM employees WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE) AND contract_type != 'STAGE'
         GROUP BY service_line ORDER BY count DESC
       `),
 
@@ -29,7 +29,7 @@ export const getDashboard = async (req: Request, res: Response) => {
       query(`
         SELECT gender, COUNT(*) as count,
           ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 1) as percentage
-        FROM employees WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE)
+        FROM employees WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE) AND contract_type != 'STAGE'
         GROUP BY gender
       `),
 
@@ -37,32 +37,29 @@ export const getDashboard = async (req: Request, res: Response) => {
       query(`
         SELECT contract_type, COUNT(*) as count
         FROM employees WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE)
-        GROUP BY contract_type
+        GROUP BY contract_type ORDER BY count DESC
       `),
 
-      // Tranches d'âge
+      // Tranches d'âge : 20-30, 30-40, 40-50, 50+
       query(`
         SELECT
           CASE
-            WHEN DATE_PART('year', AGE(birth_date)) < 25 THEN 'moins_25'
-            WHEN DATE_PART('year', AGE(birth_date)) BETWEEN 25 AND 35 THEN '25_35'
-            WHEN DATE_PART('year', AGE(birth_date)) BETWEEN 36 AND 45 THEN '36_45'
-            ELSE 'plus_45'
+            WHEN DATE_PART('year', AGE(birth_date)) BETWEEN 20 AND 29 THEN '20_30'
+            WHEN DATE_PART('year', AGE(birth_date)) BETWEEN 30 AND 39 THEN '30_40'
+            WHEN DATE_PART('year', AGE(birth_date)) BETWEEN 40 AND 49 THEN '40_50'
+            ELSE 'plus_50'
           END as age_group,
           COUNT(*) as count
-        FROM employees WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE)
+        FROM employees WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE) AND contract_type != 'STAGE'
         GROUP BY age_group
       `),
 
       // Par saison
       query(`
         SELECT EXTRACT(YEAR FROM entry_date) as season, COUNT(*) as count
-        FROM employees WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE)
+        FROM employees WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE) AND contract_type != 'STAGE'
         GROUP BY season ORDER BY season DESC
       `),
-
-      // Avec email
-      query(`SELECT COUNT(*) as count FROM employees WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE) AND email IS NOT NULL`),
 
       // Anniversaires du mois
       query(`
@@ -75,7 +72,7 @@ export const getDashboard = async (req: Request, res: Response) => {
         ORDER BY EXTRACT(DAY FROM birth_date)
       `),
 
-      // Contrats à renouveler dans le mois
+      // Contrats à renouveler dans les 30 jours
       query(`
         SELECT id, matricule, first_name, last_name, contract_type,
           exit_date,
@@ -85,6 +82,16 @@ export const getDashboard = async (req: Request, res: Response) => {
           AND exit_date IS NOT NULL
           AND exit_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '30 days'
         ORDER BY exit_date
+      `),
+
+      // Turnover année en cours (hors stagiaires)
+      query(`
+        SELECT
+          COUNT(*) FILTER (WHERE exit_date IS NOT NULL AND EXTRACT(YEAR FROM exit_date) = EXTRACT(YEAR FROM CURRENT_DATE)) as exits_ytd,
+          COUNT(*) FILTER (WHERE EXTRACT(YEAR FROM entry_date) = EXTRACT(YEAR FROM CURRENT_DATE)) as entries_ytd,
+          COUNT(*) FILTER (WHERE exit_date IS NULL OR exit_date > CURRENT_DATE) as headcount_current
+        FROM employees
+        WHERE contract_type NOT IN ('STAGE', 'CONSULTANT', 'FREELANCE')
       `),
     ]);
 
@@ -114,6 +121,10 @@ export const getDashboard = async (req: Request, res: Response) => {
       // table non encore créée — widget ignoré
     }
 
+    const exitsYtd = parseInt(turnoverData.rows[0].exits_ytd) || 0;
+    const headcountCurrent = parseInt(turnoverData.rows[0].headcount_current) || 1;
+    const turnoverRate = Math.round((exitsYtd / headcountCurrent) * 100);
+
     return res.json({
       totalActive: parseInt(totalActive.rows[0].total),
       byServiceLine: byServiceLine.rows,
@@ -121,9 +132,13 @@ export const getDashboard = async (req: Request, res: Response) => {
       byContractType: byContractType.rows,
       byAgeGroup: byAgeGroup.rows,
       bySeason: bySeason.rows,
-      withEmail: parseInt(withEmail.rows[0].count),
       birthdaysThisMonth: birthdaysThisMonth.rows,
       contractsToRenew: contractsToRenew.rows,
+      turnover: {
+        rate: turnoverRate,
+        exits: exitsYtd,
+        entries: parseInt(turnoverData.rows[0].entries_ytd) || 0,
+      },
       commercial: commercialWidget,
     });
   } catch (err) {
@@ -195,23 +210,13 @@ export const getKPIs = async (req: Request, res: Response) => {
       WHERE EXTRACT(YEAR FROM date) = $1
     `, [year]);
 
-    // Effectifs par ligne de service et grade
+    // Effectifs par ligne de service et grade (hors stagiaires)
     const byServiceAndGrade = await query(`
       SELECT service_line, grade, COUNT(*) as count
       FROM employees
-      WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE)
+      WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE) AND contract_type != 'STAGE'
       GROUP BY service_line, grade
       ORDER BY service_line, grade
-    `);
-
-    // Diplômes — depuis la table employee_diplomas
-    const diplomas = await query(`
-      SELECT ed.diploma_type, COUNT(*) as count
-      FROM employee_diplomas ed
-      JOIN employees e ON e.id = ed.employee_id
-      WHERE (e.exit_date IS NULL OR e.exit_date > CURRENT_DATE)
-      GROUP BY ed.diploma_type
-      ORDER BY count DESC
     `);
 
     // Par grade
@@ -229,18 +234,33 @@ export const getKPIs = async (req: Request, res: Response) => {
       FROM employees
     `, [year]);
 
-    // Mobilités internes
-    const mobilities = await query(`
-      SELECT COUNT(*) as count
-      FROM internal_mobilities
-      WHERE EXTRACT(YEAR FROM effective_date) = $1
-    `, [year]);
-
     // Targets
     const targets = await query(
       `SELECT indicator_key, target_value FROM kpi_targets WHERE year = $1`,
       [year]
     );
+
+    // Tables optionnelles : ne pas crasher si elles n'existent pas encore
+    let diplomasRows: unknown[] = [];
+    try {
+      const diplomas = await query(`
+        SELECT ed.diploma_type, COUNT(*) as count
+        FROM employee_diplomas ed
+        JOIN employees e ON e.id = ed.employee_id
+        WHERE (e.exit_date IS NULL OR e.exit_date > CURRENT_DATE)
+        GROUP BY ed.diploma_type ORDER BY count DESC
+      `);
+      diplomasRows = diplomas.rows;
+    } catch { logger.warn('employee_diplomas non disponible'); }
+
+    let mobilitiesCount = 0;
+    try {
+      const mobilities = await query(`
+        SELECT COUNT(*) as count FROM internal_mobilities
+        WHERE EXTRACT(YEAR FROM effective_date) = $1
+      `, [year]);
+      mobilitiesCount = parseInt(mobilities.rows[0].count);
+    } catch { logger.warn('internal_mobilities non disponible'); }
 
     const targetsMap: Record<string, number> = {};
     targets.rows.forEach((t) => { targetsMap[t.indicator_key] = t.target_value; });
@@ -253,10 +273,10 @@ export const getKPIs = async (req: Request, res: Response) => {
       trainings: trainings.rows,
       totalTrainingHours: parseFloat(totalTrainingHours.rows[0].total),
       byServiceAndGrade: byServiceAndGrade.rows,
-      diplomas: diplomas.rows,
+      diplomas: diplomasRows,
       byGrade: byGrade.rows,
       turnover: turnover.rows[0],
-      mobilitiesCount: parseInt(mobilities.rows[0].count),
+      mobilitiesCount,
       targets: targetsMap,
     });
   } catch (err) {
