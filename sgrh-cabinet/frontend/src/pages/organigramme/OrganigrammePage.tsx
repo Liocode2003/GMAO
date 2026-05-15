@@ -28,7 +28,7 @@ const SERVICE_LABELS: Record<string, string> = {
   CONSULTING_FA:      'Consulting',
   OUTSOURCING:        'Outsourcing',
   ADMINISTRATION:     'Admin',
-  JURIDIQUE_FISCALITE:'Juridique',
+  JURIDIQUE_FISCALITE:'Tax & Legal',
 };
 
 function buildTree(employees: EmployeeNode[]): EmployeeNode[] {
@@ -152,7 +152,7 @@ export default function OrganigrammePage() {
             <option value="CONSULTING_FA">Consulting & FA</option>
             <option value="OUTSOURCING">Outsourcing</option>
             <option value="ADMINISTRATION">Administration</option>
-            <option value="JURIDIQUE_FISCALITE">Juridique & Fiscalité</option>
+            <option value="JURIDIQUE_FISCALITE">Tax & Legal</option>
           </select>
         </div>
       </div>
