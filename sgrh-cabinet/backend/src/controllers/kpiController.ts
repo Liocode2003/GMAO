@@ -219,16 +219,6 @@ export const getKPIs = async (req: Request, res: Response) => {
       ORDER BY service_line, grade
     `);
 
-    // Diplômes — depuis la table employee_diplomas
-    const diplomas = await query(`
-      SELECT ed.diploma_type, COUNT(*) as count
-      FROM employee_diplomas ed
-      JOIN employees e ON e.id = ed.employee_id
-      WHERE (e.exit_date IS NULL OR e.exit_date > CURRENT_DATE)
-      GROUP BY ed.diploma_type
-      ORDER BY count DESC
-    `);
-
     // Par grade
     const byGrade = await query(`
       SELECT grade, COUNT(*) as count
@@ -244,18 +234,33 @@ export const getKPIs = async (req: Request, res: Response) => {
       FROM employees
     `, [year]);
 
-    // Mobilités internes
-    const mobilities = await query(`
-      SELECT COUNT(*) as count
-      FROM internal_mobilities
-      WHERE EXTRACT(YEAR FROM effective_date) = $1
-    `, [year]);
-
     // Targets
     const targets = await query(
       `SELECT indicator_key, target_value FROM kpi_targets WHERE year = $1`,
       [year]
     );
+
+    // Tables optionnelles : ne pas crasher si elles n'existent pas encore
+    let diplomasRows: unknown[] = [];
+    try {
+      const diplomas = await query(`
+        SELECT ed.diploma_type, COUNT(*) as count
+        FROM employee_diplomas ed
+        JOIN employees e ON e.id = ed.employee_id
+        WHERE (e.exit_date IS NULL OR e.exit_date > CURRENT_DATE)
+        GROUP BY ed.diploma_type ORDER BY count DESC
+      `);
+      diplomasRows = diplomas.rows;
+    } catch { logger.warn('employee_diplomas non disponible'); }
+
+    let mobilitiesCount = 0;
+    try {
+      const mobilities = await query(`
+        SELECT COUNT(*) as count FROM internal_mobilities
+        WHERE EXTRACT(YEAR FROM effective_date) = $1
+      `, [year]);
+      mobilitiesCount = parseInt(mobilities.rows[0].count);
+    } catch { logger.warn('internal_mobilities non disponible'); }
 
     const targetsMap: Record<string, number> = {};
     targets.rows.forEach((t) => { targetsMap[t.indicator_key] = t.target_value; });
@@ -268,10 +273,10 @@ export const getKPIs = async (req: Request, res: Response) => {
       trainings: trainings.rows,
       totalTrainingHours: parseFloat(totalTrainingHours.rows[0].total),
       byServiceAndGrade: byServiceAndGrade.rows,
-      diplomas: diplomas.rows,
+      diplomas: diplomasRows,
       byGrade: byGrade.rows,
       turnover: turnover.rows[0],
-      mobilitiesCount: parseInt(mobilities.rows[0].count),
+      mobilitiesCount,
       targets: targetsMap,
     });
   } catch (err) {

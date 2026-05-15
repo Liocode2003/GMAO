@@ -6,6 +6,19 @@ import { query } from '../config/database';
 import { logger } from '../utils/logger';
 import { employeeService, sanitizeEmployee, calcSeniority, canViewSalary } from '../services/employeeService';
 
+async function hasCircularManagerRef(employeeId: string, newManagerId: string): Promise<boolean> {
+  let currentId: string | null = newManagerId;
+  const visited = new Set<string>();
+  while (currentId) {
+    if (currentId === employeeId) return true;
+    if (visited.has(currentId)) return true;
+    visited.add(currentId);
+    const res = await query('SELECT manager_id FROM employees WHERE id = $1', [currentId]);
+    currentId = res.rows[0]?.manager_id ?? null;
+  }
+  return false;
+}
+
 // ============================================================
 // LISTE DES COLLABORATEURS
 // ============================================================
@@ -225,6 +238,14 @@ export const updateEmployee = async (req: Request, res: Response) => {
 
   const fields = Object.keys(updates);
   if (fields.length === 0) return res.status(400).json({ error: 'Aucune modification' });
+
+  // Vérification anti-boucle circulaire dans la hiérarchie
+  if (updates.manager_id) {
+    const circular = await hasCircularManagerRef(id, updates.manager_id);
+    if (circular) {
+      return res.status(400).json({ error: 'Hiérarchie invalide : ce choix crée une boucle circulaire (A manage B qui manage A)' });
+    }
+  }
 
   const setClauses = fields.map((f, i) => `${f} = $${i + 1}`).join(', ');
   const values = fields.map((f) => updates[f]);
