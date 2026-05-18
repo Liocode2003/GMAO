@@ -225,7 +225,7 @@ export const updateEmployee = async (req: Request, res: Response) => {
     'function', 'service_line', 'grade', 'contract_type', 'entry_date', 'exit_date',
     'salary', 'notes', 'has_dec_french', 'has_decofi', 'has_other_dec', 'has_cisa', 'has_cfa',
     'department', 'is_expatriate', 'manager_id', 'marital_status', 'spouse_name', 'spouse_phone',
-    'children_count', 'leave_balance', 'matricule',
+    'children_count', 'leave_balance', 'matricule', 'departure_reason',
   ]);
 
   // Ne garder que les colonnes autorisées

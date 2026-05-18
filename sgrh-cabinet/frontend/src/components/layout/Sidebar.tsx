@@ -14,6 +14,7 @@ import {
   MagnifyingGlassIcon,
   CalendarDaysIcon,
   BuildingOffice2Icon,
+  PresentationChartLineIcon,
 } from '@heroicons/react/24/outline';
 
 interface NavItem {
@@ -28,6 +29,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/personnel', icon: UsersIcon, label: 'Personnel' },
   { to: '/organigramme', icon: BuildingOffice2Icon, label: 'Organigramme' },
   { to: '/kpis', icon: ChartBarIcon, label: 'KPIs & Statistiques' },
+  { to: '/rapport-rh', icon: PresentationChartLineIcon, label: 'Rapport RH', roles: ['DRH', 'DIRECTION_GENERALE'] },
   { to: '/formations', icon: AcademicCapIcon, label: 'Formations' },
   { to: '/evaluations', icon: StarIcon, label: 'Évaluations', roles: ['DRH', 'DIRECTION_GENERALE', 'MANAGER'] },
   { to: '/recrutement', icon: MagnifyingGlassIcon, label: 'Recrutement', roles: ['DRH', 'DIRECTION_GENERALE', 'MANAGER'] },

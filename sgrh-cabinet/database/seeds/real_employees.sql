@@ -13,7 +13,7 @@ TRUNCATE TABLE
   evaluations,
   leaves,
   alerts,
-  recruitment_candidates,
+  candidates,
   commercial_submissions,
   audit_logs,
   employees

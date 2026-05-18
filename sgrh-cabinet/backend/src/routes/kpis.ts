@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getDashboard, getKPIs, getMonthlyKPIs } from '../controllers/kpiController';
+import { getHRReport } from '../controllers/hrReportController';
 import { authenticate } from '../middleware/auth';
 
 const router = Router();
@@ -70,5 +71,24 @@ router.get('/', getKPIs);
  *         description: KPIs du mois
  */
 router.get('/monthly', getMonthlyKPIs);
+
+/**
+ * @swagger
+ * /kpis/hr-report:
+ *   get:
+ *     tags: [KPIs]
+ *     summary: Rapport RH — effectifs, turnover, motifs de départ (comparaison deux périodes)
+ *     parameters:
+ *       - in: query
+ *         name: year
+ *         schema: { type: integer }
+ *       - in: query
+ *         name: month
+ *         schema: { type: integer, minimum: 1, maximum: 12 }
+ *     responses:
+ *       200:
+ *         description: Rapport RH complet
+ */
+router.get('/hr-report', getHRReport);
 
 export default router;
