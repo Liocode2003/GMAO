@@ -1,8 +1,39 @@
--- Mise à jour des identifiants de connexion DRH
-UPDATE users
-SET
-  email         = 'catherine.sawadogo@forvismazars.com',
-  password_hash = '$2b$12$dWw5u.dV2a6czJU.jPpcCuCeB336clLZMcXiw27SUcJEgBjFuEeXK',
-  first_name    = 'Catherine',
-  last_name     = 'Sawadogo'
-WHERE id = 'a0000001-0000-0000-0000-000000000001';
+-- Migration 003 — Identifiants de connexion initiaux
+-- DRH : drh@forvismazars.com / drh2026
+-- ADG : adg@forvismazars.com / adg2026
+
+INSERT INTO users (id, email, password_hash, first_name, last_name, role, is_active)
+VALUES (
+  'a0000001-0000-0000-0000-000000000001',
+  'drh@forvismazars.com',
+  '$2a$12$B1fARKWKQgss8VJm20pmrexZiygAoTn3vkyRWCgH50dUYiXLsJ.nm',
+  'DRH',
+  'Forvis Mazars',
+  'DRH',
+  true
+)
+ON CONFLICT (id) DO UPDATE SET
+  email         = EXCLUDED.email,
+  password_hash = EXCLUDED.password_hash,
+  first_name    = EXCLUDED.first_name,
+  last_name     = EXCLUDED.last_name,
+  role          = EXCLUDED.role,
+  is_active     = EXCLUDED.is_active;
+
+INSERT INTO users (id, email, password_hash, first_name, last_name, role, is_active)
+VALUES (
+  'a0000002-0000-0000-0000-000000000002',
+  'adg@forvismazars.com',
+  '$2a$12$Z8lliNNusJcjomI2ZwJGCeccBvyFXV006WeGClrsEwtbRM74LPqVy',
+  'ADG',
+  'Forvis Mazars',
+  'DIRECTION_GENERALE',
+  true
+)
+ON CONFLICT (id) DO UPDATE SET
+  email         = EXCLUDED.email,
+  password_hash = EXCLUDED.password_hash,
+  first_name    = EXCLUDED.first_name,
+  last_name     = EXCLUDED.last_name,
+  role          = EXCLUDED.role,
+  is_active     = EXCLUDED.is_active;

@@ -6,23 +6,11 @@
 -- ============================================================
 
 -- ============================================================
--- 1. UTILISATEURS ADDITIONNELS
---    (même mot de passe que le compte DRH existant)
+-- 1. UTILISATEURS — DRH et ADG uniquement
+--    DRH : drh@forvismazars.com / drh2026
+--    ADG : adg@forvismazars.com / adg2026
 -- ============================================================
-INSERT INTO users (id, email, password_hash, first_name, last_name, role) VALUES
-  ('a0000002-0000-0000-0000-000000000002',
-   'robert.nikiema@forvismazars.com',
-   '$2b$12$/nf6N1Ja1sLFf911RLqSueJ0IR0YsDEdWzISwNyrFEfmNk5d/OcBi',
-   'Robert', 'Nikiéma', 'ASSOCIE'),
-  ('a0000003-0000-0000-0000-000000000003',
-   'francois.ouattara@forvismazars.com',
-   '$2b$12$/nf6N1Ja1sLFf911RLqSueJ0IR0YsDEdWzISwNyrFEfmNk5d/OcBi',
-   'François', 'Ouattara', 'MANAGER'),
-  ('a0000004-0000-0000-0000-000000000004',
-   'chantal.zongo@forvismazars.com',
-   '$2b$12$/nf6N1Ja1sLFf911RLqSueJ0IR0YsDEdWzISwNyrFEfmNk5d/OcBi',
-   'Chantal', 'Zongo', 'DIRECTION_GENERALE')
-ON CONFLICT (email) DO NOTHING;
+-- (déjà insérés via demo_data.sql — aucun utilisateur additionnel)
 
 -- ============================================================
 -- 2. HIÉRARCHIE — manager_id pour l'organigramme

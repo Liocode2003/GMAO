@@ -3,9 +3,12 @@
 -- ============================================================
 
 -- Utilisateurs
--- Mot de passe DRH : Mazars2025!
-INSERT INTO users (id, email, password_hash, first_name, last_name, role) VALUES
-  ('a0000001-0000-0000-0000-000000000001', 'catherine.sawadogo@forvismazars.com', '$2a$12$HDRDnIHuC0SlfX/rD2zhyOof9nohTt93P/ZwRF649LOzwdQs40x7.', 'Catherine', 'Sawadogo', 'DRH');
+-- DRH  : drh@forvismazars.com / drh2026
+-- ADG  : adg@forvismazars.com / adg2026
+INSERT INTO users (id, email, password_hash, first_name, last_name, role, is_active) VALUES
+  ('a0000001-0000-0000-0000-000000000001', 'drh@forvismazars.com', '$2a$12$B1fARKWKQgss8VJm20pmrexZiygAoTn3vkyRWCgH50dUYiXLsJ.nm', 'DRH', 'Forvis Mazars', 'DRH', true),
+  ('a0000002-0000-0000-0000-000000000002', 'adg@forvismazars.com', '$2a$12$Z8lliNNusJcjomI2ZwJGCeccBvyFXV006WeGClrsEwtbRM74LPqVy', 'ADG', 'Forvis Mazars', 'DIRECTION_GENERALE', true)
+ON CONFLICT (id) DO NOTHING;
 
 -- Collaborateurs
 INSERT INTO employees (matricule, first_name, last_name, gender, email, phone, birth_date, function, service_line, grade, contract_type, entry_date, salary, status, has_dec_french, is_expatriate, department) VALUES
