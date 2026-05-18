@@ -11,6 +11,7 @@ import notificationsRoutes from './notifications';
 import evaluationsRoutes from './evaluations';
 import recruitmentRoutes from './recruitment';
 import documentsRoutes from './documents';
+import payslipsRoutes from './payslips';
 
 const router = Router();
 
@@ -26,5 +27,6 @@ router.use('/notifications', notificationsRoutes);
 router.use('/evaluations', evaluationsRoutes);
 router.use('/recruitment', recruitmentRoutes);
 router.use('/documents', documentsRoutes);
+router.use('/payslips', payslipsRoutes);
 
 export default router;

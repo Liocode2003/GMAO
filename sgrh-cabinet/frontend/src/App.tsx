@@ -21,6 +21,7 @@ import EvaluationsPage from './pages/evaluations/EvaluationsPage';
 import RecruitmentPage from './pages/recruitment/RecruitmentPage';
 import OrganigrammePage from './pages/organigramme/OrganigrammePage';
 import TeamCalendarPage from './pages/calendar/TeamCalendarPage';
+import PayslipsPage from './pages/payslips/PayslipsPage';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuthStore();
@@ -67,6 +68,7 @@ export default function App() {
         <Route path="organigramme" element={<OrganigrammePage />} />
         <Route path="calendrier" element={<TeamCalendarPage />} />
         <Route path="commercial" element={<ReportingCommercialPage />} />
+        <Route path="bulletins" element={<PayslipsPage />} />
         <Route path="rapports" element={<Navigate to="/rapport-rh" replace />} />
         <Route path="parametres/utilisateurs" element={<AdminRoute><UsersPage /></AdminRoute>} />
         <Route path="parametres/audit" element={<AdminRoute><AuditLogsPage /></AdminRoute>} />
