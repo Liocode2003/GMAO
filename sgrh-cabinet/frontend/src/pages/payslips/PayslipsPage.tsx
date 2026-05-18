@@ -3,7 +3,7 @@ import api from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import {
   DocumentArrowDownIcon, PlusIcon, PencilIcon, CheckCircleIcon, TrashIcon,
-  EyeIcon, CalculatorIcon,
+  CalculatorIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
@@ -54,8 +54,6 @@ const fmt = (n: string | number) =>
 export default function PayslipsPage() {
   const { user } = useAuthStore();
   const isDRH = user?.role === 'DRH';
-  const isADG = user?.role === 'DIRECTION_GENERALE';
-  const canRead = isDRH || isADG;
 
   const [payslips, setPayslips] = useState<Payslip[]>([]);
   const [loading, setLoading] = useState(true);
@@ -131,7 +129,7 @@ export default function PayslipsPage() {
         <table className="table">
           <thead>
             <tr>
-              {canRead && <th>Collaborateur</th>}
+              <th>Collaborateur</th>
               <th>Période</th>
               <th className="text-right">Brut</th>
               <th className="text-right">Net</th>
@@ -149,12 +147,10 @@ export default function PayslipsPage() {
               <tr><td colSpan={7} className="text-center py-10 text-gray-400">Aucun bulletin pour cette période</td></tr>
             ) : payslips.map(ps => (
               <tr key={ps.id}>
-                {canRead && (
-                  <td>
-                    <div className="font-medium text-gray-800">{ps.last_name} {ps.first_name}</div>
-                    <div className="text-xs text-gray-500">{ps.matricule} — {ps.service_line}</div>
-                  </td>
-                )}
+                <td>
+                  <div className="font-medium text-gray-800">{ps.last_name} {ps.first_name}</div>
+                  <div className="text-xs text-gray-500">{ps.matricule} — {ps.service_line}</div>
+                </td>
                 <td className="font-medium">{MONTHS[ps.period_month]} {ps.period_year}</td>
                 <td className="text-right font-mono text-sm">{fmt(ps.gross_salary)}</td>
                 <td className="text-right font-mono text-sm font-semibold text-brand-700">{fmt(ps.net_salary)}</td>
@@ -166,15 +162,13 @@ export default function PayslipsPage() {
                 </td>
                 <td>
                   <div className="flex gap-1">
-                    {(ps.status === 'PUBLIE' || isDRH) && (
-                      <button
-                        onClick={() => handleDownload(ps.id, `bulletin_${ps.matricule}_${ps.period_year}_${String(ps.period_month).padStart(2,'0')}.pdf`)}
-                        className="p-1.5 text-gray-400 hover:text-brand-700 hover:bg-brand-50 rounded"
-                        title="Télécharger PDF"
-                      >
-                        <DocumentArrowDownIcon className="w-4 h-4" />
-                      </button>
-                    )}
+                    <button
+                      onClick={() => handleDownload(ps.id, `bulletin_${ps.matricule}_${ps.period_year}_${String(ps.period_month).padStart(2,'0')}.pdf`)}
+                      className="p-1.5 text-gray-400 hover:text-brand-700 hover:bg-brand-50 rounded"
+                      title="Télécharger PDF"
+                    >
+                      <DocumentArrowDownIcon className="w-4 h-4" />
+                    </button>
                     {isDRH && ps.status === 'BROUILLON' && (
                       <>
                         <button onClick={() => { setEditing(ps); setShowForm(true); }}

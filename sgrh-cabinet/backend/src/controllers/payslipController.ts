@@ -314,37 +314,17 @@ async function generatePDF(payslipId: string): Promise<string> {
 // ============================================================
 
 export const listPayslips = async (req: Request, res: Response) => {
-  const user = req.user as unknown as { userId: string; role: string; email: string };
   const { year, month, employee_id, status } = req.query as Record<string, string>;
 
   try {
-    let whereClause = '';
+    const conds: string[] = [];
     const params: unknown[] = [];
 
-    if (['DRH', 'DIRECTION_GENERALE'].includes(user.role)) {
-      // Accès complet
-      const conds: string[] = [];
-      if (year) { params.push(parseInt(year)); conds.push(`p.period_year = $${params.length}`); }
-      if (month) { params.push(parseInt(month)); conds.push(`p.period_month = $${params.length}`); }
-      if (employee_id) { params.push(employee_id); conds.push(`p.employee_id = $${params.length}`); }
-      if (status) { params.push(status); conds.push(`p.status = $${params.length}`); }
-      if (conds.length) whereClause = 'WHERE ' + conds.join(' AND ');
-    } else {
-      // Employé : uniquement ses propres bulletins publiés
-      params.push(user.email);
-      whereClause = `
-        JOIN employees emp2 ON emp2.id = p.employee_id AND emp2.email = $1
-        WHERE p.status = 'PUBLIE'
-      `;
-      // Adjust: use a subquery instead
-      whereClause = '';
-      const empRes = await query(`SELECT id FROM employees WHERE email = $1 LIMIT 1`, [user.email]);
-      if (!empRes.rows[0]) return res.json([]);
-      params[0] = empRes.rows[0].id;
-      whereClause = `WHERE p.employee_id = $1 AND p.status = 'PUBLIE'`;
-      if (year) { params.push(parseInt(year)); whereClause += ` AND p.period_year = $${params.length}`; }
-      if (month) { params.push(parseInt(month)); whereClause += ` AND p.period_month = $${params.length}`; }
-    }
+    if (year) { params.push(parseInt(year)); conds.push(`p.period_year = $${params.length}`); }
+    if (month) { params.push(parseInt(month)); conds.push(`p.period_month = $${params.length}`); }
+    if (employee_id) { params.push(employee_id); conds.push(`p.employee_id = $${params.length}`); }
+    if (status) { params.push(status); conds.push(`p.status = $${params.length}`); }
+    const whereClause = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
 
     const result = await query(`
       SELECT p.id, p.employee_id, p.period_year, p.period_month,
@@ -365,27 +345,20 @@ export const listPayslips = async (req: Request, res: Response) => {
 };
 
 export const getPayslip = async (req: Request, res: Response) => {
-  const user = req.user as unknown as { userId: string; role: string; email: string };
   const { id } = req.params;
 
   try {
     const result = await query(`
       SELECT p.*, e.matricule, e.first_name, e.last_name, e.grade, e.function,
-        e.service_line, e.contract_type, e.entry_date, e.department, e.email as emp_email
+        e.service_line, e.contract_type, e.entry_date, e.department
       FROM payslips p
       JOIN employees e ON e.id = p.employee_id
       WHERE p.id = $1
     `, [id]);
 
     if (!result.rows[0]) return res.status(404).json({ error: 'Bulletin introuvable' });
-    const ps = result.rows[0];
 
-    if (!['DRH', 'DIRECTION_GENERALE'].includes(user.role)) {
-      if (ps.emp_email !== user.email) return res.status(403).json({ error: 'Accès refusé' });
-      if (ps.status !== 'PUBLIE') return res.status(403).json({ error: 'Bulletin non publié' });
-    }
-
-    return res.json(ps);
+    return res.json(result.rows[0]);
   } catch (err) {
     logger.error('getPayslip error', err);
     return res.status(500).json({ error: 'Erreur serveur' });
@@ -549,23 +522,16 @@ export const publishPayslip = async (req: Request, res: Response) => {
 };
 
 export const downloadPayslipPDF = async (req: Request, res: Response) => {
-  const user = req.user as unknown as { userId: string; role: string; email: string };
   const { id } = req.params;
 
   try {
     const result = await query(`
-      SELECT p.*, e.email as emp_email, e.matricule
+      SELECT p.*, e.matricule
       FROM payslips p JOIN employees e ON e.id = p.employee_id
       WHERE p.id = $1
     `, [id]);
     if (!result.rows[0]) return res.status(404).json({ error: 'Introuvable' });
     const ps = result.rows[0];
-
-    if (!['DRH', 'DIRECTION_GENERALE'].includes(user.role)) {
-      if (ps.emp_email !== user.email || ps.status !== 'PUBLIE') {
-        return res.status(403).json({ error: 'Accès refusé' });
-      }
-    }
 
     // Regénérer le PDF si absent
     if (!ps.pdf_path || !fs.existsSync(path.join(PAYSLIPS_DIR, ps.pdf_path))) {
