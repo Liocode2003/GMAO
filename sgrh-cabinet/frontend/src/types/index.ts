@@ -322,6 +322,47 @@ export const SUBMISSION_STATUS_LABELS: Record<SubmissionStatus, string> = {
   PERDU: 'Perdu',
 };
 
+export type DepartureReason = 'NOUVELLES_OPPORTUNITES' | 'RAISONS_PERSONNELLES' | 'REMUNERATION' | 'MANAGEMENT' | 'AUTRES';
+
+export const DEPARTURE_REASON_LABELS: Record<DepartureReason, string> = {
+  NOUVELLES_OPPORTUNITES: 'Nouvelles opportunités',
+  RAISONS_PERSONNELLES: 'Raisons personnelles',
+  REMUNERATION: 'Rémunération',
+  MANAGEMENT: 'Management',
+  AUTRES: 'Autres',
+};
+
+export interface HRReportTurnoverSlice {
+  departures: number;
+  headStart: number;
+  headEnd: number;
+  avgHead: number;
+  rate: number;
+}
+
+export interface HRReportData {
+  period: { year: number; month: number; endDate: string };
+  prevPeriod: { year: number; month: number; endDate: string };
+  headcount: { current: number; prev: number; delta: number };
+  gender: {
+    current: { M: number; F: number };
+    prev:    { M: number; F: number };
+  };
+  byDepartment: {
+    current: Array<{ service_line: string; count: number }>;
+    prev:    Array<{ service_line: string; count: number }>;
+  };
+  ageGroups: Array<{ label: string; count: number }>;
+  turnover: {
+    global:     { current: HRReportTurnoverSlice; prev: HRReportTurnoverSlice };
+    functional: { current: HRReportTurnoverSlice; prev: HRReportTurnoverSlice };
+  };
+  departureReasons: {
+    current: Array<{ reason: string; count: number; pct: number }>;
+    prev:    Array<{ reason: string; count: number; pct: number }>;
+  };
+}
+
 export const DOMAINE_LABELS: Record<string, string> = {
   INFORMATIQUE: 'Informatique',
   MARKETING: 'Marketing',

@@ -10,6 +10,7 @@ import EmployeesPage from './pages/personnel/EmployeesPage';
 import EmployeeDetailPage from './pages/personnel/EmployeeDetailPage';
 import EmployeeFormPage from './pages/personnel/EmployeeFormPage';
 import KPIsPage from './pages/kpis/KPIsPage';
+import HRReportPage from './pages/kpis/HRReportPage';
 import TrainingsPage from './pages/trainings/TrainingsPage';
 import ReportsPage from './pages/rapport/ReportsPage';
 import UsersPage from './pages/settings/UsersPage';
@@ -52,6 +53,7 @@ export default function App() {
         <Route path="personnel/:id" element={<EmployeeDetailPage />} />
         <Route path="personnel/:id/modifier" element={<AdminRoute><EmployeeFormPage /></AdminRoute>} />
         <Route path="kpis" element={<KPIsPage />} />
+        <Route path="rapport-rh" element={<AdminRoute><HRReportPage /></AdminRoute>} />
         <Route path="formations" element={<TrainingsPage />} />
         <Route path="evaluations" element={<EvaluationsPage />} />
         <Route path="recrutement" element={<RecruitmentPage />} />

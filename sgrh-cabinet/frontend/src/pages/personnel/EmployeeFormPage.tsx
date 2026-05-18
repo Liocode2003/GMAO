@@ -33,6 +33,7 @@ type FormData = {
   spouse_name: string;
   spouse_phone: string;
   children_count: string;
+  departure_reason: string;
 };
 
 export default function EmployeeFormPage() {
@@ -76,6 +77,7 @@ export default function EmployeeFormPage() {
           children_count: data.children_count != null ? String(data.children_count) : '0',
           manager_id: data.manager_id || '',
           marital_status: data.marital_status || 'CELIBATAIRE',
+          departure_reason: data.departure_reason || '',
         });
         if (data.photo_url) setPhotoPreview(data.photo_url);
         if (data.diplomas) setDiplomas(data.diplomas);
@@ -127,6 +129,7 @@ export default function EmployeeFormPage() {
         ...formData,
         salary: canEditSalary && formData.salary ? parseFloat(formData.salary) : undefined,
         exit_date: formData.exit_date || null,
+        departure_reason: formData.exit_date ? (formData.departure_reason || null) : null,
         manager_id: formData.manager_id || null,
         children_count: parseInt(formData.children_count) || 0,
         spouse_name: formData.marital_status === 'MARIE' ? (formData.spouse_name || null) : null,
@@ -395,6 +398,19 @@ export default function EmployeeFormPage() {
               </label>
               <input type="date" className="input" {...register('exit_date')} />
             </div>
+            {watch('exit_date') && (
+              <div>
+                <label className="label">Motif de départ</label>
+                <select className="input" {...register('departure_reason')}>
+                  <option value="">— Sélectionner —</option>
+                  <option value="NOUVELLES_OPPORTUNITES">Nouvelles opportunités</option>
+                  <option value="RAISONS_PERSONNELLES">Raisons personnelles</option>
+                  <option value="REMUNERATION">Rémunération</option>
+                  <option value="MANAGEMENT">Management</option>
+                  <option value="AUTRES">Autres</option>
+                </select>
+              </div>
+            )}
             {canEditSalary && (
               <div>
                 <label className="label">Salaire (FCFA)</label>
