@@ -15,6 +15,8 @@ import {
 } from '@heroicons/react/24/outline';
 import api from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
+import { TableSkeletonRows } from '../../components/ui/Skeleton';
+import EmptyState from '../../components/ui/EmptyState';
 import {
   CommercialSubmission,
   CommercialStats,
@@ -412,14 +414,28 @@ export default function ReportingCommercialPage() {
       {/* Table */}
       <div className="card overflow-hidden p-0">
         {loading ? (
-          <div className="flex items-center justify-center h-32">
-            <div className="animate-spin w-6 h-6 border-4 border-brand-600 border-t-transparent rounded-full" />
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Référence</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Objet</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Client</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Ligne</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Statut</th>
+                </tr>
+              </thead>
+              <tbody><TableSkeletonRows cols={6} rows={5} /></tbody>
+            </table>
           </div>
         ) : submissions.length === 0 ? (
-          <div className="text-center py-12 text-gray-400">
-            <ChartBarIcon className="w-10 h-10 mx-auto mb-2 opacity-30" />
-            <p className="text-sm">Aucune soumission trouvée</p>
-          </div>
+          <EmptyState
+            icon={ChartBarIcon}
+            title="Aucune soumission trouvée"
+            description="Modifiez les filtres ou créez une nouvelle soumission"
+            action={canWrite ? { label: '+ Nouvelle soumission', onClick: openCreate } : undefined}
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

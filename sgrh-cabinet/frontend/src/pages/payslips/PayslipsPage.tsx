@@ -3,9 +3,11 @@ import api from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import {
   DocumentArrowDownIcon, PlusIcon, PencilIcon, CheckCircleIcon, TrashIcon,
-  CalculatorIcon,
+  CalculatorIcon, DocumentTextIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import { TableSkeletonRows } from '../../components/ui/Skeleton';
+import EmptyState from '../../components/ui/EmptyState';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -140,11 +142,16 @@ export default function PayslipsPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="text-center py-10">
-                <div className="animate-spin w-6 h-6 border-2 border-brand-600 border-t-transparent rounded-full mx-auto" />
-              </td></tr>
+              <TableSkeletonRows cols={7} rows={5} />
             ) : payslips.length === 0 ? (
-              <tr><td colSpan={7} className="text-center py-10 text-gray-400">Aucun bulletin pour cette période</td></tr>
+              <tr><td colSpan={7}>
+                <EmptyState
+                  icon={DocumentTextIcon}
+                  title="Aucun bulletin pour cette période"
+                  description="Sélectionnez une autre période ou créez un nouveau bulletin"
+                  action={isDRH ? { label: '+ Nouveau bulletin', onClick: () => { setEditing(null); setShowForm(true); } } : undefined}
+                />
+              </td></tr>
             ) : payslips.map(ps => (
               <tr key={ps.id}>
                 <td>

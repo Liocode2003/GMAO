@@ -7,9 +7,11 @@ import {
   PlusIcon, MagnifyingGlassIcon, FunnelIcon,
   PencilIcon, XMarkIcon, NoSymbolIcon,
   ArrowUpTrayIcon, DocumentArrowDownIcon, TableCellsIcon,
-  CheckCircleIcon, ExclamationCircleIcon, XCircleIcon,
+  CheckCircleIcon, ExclamationCircleIcon, XCircleIcon, UsersIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import { TableSkeletonRows } from '../../components/ui/Skeleton';
+import EmptyState from '../../components/ui/EmptyState';
 
 const StatusBadge = ({ status }: { status: string }) => (
   <span className={`badge ${status === 'ACTIF' ? 'badge-green' : 'badge-gray'}`}>
@@ -528,17 +530,16 @@ export default function EmployeesPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr>
-                <td colSpan={10} className="text-center py-12">
-                  <div className="inline-block animate-spin w-6 h-6 border-3 border-brand-600 border-t-transparent rounded-full" />
-                </td>
-              </tr>
+              <TableSkeletonRows cols={10} rows={8} />
             ) : employees.length === 0 ? (
-              <tr>
-                <td colSpan={10} className="text-center py-12 text-gray-400">
-                  Aucun collaborateur trouvé
-                </td>
-              </tr>
+              <tr><td colSpan={10}>
+                <EmptyState
+                  icon={UsersIcon}
+                  title="Aucun collaborateur trouvé"
+                  description="Modifiez les filtres ou ajoutez un nouveau collaborateur"
+                  action={canManage ? { label: '+ Nouveau collaborateur', onClick: () => navigate('/personnel/nouveau') } : undefined}
+                />
+              </td></tr>
             ) : employees.map((emp) => (
               <tr key={emp.id}>
                 <td>

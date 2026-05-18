@@ -3,6 +3,8 @@ import api from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { PlusIcon, PencilIcon, TrashIcon, UserGroupIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import { PageSpinner } from '../../components/ui/Spinner';
+import EmptyState from '../../components/ui/EmptyState';
 
 interface Candidate {
   id: string;
@@ -117,9 +119,7 @@ export default function RecruitmentPage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-16">
-          <div className="animate-spin w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full" />
-        </div>
+        <PageSpinner />
       ) : view === 'kanban' ? (
         /* KANBAN */
         <div className="flex gap-4 overflow-x-auto pb-4">
@@ -231,10 +231,12 @@ export default function RecruitmentPage() {
               {candidates.length === 0 ? (
                 <tr>
                   <td colSpan={7}>
-                    <div className="flex flex-col items-center py-16 gap-2">
-                      <UserGroupIcon className="w-10 h-10 text-gray-200" />
-                      <p className="text-gray-500">Aucun candidat</p>
-                    </div>
+                    <EmptyState
+                      icon={UserGroupIcon}
+                      title="Aucun candidat"
+                      description="Aucun candidat ne correspond à la sélection"
+                      action={canManage ? { label: '+ Ajouter candidat', onClick: () => setShowModal(true) } : undefined}
+                    />
                   </td>
                 </tr>
               ) : candidates.map(c => (

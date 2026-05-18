@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
-import { PlusIcon, TrashIcon, PencilIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, TrashIcon, PencilIcon, AcademicCapIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import { TableSkeletonRows } from '../../components/ui/Skeleton';
+import EmptyState from '../../components/ui/EmptyState';
 
 interface Training {
   id: string;
@@ -106,16 +108,16 @@ export default function TrainingsPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} className="text-center py-8">Chargement...</td></tr>
+              <TableSkeletonRows cols={8} rows={5} />
             ) : trainings.length === 0 ? (
-              <tr>
-                <td colSpan={8}>
-                  <div className="flex flex-col items-center justify-center py-16 gap-2">
-                    <p className="text-gray-600 font-semibold text-base">Aucune formation enregistrée</p>
-                    <p className="text-gray-400 text-sm">pour l'année {year}</p>
-                  </div>
-                </td>
-              </tr>
+              <tr><td colSpan={8}>
+                <EmptyState
+                  icon={AcademicCapIcon}
+                  title="Aucune formation enregistrée"
+                  description={`Aucune session de formation pour l'année ${year}`}
+                  action={canManage ? { label: '+ Nouvelle formation', onClick: () => setShowModal(true) } : undefined}
+                />
+              </td></tr>
             ) : trainings.map(t => (
               <tr key={t.id}>
                 <td><span className={`badge text-xs ${TYPE_COLORS[t.type] || 'badge-gray'}`}>{t.type}</span></td>

@@ -330,7 +330,7 @@ export default function TeamCalendarPage() {
         {/* Calendar grid */}
         {loading ? (
           <div className="flex justify-center py-12">
-            <div className="animate-spin w-6 h-6 border-4 border-brand-600 border-t-transparent rounded-full" />
+            <div className="animate-spin w-6 h-6 border-2 border-brand-600 border-t-transparent rounded-full" />
           </div>
         ) : (
           <div className="grid grid-cols-7 gap-1">
