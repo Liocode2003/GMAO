@@ -60,7 +60,7 @@ export default function App() {
         <Route path="organigramme" element={<OrganigrammePage />} />
         <Route path="calendrier" element={<TeamCalendarPage />} />
         <Route path="commercial" element={<ReportingCommercialPage />} />
-        <Route path="rapports" element={<AdminRoute><ReportsPage /></AdminRoute>} />
+        <Route path="rapports" element={<Navigate to="/rapport-rh" replace />} />
         <Route path="parametres/utilisateurs" element={<AdminRoute><UsersPage /></AdminRoute>} />
         <Route path="parametres/audit" element={<AdminRoute><AuditLogsPage /></AdminRoute>} />
         <Route path="parametres/profil" element={<ProfilePage />} />

@@ -84,12 +84,14 @@ export const getDashboard = async (req: Request, res: Response) => {
         ORDER BY exit_date
       `),
 
-      // Turnover année en cours (hors stagiaires)
+      // Turnover année en cours (hors stagiaires) — formule : départs / effectif_moyen × 100
       query(`
         SELECT
           COUNT(*) FILTER (WHERE exit_date IS NOT NULL AND EXTRACT(YEAR FROM exit_date) = EXTRACT(YEAR FROM CURRENT_DATE)) as exits_ytd,
           COUNT(*) FILTER (WHERE EXTRACT(YEAR FROM entry_date) = EXTRACT(YEAR FROM CURRENT_DATE)) as entries_ytd,
-          COUNT(*) FILTER (WHERE exit_date IS NULL OR exit_date > CURRENT_DATE) as headcount_current
+          COUNT(*) FILTER (WHERE exit_date IS NULL OR exit_date > CURRENT_DATE) as headcount_current,
+          COUNT(*) FILTER (WHERE entry_date < DATE_TRUNC('year', CURRENT_DATE)
+            AND (exit_date IS NULL OR exit_date >= DATE_TRUNC('year', CURRENT_DATE))) as headcount_start
         FROM employees
         WHERE contract_type NOT IN ('STAGE', 'CONSULTANT', 'FREELANCE')
       `),
@@ -122,8 +124,10 @@ export const getDashboard = async (req: Request, res: Response) => {
     }
 
     const exitsYtd = parseInt(turnoverData.rows[0].exits_ytd) || 0;
-    const headcountCurrent = parseInt(turnoverData.rows[0].headcount_current) || 1;
-    const turnoverRate = Math.round((exitsYtd / headcountCurrent) * 100);
+    const headcountCurrent = parseInt(turnoverData.rows[0].headcount_current) || 0;
+    const headcountStart   = parseInt(turnoverData.rows[0].headcount_start)   || 0;
+    const avgHeadcount = ((headcountStart + headcountCurrent) / 2) || 1;
+    const turnoverRate = Math.round((exitsYtd / avgHeadcount) * 100 * 10) / 10;
 
     return res.json({
       totalActive: parseInt(totalActive.rows[0].total),
@@ -226,11 +230,16 @@ export const getKPIs = async (req: Request, res: Response) => {
       GROUP BY grade ORDER BY grade
     `);
 
-    // Turnover
+    // Turnover — formule : départs / effectif_moyen × 100
     const turnover = await query(`
       SELECT
         COUNT(*) FILTER (WHERE EXTRACT(YEAR FROM entry_date) = $1) as entries,
-        COUNT(*) FILTER (WHERE exit_date IS NOT NULL AND EXTRACT(YEAR FROM exit_date) = $1) as exits
+        COUNT(*) FILTER (WHERE exit_date IS NOT NULL AND EXTRACT(YEAR FROM exit_date) = $1) as exits,
+        COUNT(*) FILTER (WHERE entry_date < MAKE_DATE($1::int, 1, 1)
+          AND (exit_date IS NULL OR exit_date >= MAKE_DATE($1::int, 1, 1))
+          AND contract_type NOT IN ('STAGE','CONSULTANT','FREELANCE')) as headcount_start,
+        COUNT(*) FILTER (WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE)
+          AND contract_type NOT IN ('STAGE','CONSULTANT','FREELANCE')) as headcount_end
       FROM employees
     `, [year]);
 
@@ -276,6 +285,13 @@ export const getKPIs = async (req: Request, res: Response) => {
       diplomas: diplomasRows,
       byGrade: byGrade.rows,
       turnover: turnover.rows[0],
+      turnoverRate: (() => {
+        const exits = parseInt(turnover.rows[0].exits) || 0;
+        const hStart = parseInt(turnover.rows[0].headcount_start) || 0;
+        const hEnd   = parseInt(turnover.rows[0].headcount_end)   || 0;
+        const avg = (hStart + hEnd) / 2 || 1;
+        return Math.round((exits / avg) * 100 * 10) / 10;
+      })(),
       mobilitiesCount,
       targets: targetsMap,
     });
