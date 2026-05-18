@@ -10,8 +10,8 @@ router.use(authenticate);
 router.get('/stats', getStats);
 router.get('/', listCandidates);
 router.get('/:id', getCandidate);
-router.post('/', authorize('DRH', 'DIRECTION_GENERALE', 'MANAGER'), createCandidate);
-router.put('/:id', authorize('DRH', 'DIRECTION_GENERALE', 'MANAGER'), updateCandidate);
-router.delete('/:id', authorize('DRH', 'DIRECTION_GENERALE'), deleteCandidate);
+router.post('/', authorize('DRH', 'MANAGER'), createCandidate);
+router.put('/:id', authorize('DRH', 'MANAGER'), updateCandidate);
+router.delete('/:id', authorize('DRH'), deleteCandidate);
 
 export default router;

@@ -36,6 +36,13 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+const DrhRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, user } = useAuthStore();
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (user?.role !== 'DRH') return <Navigate to="/" replace />;
+  return <>{children}</>;
+};
+
 export default function App() {
   const { isAuthenticated } = useAuthStore();
 
@@ -49,9 +56,9 @@ export default function App() {
       <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
         <Route index element={<DashboardPage />} />
         <Route path="personnel" element={<EmployeesPage />} />
-        <Route path="personnel/nouveau" element={<AdminRoute><EmployeeFormPage /></AdminRoute>} />
+        <Route path="personnel/nouveau" element={<DrhRoute><EmployeeFormPage /></DrhRoute>} />
         <Route path="personnel/:id" element={<EmployeeDetailPage />} />
-        <Route path="personnel/:id/modifier" element={<AdminRoute><EmployeeFormPage /></AdminRoute>} />
+        <Route path="personnel/:id/modifier" element={<DrhRoute><EmployeeFormPage /></DrhRoute>} />
         <Route path="kpis" element={<KPIsPage />} />
         <Route path="rapport-rh" element={<AdminRoute><HRReportPage /></AdminRoute>} />
         <Route path="formations" element={<TrainingsPage />} />

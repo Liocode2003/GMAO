@@ -3,6 +3,7 @@ import api from '../../services/api';
 import { ROLE_LABELS } from '../../types';
 import { PlusIcon, PencilIcon, KeyIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import { useAuthStore } from '../../store/authStore';
 
 interface UserRecord {
   id: string;
@@ -16,6 +17,9 @@ interface UserRecord {
 }
 
 export default function UsersPage() {
+  const { user } = useAuthStore();
+  const canWrite = user?.role === 'DRH';
+
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -50,9 +54,11 @@ export default function UsersPage() {
           <h2 className="text-2xl font-bold text-gray-800">Utilisateurs</h2>
           <p className="text-gray-500 text-sm">{users.length} utilisateur(s)</p>
         </div>
-        <button onClick={() => { setEditing(null); setShowModal(true); }} className="btn-primary">
-          <PlusIcon className="w-4 h-4" /> Nouvel utilisateur
-        </button>
+        {canWrite && (
+          <button onClick={() => { setEditing(null); setShowModal(true); }} className="btn-primary">
+            <PlusIcon className="w-4 h-4" /> Nouvel utilisateur
+          </button>
+        )}
       </div>
 
       <div className="table-container">
@@ -64,12 +70,12 @@ export default function UsersPage() {
               <th>Rôle</th>
               <th>Statut</th>
               <th>Dernière connexion</th>
-              <th>Actions</th>
+              {canWrite && <th>Actions</th>}
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="text-center py-8">Chargement...</td></tr>
+              <tr><td colSpan={canWrite ? 6 : 5} className="text-center py-8">Chargement...</td></tr>
             ) : users.map(u => (
               <tr key={u.id}>
                 <td className="font-medium">{u.first_name} {u.last_name}</td>
@@ -92,38 +98,39 @@ export default function UsersPage() {
                 <td className="text-sm text-gray-500">
                   {u.last_login ? new Date(u.last_login).toLocaleString('fr-FR') : '—'}
                 </td>
-                <td>
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => { setEditing(u); setShowModal(true); }}
-                      className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded"
-                      title="Modifier"
-                    >
-                      <PencilIcon className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setShowPwdModal(u.id)}
-                      className="p-1.5 text-gray-400 hover:text-brand-700 hover:bg-brand-50 rounded"
-                      title="Réinitialiser MDP"
-                    >
-                      <KeyIcon className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => toggleActive(u)}
-                      className={`px-2 py-1 text-xs rounded ${u.is_active ? 'text-red-600 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'}`}
-                    >
-                      {u.is_active ? 'Désactiver' : 'Activer'}
-                    </button>
-                  </div>
-                </td>
+                {canWrite && (
+                  <td>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => { setEditing(u); setShowModal(true); }}
+                        className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded"
+                        title="Modifier"
+                      >
+                        <PencilIcon className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setShowPwdModal(u.id)}
+                        className="p-1.5 text-gray-400 hover:text-brand-700 hover:bg-brand-50 rounded"
+                        title="Réinitialiser MDP"
+                      >
+                        <KeyIcon className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => toggleActive(u)}
+                        className={`px-2 py-1 text-xs rounded ${u.is_active ? 'text-red-600 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'}`}
+                      >
+                        {u.is_active ? 'Désactiver' : 'Activer'}
+                      </button>
+                    </div>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      {/* User modal */}
-      {showModal && (
+      {canWrite && showModal && (
         <UserModal
           user={editing}
           onClose={() => setShowModal(false)}
@@ -131,8 +138,7 @@ export default function UsersPage() {
         />
       )}
 
-      {/* Reset password modal */}
-      {showPwdModal && (
+      {canWrite && showPwdModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 animate-fade-in">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Réinitialiser le mot de passe</h3>

@@ -344,7 +344,7 @@ export default function EmployeesPage() {
     season: '',
   });
 
-  const canManage = ['DRH', 'DIRECTION_GENERALE'].includes(user?.role || '');
+  const canManage = user?.role === 'DRH';
   const [deactivateTarget, setDeactivateTarget] = useState<Employee | null>(null);
   const [exitDate, setExitDate] = useState(new Date().toISOString().split('T')[0]);
   const [deactivating, setDeactivating] = useState(false);

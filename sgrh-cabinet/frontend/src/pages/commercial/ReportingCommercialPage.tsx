@@ -26,7 +26,7 @@ import {
 } from '../../types';
 
 // Rôles qui peuvent écrire
-const CAN_WRITE = ['DRH', 'DIRECTION_GENERALE', 'ASSOCIE', 'MANAGER'];
+const CAN_WRITE = ['DRH', 'ASSOCIE', 'MANAGER'];
 // Rôles qui voient les montants
 const CAN_VIEW_AMOUNTS = ['DRH', 'DIRECTION_GENERALE', 'ASSOCIE'];
 

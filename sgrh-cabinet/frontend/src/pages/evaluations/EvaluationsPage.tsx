@@ -70,7 +70,7 @@ export default function EvaluationsPage() {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Evaluation | null>(null);
 
-  const canManage = ['DRH', 'DIRECTION_GENERALE', 'MANAGER'].includes(user?.role || '');
+  const canManage = ['DRH', 'MANAGER'].includes(user?.role || '');
 
   const fetchEvaluations = () => {
     setLoading(true);

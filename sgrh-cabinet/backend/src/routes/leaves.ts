@@ -74,7 +74,7 @@ router.get('/employee/:id/balance', authenticate, getLeaveBalance);
  *         description: Congé créé
  */
 router.get('/employee/:id', authenticate, listLeaves);
-router.post('/employee/:id', authenticate, authorize('DRH', 'DIRECTION_GENERALE', 'MANAGER'), validate(createLeaveSchema), createLeave);
+router.post('/employee/:id', authenticate, authorize('DRH', 'MANAGER'), validate(createLeaveSchema), createLeave);
 
 // Demandes EN_ATTENTE — visibles par DRH/Direction uniquement
 router.get('/pending', authenticate, authorize('DRH', 'DIRECTION_GENERALE'), listPendingLeaves);
@@ -106,7 +106,7 @@ router.get('/team', authenticate, authorize('MANAGER', 'DRH', 'DIRECTION_GENERAL
  *       200:
  *         description: Statut mis à jour
  */
-router.patch('/:leaveId/approve', authenticate, authorize('DRH', 'DIRECTION_GENERALE'), validate(approveLeaveSchema), approveLeave);
+router.patch('/:leaveId/approve', authenticate, authorize('DRH'), validate(approveLeaveSchema), approveLeave);
 
 /**
  * @swagger
@@ -123,6 +123,6 @@ router.patch('/:leaveId/approve', authenticate, authorize('DRH', 'DIRECTION_GENE
  *       204:
  *         description: Congé supprimé
  */
-router.delete('/:leaveId', authenticate, authorize('DRH', 'DIRECTION_GENERALE'), deleteLeave);
+router.delete('/:leaveId', authenticate, authorize('DRH'), deleteLeave);
 
 export default router;
