@@ -21,6 +21,7 @@ import EvaluationsPage from './pages/evaluations/EvaluationsPage';
 import RecruitmentPage from './pages/recruitment/RecruitmentPage';
 import OrganigrammePage from './pages/organigramme/OrganigrammePage';
 import TeamCalendarPage from './pages/calendar/TeamCalendarPage';
+import PayslipsPage from './pages/payslips/PayslipsPage';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuthStore();
@@ -33,6 +34,13 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   if (!['DRH', 'DIRECTION_GENERALE'].includes(user?.role || '')) {
     return <Navigate to="/" replace />;
   }
+  return <>{children}</>;
+};
+
+const DrhRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, user } = useAuthStore();
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (user?.role !== 'DRH') return <Navigate to="/" replace />;
   return <>{children}</>;
 };
 
@@ -49,9 +57,9 @@ export default function App() {
       <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
         <Route index element={<DashboardPage />} />
         <Route path="personnel" element={<EmployeesPage />} />
-        <Route path="personnel/nouveau" element={<AdminRoute><EmployeeFormPage /></AdminRoute>} />
+        <Route path="personnel/nouveau" element={<DrhRoute><EmployeeFormPage /></DrhRoute>} />
         <Route path="personnel/:id" element={<EmployeeDetailPage />} />
-        <Route path="personnel/:id/modifier" element={<AdminRoute><EmployeeFormPage /></AdminRoute>} />
+        <Route path="personnel/:id/modifier" element={<DrhRoute><EmployeeFormPage /></DrhRoute>} />
         <Route path="kpis" element={<KPIsPage />} />
         <Route path="rapport-rh" element={<AdminRoute><HRReportPage /></AdminRoute>} />
         <Route path="formations" element={<TrainingsPage />} />
@@ -60,7 +68,8 @@ export default function App() {
         <Route path="organigramme" element={<OrganigrammePage />} />
         <Route path="calendrier" element={<TeamCalendarPage />} />
         <Route path="commercial" element={<ReportingCommercialPage />} />
-        <Route path="rapports" element={<AdminRoute><ReportsPage /></AdminRoute>} />
+        <Route path="bulletins" element={<PayslipsPage />} />
+        <Route path="rapports" element={<Navigate to="/rapport-rh" replace />} />
         <Route path="parametres/utilisateurs" element={<AdminRoute><UsersPage /></AdminRoute>} />
         <Route path="parametres/audit" element={<AdminRoute><AuditLogsPage /></AdminRoute>} />
         <Route path="parametres/profil" element={<ProfilePage />} />

@@ -7,8 +7,9 @@ import api from '../../services/api';
 import { HRReportData, SERVICE_LINE_LABELS, DEPARTURE_REASON_LABELS, DepartureReason } from '../../types';
 import {
   UsersIcon, ArrowTrendingUpIcon, ArrowTrendingDownIcon,
-  ChartBarIcon, UserGroupIcon,
+  ChartBarIcon, UserGroupIcon, ArrowDownTrayIcon,
 } from '@heroicons/react/24/outline';
+import toast from 'react-hot-toast';
 
 const MONTHS = [
   '', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
@@ -65,10 +66,33 @@ export default function HRReportPage() {
   const currentYear  = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
 
-  const [year, setYear]   = useState(currentYear);
-  const [month, setMonth] = useState(currentMonth);
-  const [data, setData]   = useState<HRReportData | null>(null);
+  const [year, setYear]       = useState(currentYear);
+  const [month, setMonth]     = useState(currentMonth);
+  const [data, setData]       = useState<HRReportData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportExcel = async () => {
+    setExporting(true);
+    try {
+      const res = await api.post('/reports/generate', { year, month });
+      const { filename } = res.data;
+      const dl = await api.get(`/reports/download/${filename}`, { responseType: 'blob' });
+      const url = URL.createObjectURL(new Blob([dl.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Rapport Excel téléchargé');
+    } catch {
+      toast.error('Erreur lors de la génération');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -89,7 +113,15 @@ export default function HRReportPage() {
           <h2 className="text-2xl font-bold text-gray-800">Rapport RH</h2>
           <p className="text-gray-500 text-sm mt-0.5">Indicateurs clés — comparaison deux périodes</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <button
+            onClick={handleExportExcel}
+            disabled={exporting}
+            className="btn-secondary flex items-center gap-1.5 text-sm py-1.5 disabled:opacity-50"
+          >
+            <ArrowDownTrayIcon className="w-4 h-4" />
+            {exporting ? 'Export...' : 'Excel'}
+          </button>
           <select
             className="input text-sm py-1.5"
             value={month}

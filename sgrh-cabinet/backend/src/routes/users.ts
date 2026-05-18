@@ -6,12 +6,15 @@ import { createUserSchema, updateUserSchema, resetPasswordSchema } from '../sche
 
 const router = Router();
 router.use(authenticate);
+// Lecture : DRH et DIRECTION_GENERALE peuvent consulter
 router.use(authorize('DRH', 'DIRECTION_GENERALE'));
 
 router.get('/', listUsers);
-router.post('/', validate(createUserSchema), createUser);
-router.put('/:id', validate(updateUserSchema), updateUser);
-router.post('/:id/reset-password', validate(resetPasswordSchema), resetUserPassword);
 router.get('/audit-logs', getAuditLogs);
+
+// Écriture : DRH uniquement
+router.post('/', authorize('DRH'), validate(createUserSchema), createUser);
+router.put('/:id', authorize('DRH'), validate(updateUserSchema), updateUser);
+router.post('/:id/reset-password', authorize('DRH'), validate(resetPasswordSchema), resetUserPassword);
 
 export default router;

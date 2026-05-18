@@ -129,7 +129,7 @@ router.get('/import/template', downloadImportTemplate);
  *       200:
  *         description: Résultat de l'analyse avec erreurs de validation
  */
-router.post('/import/parse', authorize('DRH', 'DIRECTION_GENERALE'), (req: Request, res: Response, next: NextFunction) => {
+router.post('/import/parse', authorize('DRH'), (req: Request, res: Response, next: NextFunction) => {
   uploadExcel(req, res, (err) => {
     if (err) return res.status(400).json({ error: err.message });
     next();
@@ -157,7 +157,7 @@ router.post('/import/parse', authorize('DRH', 'DIRECTION_GENERALE'), (req: Reque
  *       200:
  *         description: Résultat de l'import
  */
-router.post('/import/execute', authorize('DRH', 'DIRECTION_GENERALE'), executeImport);
+router.post('/import/execute', authorize('DRH'), executeImport);
 
 /**
  * @swagger
@@ -200,7 +200,7 @@ router.get('/:id', auditLog('READ', 'employee'), getEmployee);
  *       409:
  *         description: Doublon détecté (matricule ou email)
  */
-router.post('/', authorize('DRH', 'DIRECTION_GENERALE'), createEmployee);
+router.post('/', authorize('DRH'), createEmployee);
 
 /**
  * @swagger
@@ -217,7 +217,7 @@ router.post('/', authorize('DRH', 'DIRECTION_GENERALE'), createEmployee);
  *       200:
  *         description: Collaborateur mis à jour
  */
-router.put('/:id', authorize('DRH', 'DIRECTION_GENERALE', 'MANAGER'), updateEmployee);
+router.put('/:id', authorize('DRH'), updateEmployee);
 
 /**
  * @swagger
@@ -234,7 +234,7 @@ router.put('/:id', authorize('DRH', 'DIRECTION_GENERALE', 'MANAGER'), updateEmpl
  *       200:
  *         description: Collaborateur désactivé
  */
-router.patch('/:id/deactivate', authorize('DRH', 'DIRECTION_GENERALE'), deactivateEmployee);
+router.patch('/:id/deactivate', authorize('DRH'), deactivateEmployee);
 
 /**
  * @swagger
@@ -270,7 +270,7 @@ router.get('/:id/history', authorize('DRH', 'DIRECTION_GENERALE'), getEmployeeHi
  */
 router.get('/:id/salary-history', authorize('DRH', 'DIRECTION_GENERALE', 'ASSOCIE'), getSalaryHistory);
 
-router.post('/:id/photo', authorize('DRH', 'DIRECTION_GENERALE'), (req: Request, res: Response, next: NextFunction) => {
+router.post('/:id/photo', authorize('DRH'), (req: Request, res: Response, next: NextFunction) => {
   uploadPhoto(req, res, (err) => {
     if (err) return res.status(400).json({ error: err.message });
     next();

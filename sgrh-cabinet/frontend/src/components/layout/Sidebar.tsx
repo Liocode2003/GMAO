@@ -5,7 +5,6 @@ import {
   UsersIcon,
   ChartBarIcon,
   AcademicCapIcon,
-  DocumentChartBarIcon,
   ClipboardDocumentListIcon,
   UserGroupIcon,
   XMarkIcon,
@@ -15,6 +14,7 @@ import {
   CalendarDaysIcon,
   BuildingOffice2Icon,
   PresentationChartLineIcon,
+  DocumentTextIcon,
 } from '@heroicons/react/24/outline';
 
 interface NavItem {
@@ -35,7 +35,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/recrutement', icon: MagnifyingGlassIcon, label: 'Recrutement', roles: ['DRH', 'DIRECTION_GENERALE', 'MANAGER'] },
   { to: '/calendrier', icon: CalendarDaysIcon, label: 'Calendrier équipe' },
   { to: '/commercial', icon: BriefcaseIcon, label: 'Reporting Commercial' },
-  { to: '/rapports', icon: DocumentChartBarIcon, label: 'Rapports', roles: ['DRH', 'DIRECTION_GENERALE'] },
+  { to: '/bulletins', icon: DocumentTextIcon, label: 'Bulletins de paie' },
 ];
 
 const SETTINGS_ITEMS: NavItem[] = [

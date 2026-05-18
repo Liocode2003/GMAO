@@ -62,7 +62,7 @@ router.get('/', listTrainings);
  *       201:
  *         description: Formation créée
  */
-router.post('/', authorize('DRH', 'DIRECTION_GENERALE', 'MANAGER'), validate(createTrainingSchema), createTraining);
+router.post('/', authorize('DRH', 'MANAGER'), validate(createTrainingSchema), createTraining);
 
 /**
  * @swagger
@@ -90,7 +90,7 @@ router.post('/', authorize('DRH', 'DIRECTION_GENERALE', 'MANAGER'), validate(cre
  *       204:
  *         description: Formation supprimée
  */
-router.put('/:id', authorize('DRH', 'DIRECTION_GENERALE', 'MANAGER'), validate(updateTrainingSchema), updateTraining);
-router.delete('/:id', authorize('DRH', 'DIRECTION_GENERALE'), deleteTraining);
+router.put('/:id', authorize('DRH', 'MANAGER'), validate(updateTrainingSchema), updateTraining);
+router.delete('/:id', authorize('DRH'), deleteTraining);
 
 export default router;

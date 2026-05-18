@@ -62,9 +62,9 @@ export default function EmployeeDetailPage() {
   const [showDocForm, setShowDocForm] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState(false);
 
-  const canManage = ['DRH', 'DIRECTION_GENERALE'].includes(user?.role || '');
+  const canManage = user?.role === 'DRH';
   const canViewSalary = ['DRH', 'DIRECTION_GENERALE', 'ASSOCIE'].includes(user?.role || '');
-  const canManageLeaves = ['DRH', 'DIRECTION_GENERALE', 'MANAGER'].includes(user?.role || '');
+  const canManageLeaves = ['DRH', 'MANAGER'].includes(user?.role || '');
 
   const loadLeaves = async (year?: number) => {
     const y = year ?? selectedLeaveYear;
@@ -225,7 +225,7 @@ export default function EmployeeDetailPage() {
     }
   };
 
-  const canEditPhoto = user?.role === 'DRH' || user?.role === 'DIRECTION_GENERALE';
+  const canEditPhoto = user?.role === 'DRH';
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -422,7 +422,7 @@ export default function EmployeeDetailPage() {
               <AcademicCapIcon className="w-4 h-4 text-gray-400" />
               <h3 className="font-semibold text-gray-700">Diplômes professionnels</h3>
               {canManage && (
-                <span className="ml-auto text-xs text-gray-400">Modifiable par DRH / Direction Générale</span>
+                <span className="ml-auto text-xs text-gray-400">Modifiable par DRH uniquement</span>
               )}
             </div>
             {(!employee.diplomas || employee.diplomas.length === 0) ? (

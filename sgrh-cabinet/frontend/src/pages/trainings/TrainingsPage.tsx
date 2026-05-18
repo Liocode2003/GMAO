@@ -34,7 +34,7 @@ export default function TrainingsPage() {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Training | null>(null);
 
-  const canManage = ['DRH', 'DIRECTION_GENERALE', 'MANAGER'].includes(user?.role || '');
+  const canManage = ['DRH', 'MANAGER'].includes(user?.role || '');
 
   const fetchTrainings = () => {
     setLoading(true);

@@ -9,12 +9,12 @@ router.use(authenticate);
 
 router.get('/employee/:employee_id', listDocuments);
 router.post('/employee/:employee_id',
-  authorize('DRH', 'DIRECTION_GENERALE', 'MANAGER'),
+  authorize('DRH', 'MANAGER'),
   uploadDoc.single('file'),
   uploadDocument
 );
 router.get('/:id/download', downloadDocument);
-router.delete('/:id', authorize('DRH', 'DIRECTION_GENERALE'), deleteDocument);
+router.delete('/:id', authorize('DRH'), deleteDocument);
 
 // Multer validation errors → 400
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

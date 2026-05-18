@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate } from '../middleware/auth';
+import { authenticate, authorize } from '../middleware/auth';
 import {
   listSubmissions,
   getStats,
@@ -25,9 +25,9 @@ router.get('/dashboard-widget', getDashboardWidget);
 router.get('/export/excel', exportExcel);
 router.get('/export/pdf', exportPDF);
 
-// Écriture (DRH, DIRECTION_GENERALE, ASSOCIE, MANAGER)
-router.post('/', createSubmission);
-router.put('/:id', updateSubmission);
-router.delete('/:id', deleteSubmission);
+// Écriture (DRH, ASSOCIE, MANAGER — pas DIRECTION_GENERALE)
+router.post('/', authorize('DRH', 'ASSOCIE', 'MANAGER'), createSubmission);
+router.put('/:id', authorize('DRH', 'ASSOCIE', 'MANAGER'), updateSubmission);
+router.delete('/:id', authorize('DRH', 'ASSOCIE', 'MANAGER'), deleteSubmission);
 
 export default router;

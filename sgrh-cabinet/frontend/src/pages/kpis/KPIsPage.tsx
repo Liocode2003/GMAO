@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { KPIData, SERVICE_LINE_LABELS, GRADE_LABELS, DIPLOMA_LABELS } from '../../types';
+
+// Extend KPIData with server-computed turnover rate
+type KPIDataExtended = KPIData & { turnoverRate?: number };
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, Legend,
@@ -18,7 +21,7 @@ const KPICard = ({ label, value, color = 'text-gray-800', unit }: {
 );
 
 export default function KPIsPage() {
-  const [data, setData] = useState<KPIData | null>(null);
+  const [data, setData] = useState<KPIDataExtended | null>(null);
   const [monthlyData, setMonthlyData] = useState<{ month: number; entries: number; exits: number; trainingHours: number }[]>([]);
   const [year, setYear] = useState(new Date().getFullYear());
   const [loading, setLoading] = useState(true);
@@ -62,9 +65,8 @@ export default function KPIsPage() {
     }))
     .sort((a, b) => b.count - a.count);
 
-  const turnoverRate = data.turnover.entries && parseInt(data.headcount.total) > 0
-    ? ((parseInt(data.turnover.exits) / parseInt(data.headcount.total)) * 100).toFixed(1)
-    : '0.0';
+  // Utiliser le taux calculé par le backend (départs / effectif_moyen × 100)
+  const turnoverRate = (data.turnoverRate ?? 0).toFixed(1);
 
   return (
     <div className="space-y-6 animate-fade-in">

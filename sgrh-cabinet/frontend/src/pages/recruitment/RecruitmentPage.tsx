@@ -43,7 +43,7 @@ export default function RecruitmentPage() {
   const [editing, setEditing] = useState<Candidate | null>(null);
   const [filterStatus, setFilterStatus] = useState('');
 
-  const canManage = ['DRH', 'DIRECTION_GENERALE', 'MANAGER'].includes(user?.role || '');
+  const canManage = ['DRH', 'MANAGER'].includes(user?.role || '');
 
   const fetchCandidates = () => {
     setLoading(true);
