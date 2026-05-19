@@ -22,6 +22,7 @@ import RecruitmentPage from './pages/recruitment/RecruitmentPage';
 import OrganigrammePage from './pages/organigramme/OrganigrammePage';
 import TeamCalendarPage from './pages/calendar/TeamCalendarPage';
 import PayslipsPage from './pages/payslips/PayslipsPage';
+import NotFoundPage from './pages/NotFoundPage';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuthStore();
@@ -76,7 +77,7 @@ export default function App() {
         <Route path="parametres/mot-de-passe" element={<ProfilePage />} />
       </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
     </ErrorBoundary>
   );

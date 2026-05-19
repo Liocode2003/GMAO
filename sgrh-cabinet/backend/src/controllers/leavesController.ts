@@ -540,3 +540,33 @@ export const yearEndRollover = async (): Promise<void> => {
     logger.error('yearEndRollover error', err);
   }
 };
+
+
+export const listCalendarLeaves = async (req: Request, res: Response) => {
+  const year      = parseInt(String(req.query.year)) || new Date().getFullYear();
+  const startDate = req.query.startDate as string | undefined;
+  const endDate   = req.query.endDate   as string | undefined;
+
+  try {
+    const params: unknown[] = [year];
+    const conditions: string[] = ['l.year = $1', "l.status IN ('APPROUVE', 'EN_ATTENTE')"];
+
+    if (startDate) { params.push(startDate); conditions.push(`l.end_date >= $${params.length}`); }
+    if (endDate)   { params.push(endDate);   conditions.push(`l.start_date <= $${params.length}`); }
+
+    const result = await query(
+      `SELECT l.*,
+         e.first_name || ' ' || e.last_name AS employee_name,
+         e.service_line
+       FROM leaves l
+       JOIN employees e ON e.id = l.employee_id
+       WHERE ${conditions.join(' AND ')}
+       ORDER BY l.start_date ASC`,
+      params
+    );
+    return res.json(result.rows);
+  } catch (err) {
+    logger.error('listCalendarLeaves error', err);
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
+};

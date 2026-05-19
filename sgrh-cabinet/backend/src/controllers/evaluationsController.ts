@@ -2,43 +2,66 @@ import { Request, Response } from 'express';
 import { query } from '../config/database';
 import { logger } from '../utils/logger';
 
+const ALLOWED_SORT_EVALS = ['employee_name', 'year', 'overall_score', 'created_at'];
+const EVAL_SORT_MAP: Record<string, string> = {
+  employee_name: "e.first_name || ' ' || e.last_name",
+  year:          'ev.year',
+  overall_score: 'ev.overall_score',
+  created_at:    'ev.created_at',
+};
+
 export const listEvaluations = async (req: Request, res: Response) => {
   const { year, period, status, employee_id } = req.query as Record<string, string>;
   const userRole = req.user?.role;
-  const userId = req.user?.userId;
+  const userId   = req.user?.userId;
+
+  const page     = Math.max(1, parseInt(String(req.query.page  || '1')));
+  const limit    = Math.min(500, Math.max(1, parseInt(String(req.query.limit || '20'))));
+  const sortKey  = ALLOWED_SORT_EVALS.includes(String(req.query.sort)) ? String(req.query.sort) : 'created_at';
+  const sort     = EVAL_SORT_MAP[sortKey];
+  const order    = req.query.order === 'asc' ? 'ASC' : 'DESC';
+  const offset   = (page - 1) * limit;
 
   try {
     const params: unknown[] = [];
     const conditions: string[] = [];
 
-    if (year) { params.push(year); conditions.push(`ev.year = $${params.length}`); }
-    if (period) { params.push(period); conditions.push(`ev.period = $${params.length}`); }
-    if (status) { params.push(status); conditions.push(`ev.status = $${params.length}`); }
+    if (year)        { params.push(year);        conditions.push(`ev.year = $${params.length}`); }
+    if (period)      { params.push(period);      conditions.push(`ev.period = $${params.length}`); }
+    if (status)      { params.push(status);      conditions.push(`ev.status = $${params.length}`); }
     if (employee_id) { params.push(employee_id); conditions.push(`ev.employee_id = $${params.length}`); }
 
-    // MANAGER: only see evaluations for their direct reports
     if (userRole === 'MANAGER') {
       params.push(userId);
       conditions.push(`e.manager_id IN (SELECT id FROM employees WHERE id IN (SELECT employee_id FROM users WHERE id = $${params.length}))`);
     }
 
     const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    const baseIdx     = params.length + 1;
 
-    const result = await query(
-      `SELECT ev.*,
-         e.first_name || ' ' || e.last_name as employee_name,
-         e.function as employee_function,
-         e.service_line as employee_service_line,
-         u.first_name || ' ' || u.last_name as evaluator_name
-       FROM evaluations ev
-       JOIN employees e ON e.id = ev.employee_id
-       LEFT JOIN users u ON u.id = ev.evaluator_id
-       ${whereClause}
-       ORDER BY ev.year DESC, ev.created_at DESC`,
-      params
-    );
+    const [countRes, result] = await Promise.all([
+      query(
+        `SELECT COUNT(*) FROM evaluations ev JOIN employees e ON e.id = ev.employee_id ${whereClause}`,
+        params
+      ),
+      query(
+        `SELECT ev.*,
+           e.first_name || ' ' || e.last_name as employee_name,
+           e.function as employee_function,
+           e.service_line as employee_service_line,
+           u.first_name || ' ' || u.last_name as evaluator_name
+         FROM evaluations ev
+         JOIN employees e ON e.id = ev.employee_id
+         LEFT JOIN users u ON u.id = ev.evaluator_id
+         ${whereClause}
+         ORDER BY ${sort} ${order}
+         LIMIT $${baseIdx} OFFSET $${baseIdx + 1}`,
+        [...params, limit, offset]
+      ),
+    ]);
 
-    return res.json(result.rows);
+    const total = parseInt(countRes.rows[0].count);
+    return res.json({ evaluations: result.rows, total, page, limit, totalPages: Math.ceil(total / limit) });
   } catch (err) {
     logger.error('listEvaluations error', err);
     return res.status(500).json({ error: 'Erreur serveur' });

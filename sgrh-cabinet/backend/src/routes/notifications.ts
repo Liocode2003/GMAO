@@ -6,10 +6,37 @@ const router = Router();
 router.use(authenticate);
 
 /**
- * GET /api/notifications
- * Retourne les alertes actives :
- *  - Anniversaires dans les 7 prochains jours
- *  - Fins de contrat (CDD/STAGE) dans les 30 prochains jours
+ * @swagger
+ * /notifications:
+ *   get:
+ *     tags: [Notifications]
+ *     summary: Alertes actives — anniversaires (7 j), fins de contrat (30 j), congés en attente
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200:
+ *         description: Liste des notifications actives triées par priorité
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 count: { type: integer }
+ *                 notifications:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id: { type: string }
+ *                       type:
+ *                         type: string
+ *                         enum: [LEAVE_PENDING, BIRTHDAY, CONTRACT_END]
+ *                       title: { type: string }
+ *                       body: { type: string }
+ *                       employeeId: { type: string, format: uuid }
+ *                       date: { type: string, format: date }
+ *                       priority:
+ *                         type: string
+ *                         enum: [INFO, WARNING, URGENT]
  */
 router.get('/', async (req: Request, res: Response) => {
   try {

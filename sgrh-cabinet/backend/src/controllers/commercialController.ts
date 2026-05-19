@@ -51,39 +51,45 @@ function buildFilters(query_params: Record<string, string>) {
   return { conditions, values };
 }
 
+const ALLOWED_SORT_COMMERCIAL = ['submission_date', 'title', 'client', 'status', 'reference'];
+
 export const listSubmissions = async (req: Request, res: Response) => {
   const canViewAmounts = CAN_VIEW_AMOUNTS.includes(req.user!.role);
-  const params = req.query as Record<string, string>;
-  const { conditions, values } = buildFilters(params);
+  const params_query   = req.query as Record<string, string>;
+  const { conditions, values } = buildFilters(params_query);
 
+  const page    = Math.max(1, parseInt(String(req.query.page  || '1')));
+  const limit   = Math.min(500, Math.max(1, parseInt(String(req.query.limit || '20'))));
+  const sort    = ALLOWED_SORT_COMMERCIAL.includes(String(req.query.sort)) ? `cs.${String(req.query.sort)}` : 'cs.submission_date';
+  const order   = req.query.order === 'asc' ? 'ASC' : 'DESC';
+  const offset  = (page - 1) * limit;
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const baseIdx = values.length + 1;
 
   try {
-    const result = await query(
-      `SELECT
-        cs.id,
-        cs.type,
-        cs.reference,
-        cs.title,
-        cs.client,
-        cs.submission_date,
-        cs.service_line,
-        cs.responsible_employee_id,
-        CONCAT(e.first_name, ' ', e.last_name) AS responsible_name,
-        cs.status,
-        ${canViewAmounts ? 'cs.contract_amount,' : 'NULL::DECIMAL AS contract_amount,'}
-        ${canViewAmounts ? 'cs.contract_start_date,' : 'NULL::DATE AS contract_start_date,'}
-        ${canViewAmounts ? 'cs.contract_end_date,' : 'NULL::DATE AS contract_end_date,'}
-        cs.created_at,
-        cs.updated_at
-       FROM commercial_submissions cs
-       LEFT JOIN employees e ON e.id = cs.responsible_employee_id
-       ${whereClause}
-       ORDER BY cs.submission_date DESC`,
-      values
-    );
+    const [countRes, result] = await Promise.all([
+      query(`SELECT COUNT(*) FROM commercial_submissions cs ${whereClause}`, values),
+      query(
+        `SELECT
+          cs.id, cs.type, cs.reference, cs.title, cs.client,
+          cs.submission_date, cs.service_line, cs.responsible_employee_id,
+          CONCAT(e.first_name, ' ', e.last_name) AS responsible_name,
+          cs.status,
+          ${canViewAmounts ? 'cs.contract_amount,' : 'NULL::DECIMAL AS contract_amount,'}
+          ${canViewAmounts ? 'cs.contract_start_date,' : 'NULL::DATE AS contract_start_date,'}
+          ${canViewAmounts ? 'cs.contract_end_date,' : 'NULL::DATE AS contract_end_date,'}
+          cs.created_at, cs.updated_at
+         FROM commercial_submissions cs
+         LEFT JOIN employees e ON e.id = cs.responsible_employee_id
+         ${whereClause}
+         ORDER BY ${sort} ${order}
+         LIMIT $${baseIdx} OFFSET $${baseIdx + 1}`,
+        [...values, limit, offset]
+      ),
+    ]);
 
-    return res.json(result.rows);
+    const total = parseInt(countRes.rows[0].count);
+    return res.json({ submissions: result.rows, total, page, limit, totalPages: Math.ceil(total / limit) });
   } catch (err) {
     logger.error('listSubmissions error', err);
     return res.status(500).json({ error: 'Erreur serveur' });

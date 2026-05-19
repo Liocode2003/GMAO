@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { authenticate, authorize } from '../middleware/auth';
 import {
   getLeaveBalance, listLeaves, createLeave, approveLeave, deleteLeave,
-  listPendingLeaves, listTeamLeaves,
+  listPendingLeaves, listTeamLeaves, listCalendarLeaves,
 } from '../controllers/leavesController';
 import { validate } from '../middleware/validate';
 import { createLeaveSchema, approveLeaveSchema } from '../schemas/leaveSchemas';
@@ -81,6 +81,7 @@ router.get('/pending', authenticate, authorize('DRH', 'DIRECTION_GENERALE'), lis
 
 // Congés de l'équipe du manager connecté
 router.get('/team', authenticate, authorize('MANAGER', 'DRH', 'DIRECTION_GENERALE'), listTeamLeaves);
+router.get('/calendar', authenticate, listCalendarLeaves);
 
 /**
  * @swagger

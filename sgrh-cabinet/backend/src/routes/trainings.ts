@@ -12,28 +12,53 @@ router.use(authenticate);
  * /trainings:
  *   get:
  *     tags: [Trainings]
- *     summary: Liste des formations
+ *     summary: Liste paginée des formations
+ *     security: [{ bearerAuth: [] }]
  *     parameters:
  *       - in: query
  *         name: year
  *         schema: { type: integer }
  *         description: Filtrer par année
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 20, maximum: 500 }
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           enum: [date, title, type, duration_hours, trainer]
+ *           default: date
+ *       - in: query
+ *         name: order
+ *         schema: { type: string, enum: [asc, desc], default: desc }
  *     responses:
  *       200:
- *         description: Liste des formations
+ *         description: Formations paginées
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   id: { type: string, format: uuid }
- *                   title: { type: string }
- *                   type: { type: string, enum: [INTRA, INTERNE, AOC, GROUPE] }
- *                   date: { type: string, format: date }
- *                   duration_hours: { type: number }
- *                   participant_count: { type: integer }
+ *               type: object
+ *               properties:
+ *                 trainings:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id: { type: string, format: uuid }
+ *                       title: { type: string }
+ *                       type: { type: string, enum: [INTRA, INTERNE, AOC, GROUPE] }
+ *                       date: { type: string, format: date }
+ *                       duration_hours: { type: number }
+ *                       trainer: { type: string, nullable: true }
+ *                       location: { type: string, nullable: true }
+ *                       participant_count: { type: integer }
+ *                 total: { type: integer }
+ *                 page: { type: integer }
+ *                 limit: { type: integer }
+ *                 totalPages: { type: integer }
  */
 router.get('/', listTrainings);
 

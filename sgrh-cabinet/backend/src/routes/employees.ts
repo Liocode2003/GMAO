@@ -9,6 +9,8 @@ import {
   exportEmployeesExcel, exportEmployeesPDF, exportEmployeePDF,
 } from '../controllers/importExportController';
 import { authenticate, authorize, auditLog } from '../middleware/auth';
+import { validate } from '../middleware/validate';
+import { createEmployeeSchema, updateEmployeeSchema } from '../schemas/employeeSchemas';
 
 const router = Router();
 
@@ -200,7 +202,7 @@ router.get('/:id', auditLog('READ', 'employee'), getEmployee);
  *       409:
  *         description: Doublon détecté (matricule ou email)
  */
-router.post('/', authorize('DRH'), createEmployee);
+router.post('/', authorize('DRH'), validate(createEmployeeSchema), createEmployee);
 
 /**
  * @swagger
@@ -217,7 +219,7 @@ router.post('/', authorize('DRH'), createEmployee);
  *       200:
  *         description: Collaborateur mis à jour
  */
-router.put('/:id', authorize('DRH'), updateEmployee);
+router.put('/:id', authorize('DRH'), validate(updateEmployeeSchema), updateEmployee);
 
 /**
  * @swagger

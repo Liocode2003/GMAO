@@ -2,32 +2,46 @@ import { Request, Response } from 'express';
 import { query } from '../config/database';
 import { logger } from '../utils/logger';
 
+const ALLOWED_SORT_TRAININGS = ['date', 'title', 'type', 'duration_hours', 'trainer'];
+
 export const listTrainings = async (req: Request, res: Response) => {
   const { year, month, type } = req.query as Record<string, string>;
+  const page   = Math.max(1, parseInt(String(req.query.page  || '1')));
+  const limit  = Math.min(500, Math.max(1, parseInt(String(req.query.limit || '20'))));
+  const sort   = ALLOWED_SORT_TRAININGS.includes(String(req.query.sort)) ? `t.${String(req.query.sort)}` : 't.date';
+  const order  = req.query.order === 'asc' ? 'ASC' : 'DESC';
+  const offset = (page - 1) * limit;
+
   const conditions: string[] = [];
   const params: unknown[] = [];
   let pi = 1;
 
-  if (year) { conditions.push(`EXTRACT(YEAR FROM t.date) = $${pi++}`); params.push(year); }
+  if (year)  { conditions.push(`EXTRACT(YEAR  FROM t.date) = $${pi++}`); params.push(year); }
   if (month) { conditions.push(`EXTRACT(MONTH FROM t.date) = $${pi++}`); params.push(month); }
-  if (type) { conditions.push(`t.type = $${pi++}`); params.push(type); }
+  if (type)  { conditions.push(`t.type = $${pi++}`); params.push(type); }
 
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
   try {
-    const result = await query(
-      `SELECT t.*,
-         COUNT(tp.employee_id) as participant_count,
-         ARRAY_AGG(json_build_object('id', e.id, 'name', e.first_name || ' ' || e.last_name)) FILTER (WHERE e.id IS NOT NULL) as participants
-       FROM trainings t
-       LEFT JOIN training_participants tp ON tp.training_id = t.id
-       LEFT JOIN employees e ON e.id = tp.employee_id
-       ${where}
-       GROUP BY t.id
-       ORDER BY t.date DESC`,
-      params
-    );
-    return res.json(result.rows);
+    const [countRes, result] = await Promise.all([
+      query(`SELECT COUNT(DISTINCT t.id) FROM trainings t ${where}`, params),
+      query(
+        `SELECT t.*,
+           COUNT(tp.employee_id) as participant_count,
+           ARRAY_AGG(json_build_object('id', e.id, 'name', e.first_name || ' ' || e.last_name)) FILTER (WHERE e.id IS NOT NULL) as participants
+         FROM trainings t
+         LEFT JOIN training_participants tp ON tp.training_id = t.id
+         LEFT JOIN employees e ON e.id = tp.employee_id
+         ${where}
+         GROUP BY t.id
+         ORDER BY ${sort} ${order}
+         LIMIT $${pi} OFFSET $${pi + 1}`,
+        [...params, limit, offset]
+      ),
+    ]);
+
+    const total = parseInt(countRes.rows[0].count);
+    return res.json({ trainings: result.rows, total, page, limit, totalPages: Math.ceil(total / limit) });
   } catch (err) {
     logger.error('listTrainings error', err);
     return res.status(500).json({ error: 'Erreur serveur' });
