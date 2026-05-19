@@ -569,3 +569,256 @@ export const deletePayslip = async (req: Request, res: Response) => {
     return res.status(500).json({ error: 'Erreur serveur' });
   }
 };
+
+// ============================================================
+// MASSE SALARIALE MENSUELLE — GET /payslips/masse-salariale?year=
+// ============================================================
+
+export const getMasseSalariale = async (req: Request, res: Response) => {
+  const year = parseInt(String(req.query.year)) || new Date().getFullYear();
+  try {
+    const result = await query(`
+      SELECT
+        period_month as month,
+        COUNT(*) as count,
+        SUM(gross_salary)  as total_brut,
+        SUM(net_salary)    as total_net,
+        SUM(igr)           as total_igr,
+        SUM(cnss_employee) as total_cnss,
+        SUM(amo_employee)  as total_amo,
+        SUM(cnss_employer) as total_cnss_patronal
+      FROM payslips
+      WHERE period_year = $1
+      GROUP BY period_month
+      ORDER BY period_month
+    `, [year]);
+
+    const months = result.rows.map(r => ({
+      month: parseInt(r.month),
+      monthLabel: MONTHS_FR[parseInt(r.month)],
+      count: parseInt(r.count),
+      totalBrut: parseFloat(r.total_brut) || 0,
+      totalNet: parseFloat(r.total_net) || 0,
+      totalIgr: parseFloat(r.total_igr) || 0,
+      totalCnss: parseFloat(r.total_cnss) || 0,
+      totalAmo: parseFloat(r.total_amo) || 0,
+      totalCnssPatronal: parseFloat(r.total_cnss_patronal) || 0,
+    }));
+
+    const totals = {
+      totalBrut: months.reduce((s, m) => s + m.totalBrut, 0),
+      totalNet: months.reduce((s, m) => s + m.totalNet, 0),
+      totalIgr: months.reduce((s, m) => s + m.totalIgr, 0),
+      totalCnss: months.reduce((s, m) => s + m.totalCnss, 0),
+    };
+
+    return res.json({ year, months, totals });
+  } catch (err) {
+    logger.error('getMasseSalariale error', err);
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
+
+// ============================================================
+// CUMUL ANNUEL PAR EMPLOYÉ — GET /payslips/employee/:id/annual?year=
+// ============================================================
+
+export const getAnnualSummary = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const year = parseInt(String(req.query.year)) || new Date().getFullYear();
+  try {
+    const empResult = await query(`
+      SELECT id, matricule, first_name, last_name, grade, service_line, function, children_count
+      FROM employees WHERE id = $1
+    `, [id]);
+    if (!empResult.rows[0]) return res.status(404).json({ error: 'Employé introuvable' });
+    const emp = empResult.rows[0];
+
+    const slipsResult = await query(`
+      SELECT
+        period_month,
+        base_salary, gross_salary, net_salary,
+        cnss_employee, amo_employee, cimr_employee, igr,
+        advance_amount, other_deduction_amount
+      FROM payslips
+      WHERE employee_id = $1 AND period_year = $2
+      ORDER BY period_month
+    `, [id, year]);
+
+    const slips = slipsResult.rows.map(r => ({
+      month: parseInt(r.period_month),
+      monthLabel: MONTHS_FR[parseInt(r.period_month)],
+      grossSalary: parseFloat(r.gross_salary) || 0,
+      netSalary: parseFloat(r.net_salary) || 0,
+      igr: parseFloat(r.igr) || 0,
+      cnss: parseFloat(r.cnss_employee) || 0,
+      amo: parseFloat(r.amo_employee) || 0,
+      cimr: parseFloat(r.cimr_employee) || 0,
+    }));
+
+    const cumul = {
+      grossSalary: slips.reduce((s, r) => s + r.grossSalary, 0),
+      netSalary: slips.reduce((s, r) => s + r.netSalary, 0),
+      igr: slips.reduce((s, r) => s + r.igr, 0),
+      cnss: slips.reduce((s, r) => s + r.cnss, 0),
+      amo: slips.reduce((s, r) => s + r.amo, 0),
+      cimr: slips.reduce((s, r) => s + r.cimr, 0),
+    };
+
+    return res.json({ employee: emp, year, slips, cumul });
+  } catch (err) {
+    logger.error('getAnnualSummary error', err);
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
+
+// ============================================================
+// ATTESTATION FISCALE (modèle 9421) — GET /payslips/employee/:id/attestation?year=
+// ============================================================
+
+async function generateAttestation9421(employeeId: string, year: number): Promise<Buffer> {
+  const empResult = await query(`
+    SELECT id, matricule, first_name, last_name, grade, function, service_line, entry_date, cin
+    FROM employees WHERE id = $1
+  `, [employeeId]);
+  if (!empResult.rows[0]) throw new Error('Employé introuvable');
+  const emp = empResult.rows[0];
+
+  const cumResult = await query(`
+    SELECT
+      COALESCE(SUM(gross_salary),0)  as total_brut,
+      COALESCE(SUM(cnss_employee),0) as total_cnss,
+      COALESCE(SUM(amo_employee),0)  as total_amo,
+      COALESCE(SUM(cimr_employee),0) as total_cimr,
+      COALESCE(SUM(igr),0)           as total_igr,
+      COALESCE(SUM(net_salary),0)    as total_net,
+      COUNT(*)                       as nb_bulletins
+    FROM payslips
+    WHERE employee_id = $1 AND period_year = $2
+  `, [employeeId, year]);
+  const cumul = cumResult.rows[0];
+
+  const profDed = Math.min(parseFloat(cumul.total_brut) * 0.20, 30000);
+  const igrBase = Math.max(0, parseFloat(cumul.total_brut) - parseFloat(cumul.total_cnss) - parseFloat(cumul.total_amo) - parseFloat(cumul.total_cimr) - profDed);
+
+  return new Promise<Buffer>((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'A4', margin: 50 });
+    const chunks: Buffer[] = [];
+    doc.on('data', (c: Buffer) => chunks.push(c));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    const navy = '#1e3a5f';
+    const W = doc.page.width - 100;
+
+    // ── En-tête ──
+    doc.rect(50, 40, W, 60).fill(navy);
+    doc.fillColor('white').fontSize(14).font('Helvetica-Bold')
+      .text('FORVIS MAZARS', 62, 52);
+    doc.fontSize(9).font('Helvetica')
+      .text('Cabinet d\'Audit & Conseil — SGRH', 62, 69);
+    doc.fontSize(12).font('Helvetica-Bold')
+      .text('ATTESTATION FISCALE', 0, 58, { align: 'right', width: W + 50 });
+    doc.fontSize(9).font('Helvetica')
+      .text(`Exercice ${year}`, 0, 74, { align: 'right', width: W + 50 });
+
+    // ── Titre modèle ──
+    doc.fillColor(navy).fontSize(11).font('Helvetica-Bold')
+      .text('Modèle 9421 — Attestation de Revenu Salarial', 50, 120, { align: 'center', width: W });
+    doc.fillColor('#374151').fontSize(9).font('Helvetica')
+      .text('(Article 79 et 81 du Code Général des Impôts)', 50, 136, { align: 'center', width: W });
+
+    let y = 162;
+
+    // ── Employeur ──
+    doc.rect(50, y, W, 14).fill('#e5e7eb');
+    doc.fillColor(navy).fontSize(9).font('Helvetica-Bold').text('EMPLOYEUR', 56, y + 3);
+    y += 18;
+
+    const row = (label: string, val: string, ly: number) => {
+      doc.fillColor('#6b7280').fontSize(8).font('Helvetica').text(label, 56, ly);
+      doc.fillColor('#111827').fontSize(9).font('Helvetica').text(val, 200, ly);
+    };
+    row('Raison sociale :', 'FORVIS MAZARS', y); y += 14;
+    row('Identifiant fiscal :', 'IF-00000000', y); y += 14;
+    row('CNSS employeur :', '0000000', y); y += 20;
+
+    // ── Employé ──
+    doc.rect(50, y, W, 14).fill('#e5e7eb');
+    doc.fillColor(navy).fontSize(9).font('Helvetica-Bold').text('BÉNÉFICIAIRE', 56, y + 3);
+    y += 18;
+
+    row('Nom & Prénom :', `${emp.last_name} ${emp.first_name}`, y); y += 14;
+    row('Matricule :', emp.matricule || '—', y); y += 14;
+    row('CIN :', emp.cin || '—', y); y += 14;
+    row('Fonction :', emp.function || '—', y); y += 20;
+
+    // ── Tableau récapitulatif ──
+    doc.rect(50, y, W, 14).fill(navy);
+    doc.fillColor('white').fontSize(9).font('Helvetica-Bold')
+      .text('RÉCAPITULATIF DES RÉMUNÉRATIONS', 56, y + 3);
+    y += 18;
+
+    const tableLines: [string, number][] = [
+      ['Salaire brut imposable', parseFloat(cumul.total_brut)],
+      ['Cotisations CNSS salarié', parseFloat(cumul.total_cnss)],
+      ['Cotisations AMO salarié', parseFloat(cumul.total_amo)],
+      ['Cotisations CIMR salarié', parseFloat(cumul.total_cimr)],
+      ['Déduction frais professionnels (20%)', profDed],
+      ['Base imposable (revenu net taxable)', igrBase],
+      ['Impôt sur le Revenu (IGR) retenu à la source', parseFloat(cumul.total_igr)],
+      ['Net total versé', parseFloat(cumul.total_net)],
+    ];
+
+    tableLines.forEach(([label, amount], i) => {
+      const isHighlight = i === tableLines.length - 1 || i === tableLines.length - 2;
+      if (isHighlight) doc.rect(50, y, W, 16).fill('#dbeafe');
+      else if (i % 2 === 0) doc.rect(50, y, W, 16).fill('#f9fafb');
+      doc.fillColor('#374151').fontSize(9).font('Helvetica').text(label, 56, y + 4, { width: W - 120 });
+      doc.fillColor(isHighlight ? navy : '#111827').font('Helvetica-Bold')
+        .text(`${fmt(amount)} MAD`, 50, y + 4, { align: 'right', width: W });
+      y += 16;
+    });
+
+    y += 20;
+    doc.fillColor('#6b7280').fontSize(8).font('Helvetica')
+      .text(`Nombre de bulletins émis : ${cumul.nb_bulletins} — Exercice ${year}`, 50, y, { align: 'center', width: W });
+
+    // ── Signature ──
+    y += 30;
+    doc.rect(50, y, W / 2 - 10, 60).stroke('#e5e7eb');
+    doc.fillColor(navy).fontSize(9).font('Helvetica-Bold').text('CACHET ET SIGNATURE DU RESPONSABLE RH', 56, y + 4);
+    doc.rect(50 + W / 2 + 10, y, W / 2 - 10, 60).stroke('#e5e7eb');
+    doc.fillColor(navy).fontSize(9).font('Helvetica-Bold').text('ATTESTATION REÇUE PAR LE BÉNÉFICIAIRE', 56 + W / 2 + 10, y + 4);
+
+    y += 75;
+    doc.fillColor('#9ca3af').fontSize(7.5).font('Helvetica')
+      .text(`Document généré le ${new Date().toLocaleDateString('fr-FR')} — SGRH Forvis Mazars`, 50, y, { align: 'center', width: W });
+
+    doc.end();
+  });
+}
+
+export const downloadAttestation = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const year = parseInt(String(req.query.year)) || new Date().getFullYear();
+  try {
+    const emp = await query(`SELECT matricule, first_name, last_name FROM employees WHERE id = $1`, [id]);
+    if (!emp.rows[0]) return res.status(404).json({ error: 'Employé introuvable' });
+    const e = emp.rows[0];
+
+    const count = await query(`SELECT COUNT(*) as c FROM payslips WHERE employee_id=$1 AND period_year=$2`, [id, year]);
+    if (parseInt(count.rows[0].c) === 0) {
+      return res.status(404).json({ error: `Aucun bulletin trouvé pour ${year}` });
+    }
+
+    const pdfBuffer = await generateAttestation9421(id, year);
+    const filename = `attestation_fiscale_${e.matricule}_${year}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.send(pdfBuffer);
+  } catch (err) {
+    logger.error('downloadAttestation error', err);
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
+};

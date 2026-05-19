@@ -8,6 +8,7 @@ import {
   PencilIcon, XMarkIcon, NoSymbolIcon,
   ArrowUpTrayIcon, DocumentArrowDownIcon, TableCellsIcon,
   CheckCircleIcon, ExclamationCircleIcon, XCircleIcon, UsersIcon,
+  ChevronUpIcon, ChevronDownIcon, ChevronUpDownIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { TableSkeletonRows } from '../../components/ui/Skeleton';
@@ -51,8 +52,8 @@ function ImportModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
   };
 
   const handleFile = async (file: File) => {
-    if (!file.name.endsWith('.xlsx')) {
-      toast.error('Seuls les fichiers .xlsx sont acceptés');
+    if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.csv')) {
+      toast.error('Seuls les fichiers .xlsx et .csv sont acceptés');
       return;
     }
     setParsing(true);
@@ -106,9 +107,9 @@ function ImportModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
           <div>
-            <h3 className="text-lg font-semibold text-gray-800">Import Excel des collaborateurs</h3>
+            <h3 className="text-lg font-semibold text-gray-800">Import des collaborateurs (Excel / CSV)</h3>
             <p className="text-sm text-gray-500 mt-0.5">
-              {step === 'upload' && 'Sélectionnez un fichier .xlsx'}
+              {step === 'upload' && 'Sélectionnez un fichier .xlsx ou .csv'}
               {step === 'preview' && `${rows.length} ligne(s) détectée(s) — ${validCount} valide(s), ${errorCount} en erreur`}
               {step === 'done' && 'Rapport d\'import'}
             </p>
@@ -134,9 +135,9 @@ function ImportModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
                 onClick={() => fileInputRef.current?.click()}
               >
                 <ArrowUpTrayIcon className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-600 font-medium">Glisser-déposer un fichier .xlsx ici</p>
+                <p className="text-gray-600 font-medium">Glisser-déposer un fichier .xlsx ou .csv ici</p>
                 <p className="text-gray-400 text-sm mt-1">ou cliquez pour sélectionner</p>
-                <input ref={fileInputRef} type="file" accept=".xlsx" className="hidden"
+                <input ref={fileInputRef} type="file" accept=".xlsx,.csv" className="hidden"
                   onChange={(e) => { if (e.target.files?.[0]) handleFile(e.target.files[0]); }} />
               </div>
               {parsing && (
@@ -325,6 +326,32 @@ function ImportModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
 }
 
 // ============================================================
+// SortTh — en-tête de colonne triable
+// ============================================================
+function SortTh({ label, field, sort, order, onSort }: {
+  label: string; field: string; sort: string; order: 'asc' | 'desc'; onSort: (f: string) => void;
+}) {
+  const active = sort === field;
+  return (
+    <th
+      className="cursor-pointer select-none group hover:bg-gray-100 transition-colors"
+      onClick={() => onSort(field)}
+      aria-sort={active ? (order === 'asc' ? 'ascending' : 'descending') : 'none'}
+    >
+      <span className="flex items-center gap-1">
+        {label}
+        {active
+          ? order === 'asc'
+            ? <ChevronUpIcon className="w-3 h-3 text-brand-600 flex-shrink-0" />
+            : <ChevronDownIcon className="w-3 h-3 text-brand-600 flex-shrink-0" />
+          : <ChevronUpDownIcon className="w-3 h-3 text-gray-300 group-hover:text-gray-400 flex-shrink-0" />
+        }
+      </span>
+    </th>
+  );
+}
+
+// ============================================================
 // Page principale
 // ============================================================
 export default function EmployeesPage() {
@@ -335,6 +362,13 @@ export default function EmployeesPage() {
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [sort, setSort] = useState('last_name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  const handleSort = (field: string) => {
+    if (sort === field) setSortOrder(o => o === 'asc' ? 'desc' : 'asc');
+    else { setSort(field); setSortOrder('asc'); }
+  };
 
   const [filters, setFilters] = useState({
     search: '',
@@ -369,7 +403,7 @@ export default function EmployeesPage() {
   const fetchEmployees = useCallback(async (page = 1) => {
     setLoading(true);
     try {
-      const params: Record<string, string> = { page: String(page), limit: '20' };
+      const params: Record<string, string> = { page: String(page), limit: '20', sort, order: sortOrder };
       Object.entries(filters).forEach(([k, v]) => { if (v) params[k] = v; });
       const { data } = await api.get<PaginatedResponse<Employee>>('/employees', { params });
       setEmployees(data.data);
@@ -377,7 +411,7 @@ export default function EmployeesPage() {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, sort, sortOrder]);
 
   useEffect(() => {
     const timer = setTimeout(() => fetchEmployees(1), 300);
@@ -511,19 +545,45 @@ export default function EmployeesPage() {
         )}
       </div>
 
-      {/* Table */}
-      <div className="table-container">
-        <table className="table">
+      {/* Mobile: cards */}
+      {!loading && employees.length > 0 && (
+        <div className="sm:hidden space-y-2">
+          {employees.map(emp => (
+            <div key={emp.id} className="card p-4 flex items-start gap-3 cursor-pointer active:bg-gray-50"
+              onClick={() => navigate(`/personnel/${emp.id}`)}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0 ${emp.gender === 'M' ? 'bg-blue-500' : 'bg-purple-500'}`}>
+                {emp.first_name[0]}{emp.last_name[0]}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-gray-800 truncate">{emp.last_name} {emp.first_name}</p>
+                <p className="text-xs text-gray-400 font-mono">{emp.matricule}</p>
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  <span className="badge badge-blue text-xs">{GRADE_LABELS[emp.grade] || emp.grade}</span>
+                  <span className={`badge text-xs ${emp.contract_type === 'CDI' ? 'badge-green' : emp.contract_type === 'CDD' ? 'badge-yellow' : emp.contract_type === 'STAGE' ? 'badge-purple' : 'badge-gray'}`}>
+                    {emp.contract_type}
+                  </span>
+                  <StatusBadge status={emp.status} />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">{SERVICE_LINE_LABELS[emp.service_line] || emp.service_line}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Desktop: table */}
+      <div className="hidden sm:block table-container">
+        <table className="table" aria-label="Liste des collaborateurs">
           <thead>
             <tr>
-              <th>Matricule</th>
-              <th>Nom & Prénom</th>
+              <SortTh label="Matricule" field="matricule" sort={sort} order={sortOrder} onSort={handleSort} />
+              <SortTh label="Nom & Prénom" field="last_name" sort={sort} order={sortOrder} onSort={handleSort} />
               <th>Genre</th>
               <th>Fonction</th>
-              <th>Ligne de service</th>
-              <th>Grade</th>
-              <th>Contrat</th>
-              <th>Ancienneté</th>
+              <SortTh label="Ligne de service" field="service_line" sort={sort} order={sortOrder} onSort={handleSort} />
+              <SortTh label="Grade" field="grade" sort={sort} order={sortOrder} onSort={handleSort} />
+              <SortTh label="Contrat" field="contract_type" sort={sort} order={sortOrder} onSort={handleSort} />
+              <SortTh label="Ancienneté" field="entry_date" sort={sort} order={sortOrder} onSort={handleSort} />
               <th>Statut</th>
               {canManage && <th></th>}
             </tr>
@@ -557,7 +617,7 @@ export default function EmployeesPage() {
                       </div>
                     )}
                     <div className="cursor-pointer" onClick={() => navigate(`/personnel/${emp.id}`)}>
-                      <p className="font-medium text-gray-800 hover:text-blue-600 hover:underline">{emp.last_name} {emp.first_name}</p>
+                      <p className="font-medium text-gray-800 hover:text-brand-600 hover:underline">{emp.last_name} {emp.first_name}</p>
                       {emp.email && <p className="text-xs text-gray-400">{emp.email}</p>}
                     </div>
                   </div>
@@ -565,9 +625,7 @@ export default function EmployeesPage() {
                 <td><GenderBadge gender={emp.gender} /></td>
                 <td className="text-sm text-gray-600">{emp.function.replace(/_/g, ' ')}</td>
                 <td className="text-sm">{SERVICE_LINE_LABELS[emp.service_line] || emp.service_line}</td>
-                <td>
-                  <span className="badge badge-blue text-xs">{GRADE_LABELS[emp.grade] || emp.grade}</span>
-                </td>
+                <td><span className="badge badge-blue text-xs">{GRADE_LABELS[emp.grade] || emp.grade}</span></td>
                 <td>
                   <span className={`badge text-xs ${
                     emp.contract_type === 'CDI' ? 'badge-green'
@@ -588,6 +646,7 @@ export default function EmployeesPage() {
                         onClick={() => { setDeactivateTarget(emp); setExitDate(new Date().toISOString().split('T')[0]); }}
                         className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"
                         title="Désactiver"
+                        aria-label={`Désactiver ${emp.first_name} ${emp.last_name}`}
                       >
                         <NoSymbolIcon className="w-4 h-4" />
                       </button>
@@ -599,6 +658,18 @@ export default function EmployeesPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Mobile empty state */}
+      {!loading && employees.length === 0 && (
+        <div className="sm:hidden">
+          <EmptyState
+            icon={UsersIcon}
+            title="Aucun collaborateur trouvé"
+            description="Modifiez les filtres ou ajoutez un nouveau collaborateur"
+            action={canManage ? { label: '+ Nouveau collaborateur', onClick: () => navigate('/personnel/nouveau') } : undefined}
+          />
+        </div>
+      )}
 
       {/* Pagination */}
       {pagination.totalPages > 1 && (

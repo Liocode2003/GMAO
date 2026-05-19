@@ -54,7 +54,7 @@ export default function DashboardPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <PageSpinner text="Chargement du tableau de bord..." />;
+  if (loading) return <PageSpinner />;
 
   if (error) return (
     <div className="flex items-center justify-center h-64 text-red-500 text-sm">

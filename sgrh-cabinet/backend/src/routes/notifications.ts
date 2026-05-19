@@ -50,7 +50,28 @@ router.get('/', async (req: Request, res: Response) => {
       LIMIT 20
     `);
 
+    // Congés en attente de validation
+    const pendingLeaves = await query(`
+      SELECT lr.id, lr.leave_type, lr.start_date, lr.end_date,
+             e.first_name, e.last_name, e.id as employee_id,
+             (lr.end_date - lr.start_date + 1) as days
+      FROM leave_requests lr
+      JOIN employees e ON e.id = lr.employee_id
+      WHERE lr.status = 'PENDING'
+      ORDER BY lr.created_at ASC
+      LIMIT 20
+    `);
+
     const notifications = [
+      ...pendingLeaves.rows.map(l => ({
+        id: `leave-pending-${l.id}`,
+        type: 'LEAVE_PENDING' as const,
+        title: `Congé en attente — ${l.first_name} ${l.last_name}`,
+        body: `${l.first_name} ${l.last_name} demande ${l.days} jour(s) de congé (${l.leave_type}) du ${new Date(l.start_date).toLocaleDateString('fr-FR')} au ${new Date(l.end_date).toLocaleDateString('fr-FR')}`,
+        employeeId: l.employee_id,
+        date: l.start_date,
+        priority: 'WARNING' as const,
+      })),
       ...birthdays.rows.map(b => ({
         id: `birthday-${b.id}`,
         type: 'BIRTHDAY' as const,

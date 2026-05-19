@@ -4,12 +4,18 @@ import {
   listPayslips, getPayslip, previewPayslip,
   createPayslip, updatePayslip, publishPayslip,
   downloadPayslipPDF, deletePayslip,
+  getMasseSalariale, getAnnualSummary, downloadAttestation,
 } from '../controllers/payslipController';
 
 const router = Router();
 router.use(authenticate);
 // Seuls DRH et ADG utilisent l'application
 router.use(authorize('DRH', 'DIRECTION_GENERALE'));
+
+// Agrégats & rapports (AVANT les routes paramétrées pour éviter les conflits)
+router.get('/masse-salariale', getMasseSalariale);
+router.get('/employee/:id/annual', getAnnualSummary);
+router.get('/employee/:id/attestation', downloadAttestation);
 
 // Lecture
 router.get('/', listPayslips);
