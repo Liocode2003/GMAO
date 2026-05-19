@@ -17,6 +17,8 @@ import { Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { PageSpinner } from '../../components/ui/Spinner';
+import ChartTooltip from '../../components/ui/ChartTooltip';
 
 const COLORS = ['#1d4ed8', '#0891b2', '#059669', '#d97706', '#dc2626', '#7c3aed', '#db2777'];
 
@@ -52,11 +54,7 @@ export default function DashboardPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <div className="animate-spin w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full" />
-    </div>
-  );
+  if (loading) return <PageSpinner />;
 
   if (error) return (
     <div className="flex items-center justify-center h-64 text-red-500 text-sm">
@@ -144,8 +142,8 @@ export default function DashboardPage() {
                   </g>
                 );
               }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip />
+              <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+              <Tooltip content={<ChartTooltip />} />
               <Bar dataKey="count" fill="#1d4ed8" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -164,8 +162,8 @@ export default function DashboardPage() {
                     <Cell key={i} fill={COLORS[i]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(v: number, name: string) => [`${v} (${genderChart.find(g => g.name === name) ? ((genderChart.find(g => g.name === name)!.value / genderChart.reduce((a, b) => a + b.value, 0)) * 100).toFixed(1) : 0}%)`, name]} />
-                <Legend verticalAlign="bottom" height={36} />
+                <Tooltip content={<ChartTooltip />} />
+                <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: 12 }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -180,9 +178,9 @@ export default function DashboardPage() {
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={ageChart} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip />
+              <XAxis dataKey="name" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+              <Tooltip content={<ChartTooltip />} />
               <Bar dataKey="count" fill="#0891b2" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>

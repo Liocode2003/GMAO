@@ -10,6 +10,8 @@ import {
   ChartBarIcon, UserGroupIcon, ArrowDownTrayIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import { PageSpinner } from '../../components/ui/Spinner';
+import ChartTooltip from '../../components/ui/ChartTooltip';
 
 const MONTHS = [
   '', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
@@ -143,11 +145,7 @@ export default function HRReportPage() {
         </div>
       </div>
 
-      {loading && (
-        <div className="flex items-center justify-center h-48">
-          <div className="animate-spin w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full" />
-        </div>
-      )}
+      {loading && <PageSpinner />}
 
       {!loading && data && (
         <>
@@ -273,9 +271,9 @@ export default function HRReportPage() {
                 margin={{ top: 0, right: 0, left: -20, bottom: 0 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip />
+                <XAxis dataKey="name" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+                <Tooltip content={<ChartTooltip />} />
                 <Bar dataKey="count" fill="#1d4ed8" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>

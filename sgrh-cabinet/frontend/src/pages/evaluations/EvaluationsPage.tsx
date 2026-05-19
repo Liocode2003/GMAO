@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
-import { PlusIcon, PencilIcon, TrashIcon, StarIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, PencilIcon, TrashIcon, StarIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { useModalEscape } from '../../components/ui/useModalEscape';
 import toast from 'react-hot-toast';
+import { TableSkeletonRows } from '../../components/ui/Skeleton';
+import EmptyState from '../../components/ui/EmptyState';
 
 interface Evaluation {
   id: string;
@@ -165,17 +168,16 @@ export default function EvaluationsPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} className="text-center py-8">Chargement...</td></tr>
+              <TableSkeletonRows cols={8} rows={5} />
             ) : evaluations.length === 0 ? (
-              <tr>
-                <td colSpan={8}>
-                  <div className="flex flex-col items-center justify-center py-16 gap-2">
-                    <StarIcon className="w-10 h-10 text-gray-200" />
-                    <p className="text-gray-500 font-medium">Aucune évaluation pour {year}</p>
-                    {canManage && <button onClick={() => { setEditing(null); setShowModal(true); }} className="btn-primary text-sm mt-2">Créer une évaluation</button>}
-                  </div>
-                </td>
-              </tr>
+              <tr><td colSpan={8}>
+                <EmptyState
+                  icon={StarIcon}
+                  title="Aucune évaluation"
+                  description={`Aucune évaluation enregistrée pour ${year}`}
+                  action={canManage ? { label: '+ Créer une évaluation', onClick: () => { setEditing(null); setShowModal(true); } } : undefined}
+                />
+              </td></tr>
             ) : evaluations.map(ev => {
               const scoreColor = ev.overall_score === null ? 'text-gray-400' :
                 ev.overall_score >= 16 ? 'text-green-600' :
@@ -236,6 +238,7 @@ function EvaluationModal({ evaluation, year, onClose, onSaved }: {
   onClose: () => void;
   onSaved: () => void;
 }) {
+  useModalEscape(onClose);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [form, setForm] = useState({
     employee_id: evaluation?.employee_id || '',
@@ -290,12 +293,15 @@ function EvaluationModal({ evaluation, year, onClose, onSaved }: {
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl p-6 animate-fade-in max-h-[90vh] overflow-y-auto">
-        <h3 className="text-lg font-semibold text-gray-800 mb-5">
-          {evaluation ? 'Modifier l\'évaluation' : 'Nouvelle évaluation'}
-        </h3>
-        <div className="space-y-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="eval-modal-title">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl animate-fade-in max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+          <h3 id="eval-modal-title" className="text-lg font-semibold text-gray-800">
+            {evaluation ? 'Modifier l\'évaluation' : 'Nouvelle évaluation'}
+          </h3>
+          <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100" aria-label="Fermer"><XMarkIcon className="w-5 h-5" /></button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <label className="label">Collaborateur *</label>
@@ -373,7 +379,7 @@ function EvaluationModal({ evaluation, year, onClose, onSaved }: {
               onChange={e => setForm(p => ({ ...p, comments: e.target.value }))} placeholder="Commentaires généraux..." />
           </div>
         </div>
-        <div className="flex gap-3 justify-end mt-5">
+        <div className="flex gap-3 justify-end px-6 py-4 border-t border-gray-100 flex-shrink-0">
           <button onClick={onClose} className="btn-secondary">Annuler</button>
           <button onClick={handleSave} disabled={saving} className="btn-primary">
             {saving ? 'Enregistrement...' : 'Enregistrer'}

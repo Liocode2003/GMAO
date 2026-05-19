@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
-import { PlusIcon, TrashIcon, PencilIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, TrashIcon, PencilIcon, AcademicCapIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { useModalEscape } from '../../components/ui/useModalEscape';
 import toast from 'react-hot-toast';
+import { TableSkeletonRows } from '../../components/ui/Skeleton';
+import EmptyState from '../../components/ui/EmptyState';
 
 interface Training {
   id: string;
@@ -106,16 +109,16 @@ export default function TrainingsPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} className="text-center py-8">Chargement...</td></tr>
+              <TableSkeletonRows cols={8} rows={5} />
             ) : trainings.length === 0 ? (
-              <tr>
-                <td colSpan={8}>
-                  <div className="flex flex-col items-center justify-center py-16 gap-2">
-                    <p className="text-gray-600 font-semibold text-base">Aucune formation enregistrée</p>
-                    <p className="text-gray-400 text-sm">pour l'année {year}</p>
-                  </div>
-                </td>
-              </tr>
+              <tr><td colSpan={8}>
+                <EmptyState
+                  icon={AcademicCapIcon}
+                  title="Aucune formation enregistrée"
+                  description={`Aucune session de formation pour l'année ${year}`}
+                  action={canManage ? { label: '+ Nouvelle formation', onClick: () => setShowModal(true) } : undefined}
+                />
+              </td></tr>
             ) : trainings.map(t => (
               <tr key={t.id}>
                 <td><span className={`badge text-xs ${TYPE_COLORS[t.type] || 'badge-gray'}`}>{t.type}</span></td>
@@ -177,6 +180,7 @@ function TrainingModal({ training, onClose, onSaved }: {
   onClose: () => void;
   onSaved: () => void;
 }) {
+  useModalEscape(onClose);
   const [form, setForm] = useState({
     type: training?.type || 'INTRA',
     title: training?.title || '',
@@ -211,12 +215,15 @@ function TrainingModal({ training, onClose, onSaved }: {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 animate-fade-in max-h-screen overflow-y-auto">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">
-          {training ? 'Modifier la formation' : 'Nouvelle formation'}
-        </h3>
-        <div className="space-y-3">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="training-modal-title">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg animate-fade-in max-h-[92vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+          <h3 id="training-modal-title" className="text-lg font-semibold text-gray-800">
+            {training ? 'Modifier la formation' : 'Nouvelle formation'}
+          </h3>
+          <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100" aria-label="Fermer"><XMarkIcon className="w-5 h-5" /></button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-6 space-y-3">
           <div>
             <label className="label">Type *</label>
             <select className="input" value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value }))}>
@@ -260,7 +267,7 @@ function TrainingModal({ training, onClose, onSaved }: {
             <textarea className="input h-20 resize-none" value={form.observations} onChange={e => setForm(p => ({ ...p, observations: e.target.value }))} />
           </div>
         </div>
-        <div className="flex gap-3 justify-end mt-5">
+        <div className="flex gap-3 justify-end px-6 py-4 border-t border-gray-100 flex-shrink-0">
           <button onClick={onClose} className="btn-secondary">Annuler</button>
           <button onClick={handleSave} disabled={saving} className="btn-primary">
             {saving ? 'Enregistrement...' : 'Enregistrer'}

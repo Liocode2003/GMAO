@@ -5,23 +5,57 @@ import { query } from '../config/database';
 import { logger } from '../utils/logger';
 
 // ============================================================
-// IMPORT EXCEL — multer en mémoire
+// IMPORT EXCEL / CSV — multer en mémoire
 // ============================================================
 
 export const uploadExcel = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    if (
+    const isXlsx =
       file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
-      file.originalname.endsWith('.xlsx')
-    ) {
+      file.originalname.endsWith('.xlsx');
+    const isCsv =
+      file.mimetype === 'text/csv' ||
+      file.mimetype === 'application/csv' ||
+      file.originalname.endsWith('.csv');
+    if (isXlsx || isCsv) {
       cb(null, true);
     } else {
-      cb(new Error('Seuls les fichiers .xlsx sont acceptés'));
+      cb(new Error('Seuls les fichiers .xlsx et .csv sont acceptés'));
     }
   },
 }).single('file');
+
+// Parse CSV (RFC 4180 subset — semicolon or comma separator, quoted fields)
+function parseCSVBuffer(buf: Buffer): string[][] {
+  const text = buf.toString('utf-8').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const lines = text.split('\n').filter(l => l.trim());
+  if (lines.length === 0) return [];
+  // Detect delimiter
+  const firstLine = lines[0];
+  const sep = firstLine.includes(';') ? ';' : ',';
+
+  return lines.map(line => {
+    const fields: string[] = [];
+    let cur = '';
+    let inQuote = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (inQuote) {
+        if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; }
+        else if (ch === '"') { inQuote = false; }
+        else { cur += ch; }
+      } else {
+        if (ch === '"') { inQuote = true; }
+        else if (ch === sep) { fields.push(cur.trim()); cur = ''; }
+        else { cur += ch; }
+      }
+    }
+    fields.push(cur.trim());
+    return fields;
+  });
+}
 
 // Colonnes attendues dans l'Excel — ordre exact défini par le cahier des charges
 const EXCEL_COLUMNS: Record<string, string> = {
@@ -115,19 +149,81 @@ function validateRow(row: Record<string, unknown>, rowIndex: number): { errors: 
   return { errors };
 }
 
+function mapCellValue(field: string, val: unknown): unknown {
+  if (['birth_date', 'entry_date', 'exit_date'].includes(field)) {
+    return parseDate(val);
+  } else if (field === 'gender') {
+    return val ? String(val).toUpperCase().trim() : 'M';
+  } else if (['function', 'service_line', 'grade', 'contract_type'].includes(field)) {
+    return val ? String(val).toUpperCase().trim() : null;
+  } else if (field === 'marital_status') {
+    return val ? normalizeMaritalStatus(val) : null;
+  } else if (field === 'is_expatriate') {
+    return ['oui', 'yes', '1', 'true'].includes(String(val || '').toLowerCase());
+  } else if (['salary', 'children_count'].includes(field)) {
+    return val !== null && val !== '' ? parseFloat(String(val)) : null;
+  }
+  return val !== null && val !== '' ? String(val).trim() : null;
+}
+
 export const parseImport = async (req: Request, res: Response) => {
   if (!req.file) return res.status(400).json({ error: 'Aucun fichier fourni' });
 
-  try {
-    const workbook = new ExcelJS.Workbook();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await workbook.xlsx.load(req.file.buffer as any);
-    const sheet = workbook.worksheets[0];
-    if (!sheet) return res.status(400).json({ error: 'Fichier Excel vide ou invalide' });
+  const isCsv = req.file.originalname.endsWith('.csv') || req.file.mimetype === 'text/csv' || req.file.mimetype === 'application/csv';
 
-    const headerRow = sheet.getRow(1);
-    const headers: string[] = [];
-    headerRow.eachCell((cell) => headers.push(String(cell.value || '').trim()));
+  try {
+    let headers: string[] = [];
+    let rawRows: Array<{ rowIndex: number; values: Record<string, unknown> }> = [];
+
+    if (isCsv) {
+      const csvData = parseCSVBuffer(req.file.buffer);
+      if (csvData.length === 0) return res.status(400).json({ error: 'Fichier CSV vide ou invalide' });
+      headers = csvData[0].map(h => h.trim());
+      for (let i = 1; i < csvData.length; i++) {
+        const cols = csvData[i];
+        if (cols.every(c => !c)) continue;
+        const values: Record<string, unknown> = {};
+        headers.forEach((header, colIdx) => {
+          const field = EXCEL_COLUMNS[header];
+          if (field) {
+            const raw = cols[colIdx] ?? '';
+            if (['birth_date', 'entry_date', 'exit_date'].includes(field)) {
+              values['_raw_' + field] = raw;
+            }
+            values[field] = mapCellValue(field, raw || null);
+          }
+        });
+        rawRows.push({ rowIndex: i + 1, values });
+      }
+    } else {
+      const workbook = new ExcelJS.Workbook();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await workbook.xlsx.load(req.file.buffer as any);
+      const sheet = workbook.worksheets[0];
+      if (!sheet) return res.status(400).json({ error: 'Fichier Excel vide ou invalide' });
+
+      const headerRow = sheet.getRow(1);
+      headerRow.eachCell((cell) => headers.push(String(cell.value || '').trim()));
+
+      for (let i = 2; i <= sheet.rowCount; i++) {
+        const row = sheet.getRow(i);
+        if (row.actualCellCount === 0) continue;
+        const values: Record<string, unknown> = {};
+        headers.forEach((header, colIdx) => {
+          const field = EXCEL_COLUMNS[header];
+          if (field) {
+            const cell = row.getCell(colIdx + 1);
+            let val = cell.value;
+            if (val instanceof Object && 'result' in val) val = (val as { result: ExcelJS.CellValue }).result;
+            if (['birth_date', 'entry_date', 'exit_date'].includes(field) && val) {
+              values['_raw_' + field] = String(val);
+            }
+            values[field] = mapCellValue(field, val);
+          }
+        });
+        rawRows.push({ rowIndex: i, values });
+      }
+    }
 
     const missingColumns = REQUIRED_COLUMNS.filter(col => !headers.includes(col));
     const unknownColumns = headers.filter(h => h && !EXCEL_COLUMNS[h]);
@@ -143,37 +239,9 @@ export const parseImport = async (req: Request, res: Response) => {
 
     const rows: Array<{ rowIndex: number; data: Record<string, unknown>; errors: string[]; isDuplicate: boolean }> = [];
 
-    for (let i = 2; i <= sheet.rowCount; i++) {
-      const row = sheet.getRow(i);
-      if (row.actualCellCount === 0) continue;
-
-      const data: Record<string, unknown> = {};
-      headers.forEach((header, colIdx) => {
-        const field = EXCEL_COLUMNS[header];
-        if (field) {
-          const cell = row.getCell(colIdx + 1);
-          let val = cell.value;
-          if (val instanceof Object && 'result' in val) val = (val as { result: ExcelJS.CellValue }).result;
-          if (['birth_date', 'entry_date', 'exit_date'].includes(field)) {
-            if (val) data['_raw_' + field] = String(val);
-            data[field] = parseDate(val);
-          } else if (field === 'gender') {
-            data[field] = val ? String(val).toUpperCase().trim() : 'M';
-          } else if (['function', 'service_line', 'grade', 'contract_type'].includes(field)) {
-            data[field] = val ? String(val).toUpperCase().trim() : null;
-          } else if (field === 'marital_status') {
-            data[field] = val ? normalizeMaritalStatus(val) : null;
-          } else if (field === 'is_expatriate') {
-            data[field] = ['oui', 'yes', '1', 'true'].includes(String(val || '').toLowerCase());
-          } else if (['salary', 'children_count'].includes(field)) {
-            data[field] = val ? parseFloat(String(val)) : null;
-          } else {
-            data[field] = val ? String(val).trim() : null;
-          }
-        }
-      });
-
-      const { errors } = validateRow(data, i);
+    for (const raw of rawRows) {
+      const data = raw.values;
+      const { errors } = validateRow(data, raw.rowIndex);
 
       let isDuplicate = false;
       if (data.matricule) {
@@ -185,7 +253,7 @@ export const parseImport = async (req: Request, res: Response) => {
         if (r.rows[0]) { errors.push(`Email "${data.email}" déjà utilisé en base`); isDuplicate = true; }
       }
 
-      rows.push({ rowIndex: i, data, errors, isDuplicate });
+      rows.push({ rowIndex: raw.rowIndex, data, errors, isDuplicate });
     }
 
     const validCount = rows.filter(r => r.errors.length === 0).length;
@@ -200,7 +268,7 @@ export const parseImport = async (req: Request, res: Response) => {
     });
   } catch (err) {
     logger.error('parseImport error', err);
-    return res.status(500).json({ error: 'Erreur lors de la lecture du fichier Excel' });
+    return res.status(500).json({ error: 'Erreur lors de la lecture du fichier' });
   }
 };
 

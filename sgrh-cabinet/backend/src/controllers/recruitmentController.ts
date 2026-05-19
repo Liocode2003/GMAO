@@ -2,8 +2,16 @@ import { Request, Response } from 'express';
 import { query } from '../config/database';
 import { logger } from '../utils/logger';
 
+const ALLOWED_SORT_CANDIDATES = ['last_name', 'first_name', 'position', 'created_at', 'interview_date', 'salary_expected'];
+
 export const listCandidates = async (req: Request, res: Response) => {
   const { status, position, search } = req.query as Record<string, string>;
+  const page  = Math.max(1, parseInt(String(req.query.page  || '1')));
+  const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit || '20'))));
+  const sort  = ALLOWED_SORT_CANDIDATES.includes(String(req.query.sort)) ? String(req.query.sort) : 'created_at';
+  const order = req.query.order === 'asc' ? 'ASC' : 'DESC';
+  const offset = (page - 1) * limit;
+
   try {
     const params: unknown[] = [];
     const conditions: string[] = [];
@@ -16,16 +24,31 @@ export const listCandidates = async (req: Request, res: Response) => {
     }
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const countRes = await query(
+      `SELECT COUNT(*) as total FROM candidates c ${where}`,
+      params
+    );
+    const total = parseInt(countRes.rows[0].total);
+
+    params.push(limit, offset);
     const result = await query(
       `SELECT c.*,
          u.first_name || ' ' || u.last_name as created_by_name
        FROM candidates c
        LEFT JOIN users u ON u.id = c.created_by
        ${where}
-       ORDER BY c.created_at DESC`,
+       ORDER BY c.${sort} ${order} NULLS LAST
+       LIMIT $${params.length - 1} OFFSET $${params.length}`,
       params
     );
-    return res.json(result.rows);
+    return res.json({
+      candidates: result.rows,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    });
   } catch (err) {
     logger.error('listCandidates error', err);
     return res.status(500).json({ error: 'Erreur serveur' });

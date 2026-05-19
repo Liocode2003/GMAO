@@ -330,7 +330,7 @@ export default function TeamCalendarPage() {
         {/* Calendar grid */}
         {loading ? (
           <div className="flex justify-center py-12">
-            <div className="animate-spin w-6 h-6 border-4 border-brand-600 border-t-transparent rounded-full" />
+            <div className="animate-spin w-6 h-6 border-2 border-brand-600 border-t-transparent rounded-full" />
           </div>
         ) : (
           <div className="grid grid-cols-7 gap-1">
@@ -488,10 +488,10 @@ export default function TeamCalendarPage() {
 
       {/* ── Create leave modal ── */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="leave-modal-title">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
             <div className="p-6 border-b border-gray-100">
-              <h3 className="text-lg font-semibold text-gray-800">Nouvelle demande de congé</h3>
+              <h3 id="leave-modal-title" className="text-lg font-semibold text-gray-800">Nouvelle demande de congé</h3>
               <p className="text-xs text-gray-400 mt-1">
                 {isDRH ? 'La demande sera soumise pour approbation.' : 'Soumettez une demande pour vos collaborateurs directs.'}
               </p>

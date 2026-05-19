@@ -1,9 +1,13 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { ROLE_LABELS } from '../../types';
-import { PlusIcon, PencilIcon, KeyIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, PencilIcon, KeyIcon, UserGroupIcon } from '@heroicons/react/24/outline';
+import { useModalEscape } from '../../components/ui/useModalEscape';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../../store/authStore';
+import { TableSkeletonRows } from '../../components/ui/Skeleton';
+import { TableEmptyRow } from '../../components/ui/EmptyState';
+import PageHeader from '../../components/ui/PageHeader';
 
 interface UserRecord {
   id: string;
@@ -48,18 +52,16 @@ export default function UsersPage() {
   };
 
   return (
-    <div className="space-y-4 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-800">Utilisateurs</h2>
-          <p className="text-gray-500 text-sm">{users.length} utilisateur(s)</p>
-        </div>
-        {canWrite && (
+    <div className="space-y-5 animate-fade-in">
+      <PageHeader
+        title="Utilisateurs"
+        subtitle={`${users.length} compte(s) configuré(s)`}
+        actions={canWrite ? (
           <button onClick={() => { setEditing(null); setShowModal(true); }} className="btn-primary">
             <PlusIcon className="w-4 h-4" /> Nouvel utilisateur
           </button>
-        )}
-      </div>
+        ) : undefined}
+      />
 
       <div className="table-container">
         <table className="table">
@@ -75,7 +77,9 @@ export default function UsersPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={canWrite ? 6 : 5} className="text-center py-8">Chargement...</td></tr>
+              <TableSkeletonRows cols={canWrite ? 6 : 5} rows={5} />
+            ) : users.length === 0 ? (
+              <TableEmptyRow cols={canWrite ? 6 : 5} icon={UserGroupIcon} title="Aucun utilisateur configuré" />
             ) : users.map(u => (
               <tr key={u.id}>
                 <td className="font-medium">{u.first_name} {u.last_name}</td>
@@ -139,7 +143,7 @@ export default function UsersPage() {
       )}
 
       {canWrite && showPwdModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-label="Réinitialiser le mot de passe">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 animate-fade-in">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Réinitialiser le mot de passe</h3>
             <div>
@@ -160,6 +164,7 @@ export default function UsersPage() {
 function UserModal({ user, onClose, onSaved }: {
   user: UserRecord | null; onClose: () => void; onSaved: () => void;
 }) {
+  useModalEscape(onClose);
   const [form, setForm] = useState({
     email: user?.email || '',
     first_name: user?.first_name || '',
@@ -185,9 +190,9 @@ function UserModal({ user, onClose, onSaved }: {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="user-modal-title">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-fade-in">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">
+        <h3 id="user-modal-title" className="text-lg font-semibold text-gray-800 mb-4">
           {user ? 'Modifier l\'utilisateur' : 'Nouvel utilisateur'}
         </h3>
         <div className="space-y-3">

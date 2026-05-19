@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { KPIData, SERVICE_LINE_LABELS, GRADE_LABELS, DIPLOMA_LABELS } from '../../types';
+import { PageSpinner } from '../../components/ui/Spinner';
+import ChartTooltip from '../../components/ui/ChartTooltip';
 
 // Extend KPIData with server-computed turnover rate
 type KPIDataExtended = KPIData & { turnoverRate?: number };
@@ -37,11 +39,7 @@ export default function KPIsPage() {
     }).finally(() => setLoading(false));
   }, [year]);
 
-  if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <div className="animate-spin w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full" />
-    </div>
-  );
+  if (loading) return <PageSpinner />;
 
   if (!data) return null;
 
@@ -149,10 +147,10 @@ export default function KPIsPage() {
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={movementsChart} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip />
-              <Legend />
+              <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+              <Tooltip content={<ChartTooltip />} />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
               <Bar dataKey="Entrées" fill="#059669" radius={[3, 3, 0, 0]} />
               <Bar dataKey="Sorties" fill="#dc2626" radius={[3, 3, 0, 0]} />
             </BarChart>
@@ -165,9 +163,9 @@ export default function KPIsPage() {
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={trainingChart} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip />
+              <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+              <Tooltip content={<ChartTooltip />} />
               <Line type="monotone" dataKey="Heures" stroke="#1d4ed8" strokeWidth={2} dot={{ r: 4 }} />
             </LineChart>
           </ResponsiveContainer>
@@ -180,9 +178,9 @@ export default function KPIsPage() {
         <ResponsiveContainer width="100%" height={250}>
           <BarChart data={gradeChart} layout="vertical" margin={{ top: 0, right: 20, left: 130, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
-            <XAxis type="number" tick={{ fontSize: 11 }} />
-            <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={130} />
-            <Tooltip />
+            <XAxis type="number" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+            <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={130} axisLine={false} tickLine={false} />
+            <Tooltip content={<ChartTooltip />} />
             <Bar dataKey="count" fill="#1d4ed8" radius={[0, 4, 4, 0]} />
           </BarChart>
         </ResponsiveContainer>
