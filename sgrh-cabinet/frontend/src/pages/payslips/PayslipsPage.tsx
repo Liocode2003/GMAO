@@ -4,7 +4,7 @@ import { useAuthStore } from '../../store/authStore';
 import {
   DocumentArrowDownIcon, PlusIcon, PencilIcon, CheckCircleIcon, TrashIcon,
   CalculatorIcon, DocumentTextIcon, ChevronLeftIcon, ChevronRightIcon,
-  ChartBarIcon, UserGroupIcon, ArrowDownTrayIcon,
+  ChartBarIcon, UserGroupIcon, ArrowDownTrayIcon, TableCellsIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { TableSkeletonRows } from '../../components/ui/Skeleton';
@@ -275,6 +275,7 @@ export default function PayslipsPage() {
 function MasseSalarialeTab({ year }: { year: number }) {
   const [data, setData] = useState<{ months: MasseSalarialeMonth[]; totals: { totalBrut: number; totalNet: number; totalIgr: number; totalCnss: number } } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -282,6 +283,20 @@ function MasseSalarialeTab({ year }: { year: number }) {
       .then(r => setData(r.data))
       .finally(() => setLoading(false));
   }, [year]);
+
+  const handleExportExcel = async () => {
+    setExporting(true);
+    try {
+      const res = await api.get('/payslips/masse-salariale/export', { params: { year }, responseType: 'blob' });
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url; a.download = `masse_salariale_${year}.xlsx`; a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Export Excel téléchargé');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   if (loading) return (
     <div className="card animate-pulse space-y-4 p-6">
@@ -307,6 +322,19 @@ function MasseSalarialeTab({ year }: { year: number }) {
 
   return (
     <div className="space-y-6">
+      {/* Header row with export button */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <p className="text-sm text-gray-500">{data.months.length} mois — exercice {year}</p>
+        <button
+          onClick={handleExportExcel}
+          disabled={exporting}
+          className="btn-secondary gap-2 text-sm"
+        >
+          <TableCellsIcon className="w-4 h-4" />
+          {exporting ? 'Export...' : 'Exporter Excel'}
+        </button>
+      </div>
+
       {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[

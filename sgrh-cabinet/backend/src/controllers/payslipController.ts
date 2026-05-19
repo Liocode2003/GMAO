@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { query } from '../config/database';
 import { logger } from '../utils/logger';
 import PDFDocument from 'pdfkit';
+import ExcelJS from 'exceljs';
 import fs from 'fs';
 import path from 'path';
 
@@ -819,6 +820,158 @@ export const downloadAttestation = async (req: Request, res: Response) => {
     return res.send(pdfBuffer);
   } catch (err) {
     logger.error('downloadAttestation error', err);
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
+
+// ============================================================
+// EXPORT EXCEL MASSE SALARIALE — GET /payslips/masse-salariale/export?year=
+// ============================================================
+
+export const exportMasseSalarialeExcel = async (req: Request, res: Response) => {
+  const year = parseInt(String(req.query.year)) || new Date().getFullYear();
+  try {
+    const result = await query(`
+      SELECT
+        period_month as month,
+        COUNT(*) as count,
+        SUM(gross_salary)  as total_brut,
+        SUM(net_salary)    as total_net,
+        SUM(igr)           as total_igr,
+        SUM(cnss_employee) as total_cnss,
+        SUM(amo_employee)  as total_amo,
+        SUM(cimr_employee) as total_cimr,
+        SUM(cnss_employer) as total_cnss_patronal,
+        SUM(amo_employer)  as total_amo_patronal
+      FROM payslips
+      WHERE period_year = $1
+      GROUP BY period_month
+      ORDER BY period_month
+    `, [year]);
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'SGRH Cabinet';
+    workbook.created = new Date();
+
+    const sheet = workbook.addWorksheet(`Masse salariale ${year}`);
+    sheet.properties.defaultRowHeight = 18;
+
+    // Colonnes
+    sheet.columns = [
+      { header: 'Mois',              key: 'month',     width: 16 },
+      { header: 'Bulletins',         key: 'count',     width: 12 },
+      { header: 'Total brut (MAD)',  key: 'brut',      width: 20 },
+      { header: 'Total net (MAD)',   key: 'net',       width: 20 },
+      { header: 'IGR total (MAD)',   key: 'igr',       width: 18 },
+      { header: 'CNSS salarié',      key: 'cnss',      width: 16 },
+      { header: 'AMO salarié',       key: 'amo',       width: 16 },
+      { header: 'CIMR salarié',      key: 'cimr',      width: 16 },
+      { header: 'CNSS patronal',     key: 'cnss_pat',  width: 16 },
+      { header: 'AMO patronal',      key: 'amo_pat',   width: 16 },
+    ];
+
+    // Style en-tête
+    const headerRow = sheet.getRow(1);
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+    headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1D4ED8' } };
+    headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+    headerRow.height = 22;
+
+    const numFmt = '#,##0.00';
+    let totalBrut = 0, totalNet = 0, totalIgr = 0, totalCnss = 0, totalAmo = 0;
+
+    result.rows.forEach((r, i) => {
+      const brut  = parseFloat(r.total_brut) || 0;
+      const net   = parseFloat(r.total_net) || 0;
+      const igr   = parseFloat(r.total_igr) || 0;
+      const cnss  = parseFloat(r.total_cnss) || 0;
+      const amo   = parseFloat(r.total_amo) || 0;
+      const cimr  = parseFloat(r.total_cimr) || 0;
+      const cPat  = parseFloat(r.total_cnss_patronal) || 0;
+      const aPat  = parseFloat(r.total_amo_patronal) || 0;
+      totalBrut += brut; totalNet += net; totalIgr += igr; totalCnss += cnss; totalAmo += amo;
+
+      const row = sheet.addRow({
+        month: MONTHS_FR[parseInt(r.month)],
+        count: parseInt(r.count),
+        brut, net, igr, cnss, amo, cimr, cnss_pat: cPat, amo_pat: aPat,
+      });
+      if (i % 2 === 0) {
+        row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFF' } };
+      }
+      ['brut','net','igr','cnss','amo','cimr','cnss_pat','amo_pat'].forEach(k => {
+        const cell = row.getCell(k);
+        cell.numFmt = numFmt;
+        cell.alignment = { horizontal: 'right' };
+      });
+    });
+
+    // Ligne de total
+    const totalRow = sheet.addRow({
+      month: `TOTAL ${year}`,
+      count: result.rows.reduce((s, r) => s + parseInt(r.count), 0),
+      brut: totalBrut, net: totalNet, igr: totalIgr, cnss: totalCnss, amo: totalAmo,
+      cimr: 0, cnss_pat: 0, amo_pat: 0,
+    });
+    totalRow.font = { bold: true };
+    totalRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDBEAFE' } };
+    ['brut','net','igr','cnss','amo','cimr','cnss_pat','amo_pat'].forEach(k => {
+      totalRow.getCell(k).numFmt = numFmt;
+    });
+
+    // Feuille détail par employé
+    const detailSheet = workbook.addWorksheet('Détail par collaborateur');
+    const detailRes = await query(`
+      SELECT
+        e.matricule, e.last_name, e.first_name, e.grade, e.service_line,
+        p.period_month,
+        p.gross_salary, p.net_salary, p.igr, p.cnss_employee, p.amo_employee, p.cimr_employee
+      FROM payslips p
+      JOIN employees e ON e.id = p.employee_id
+      WHERE p.period_year = $1
+      ORDER BY e.last_name, e.first_name, p.period_month
+    `, [year]);
+
+    detailSheet.columns = [
+      { header: 'Matricule',    key: 'mat',   width: 14 },
+      { header: 'Nom',          key: 'ln',    width: 18 },
+      { header: 'Prénom',       key: 'fn',    width: 18 },
+      { header: 'Grade',        key: 'gr',    width: 22 },
+      { header: 'Ligne service',key: 'sl',    width: 22 },
+      { header: 'Mois',         key: 'mo',    width: 12 },
+      { header: 'Brut',         key: 'brut',  width: 16 },
+      { header: 'Net',          key: 'net',   width: 16 },
+      { header: 'IGR',          key: 'igr',   width: 14 },
+      { header: 'CNSS',         key: 'cnss',  width: 14 },
+      { header: 'AMO',          key: 'amo',   width: 14 },
+      { header: 'CIMR',         key: 'cimr',  width: 14 },
+    ];
+    const dh = detailSheet.getRow(1);
+    dh.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    dh.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1D4ED8' } };
+    dh.height = 20;
+
+    detailRes.rows.forEach((r, i) => {
+      const row = detailSheet.addRow({
+        mat: r.matricule, ln: r.last_name, fn: r.first_name, gr: r.grade, sl: r.service_line,
+        mo: MONTHS_FR[parseInt(r.period_month)],
+        brut: parseFloat(r.gross_salary), net: parseFloat(r.net_salary),
+        igr: parseFloat(r.igr), cnss: parseFloat(r.cnss_employee),
+        amo: parseFloat(r.amo_employee), cimr: parseFloat(r.cimr_employee),
+      });
+      if (i % 2 === 0) row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFF' } };
+      ['brut','net','igr','cnss','amo','cimr'].forEach(k => {
+        row.getCell(k).numFmt = numFmt;
+        row.getCell(k).alignment = { horizontal: 'right' };
+      });
+    });
+
+    const buf = await workbook.xlsx.writeBuffer();
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="masse_salariale_${year}.xlsx"`);
+    return res.send(buf);
+  } catch (err) {
+    logger.error('exportMasseSalarialeExcel error', err);
     return res.status(500).json({ error: 'Erreur serveur' });
   }
 };

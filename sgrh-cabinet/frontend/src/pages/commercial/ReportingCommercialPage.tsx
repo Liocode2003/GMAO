@@ -13,6 +13,7 @@ import {
   ChartBarIcon,
   BriefcaseIcon,
 } from '@heroicons/react/24/outline';
+import { useModalEscape } from '../../components/ui/useModalEscape';
 import api from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { TableSkeletonRows } from '../../components/ui/Skeleton';
@@ -507,7 +508,7 @@ export default function ReportingCommercialPage() {
 
       {/* Modal Form */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Formulaire de soumission commerciale">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl mx-4 max-h-[92vh] flex flex-col">
 
             {/* Header coloré */}

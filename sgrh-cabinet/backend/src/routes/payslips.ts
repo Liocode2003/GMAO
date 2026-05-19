@@ -5,6 +5,7 @@ import {
   createPayslip, updatePayslip, publishPayslip,
   downloadPayslipPDF, deletePayslip,
   getMasseSalariale, getAnnualSummary, downloadAttestation,
+  exportMasseSalarialeExcel,
 } from '../controllers/payslipController';
 
 const router = Router();
@@ -14,6 +15,7 @@ router.use(authorize('DRH', 'DIRECTION_GENERALE'));
 
 // Agrégats & rapports (AVANT les routes paramétrées pour éviter les conflits)
 router.get('/masse-salariale', getMasseSalariale);
+router.get('/masse-salariale/export', exportMasseSalarialeExcel);
 router.get('/employee/:id/annual', getAnnualSummary);
 router.get('/employee/:id/attestation', downloadAttestation);
 

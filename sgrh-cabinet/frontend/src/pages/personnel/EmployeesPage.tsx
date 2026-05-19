@@ -102,12 +102,12 @@ function ImportModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
   const allErrors = rows.filter(r => r.errors.length > 0).flatMap(r => r.errors);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="import-modal-title">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col animate-fade-in">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
           <div>
-            <h3 className="text-lg font-semibold text-gray-800">Import des collaborateurs (Excel / CSV)</h3>
+            <h3 id="import-modal-title" className="text-lg font-semibold text-gray-800">Import des collaborateurs (Excel / CSV)</h3>
             <p className="text-sm text-gray-500 mt-0.5">
               {step === 'upload' && 'Sélectionnez un fichier .xlsx ou .csv'}
               {step === 'preview' && `${rows.length} ligne(s) détectée(s) — ${validCount} valide(s), ${errorCount} en erreur`}
@@ -706,9 +706,9 @@ export default function EmployeesPage() {
 
       {/* Modal Désactivation */}
       {deactivateTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="deactivate-modal-title">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-fade-in">
-            <h3 className="text-lg font-semibold text-gray-800 mb-1">Désactiver le collaborateur</h3>
+            <h3 id="deactivate-modal-title" className="text-lg font-semibold text-gray-800 mb-1">Désactiver le collaborateur</h3>
             <p className="text-sm text-gray-500 mb-4">
               <strong>{deactivateTarget.first_name} {deactivateTarget.last_name}</strong> sera marqué(e) comme inactif(ve). Cette action est réversible.
             </p>
