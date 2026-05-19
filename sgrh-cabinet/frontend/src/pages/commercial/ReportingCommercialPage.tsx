@@ -62,6 +62,50 @@ interface Employee {
   last_name: string;
 }
 
+function CommercialSortTh({ col, label, current, order, onClick }: {
+  col: string; label: string; current: string; order: 'asc' | 'desc'; onClick: (col: string) => void;
+}) {
+  const active = current === col;
+  return (
+    <th
+      className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100 transition-colors"
+      onClick={() => onClick(col)}
+    >
+      <span className="flex items-center gap-1">
+        {label}
+        <span className={`text-xs ${active ? 'text-brand-600' : 'text-gray-300'}`}>
+          {active ? (order === 'asc' ? '↑' : '↓') : '↕'}
+        </span>
+      </span>
+    </th>
+  );
+}
+
+function CommercialPaginationBar({ page, totalPages, total, limit, onPage }: {
+  page: number; totalPages: number; total: number; limit: number; onPage: (p: number) => void;
+}) {
+  const from = Math.min((page - 1) * limit + 1, total);
+  const to   = Math.min(page * limit, total);
+  const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+  return (
+    <div className="flex items-center justify-between py-3 px-4 border-t border-gray-100">
+      <span className="text-xs text-gray-500">{from}–{to} sur {total}</span>
+      <div className="flex gap-1">
+        <button disabled={page === 1} onClick={() => onPage(page - 1)}
+          className="px-2 py-1 text-xs border rounded disabled:opacity-30 hover:bg-gray-50">◀</button>
+        {pages.map(p => (
+          <button key={p} onClick={() => onPage(p)}
+            className={`px-2.5 py-1 text-xs border rounded ${p === page ? 'bg-brand-700 text-white border-brand-700' : 'hover:bg-gray-50'}`}>
+            {p}
+          </button>
+        ))}
+        <button disabled={page === totalPages} onClick={() => onPage(page + 1)}
+          className="px-2 py-1 text-xs border rounded disabled:opacity-30 hover:bg-gray-50">▶</button>
+      </div>
+    </div>
+  );
+}
+
 const StatusBadge = ({ status }: { status: SubmissionStatus }) => {
   const styles: Record<SubmissionStatus, string> = {
     EN_COURS: 'bg-blue-100 text-blue-800',
@@ -88,6 +132,16 @@ export default function ReportingCommercialPage() {
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState<CommercialSubmission | null>(null);
 
+  // Pagination
+  const [page, setPage]             = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal]           = useState(0);
+  const LIMIT = 20;
+
+  // Sort
+  const [sortCol, setSortCol] = useState('submission_date');
+  const [sortOrd, setSortOrd] = useState<'asc' | 'desc'>('desc');
+
   // Filters
   const [filterStatus, setFilterStatus] = useState('');
   const [filterServiceLine, setFilterServiceLine] = useState('');
@@ -98,25 +152,27 @@ export default function ReportingCommercialPage() {
   const { register, handleSubmit, watch, reset, formState: { errors } } = useForm<FormData>();
   const watchStatus = watch('status');
 
-  const buildParams = useCallback((type: SubmissionType) => {
-    const p: Record<string, string> = { type };
+  const buildParams = useCallback((type: SubmissionType, withPagination = false) => {
+    const p: Record<string, string | number> = { type };
     if (filterStatus) p.status = filterStatus;
     if (filterServiceLine) p.service_line = filterServiceLine;
     if (filterYear) p.year = filterYear;
     if (filterMonth) p.month = filterMonth;
     if (filterQuarter) p.quarter = filterQuarter;
+    if (withPagination) { p.page = page; p.limit = LIMIT; p.sort = sortCol; p.order = sortOrd; }
     return p;
-  }, [filterStatus, filterServiceLine, filterYear, filterMonth, filterQuarter]);
+  }, [filterStatus, filterServiceLine, filterYear, filterMonth, filterQuarter, page, sortCol, sortOrd]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const params = buildParams(activeTab);
       const [subRes, statsRes] = await Promise.all([
-        api.get('/commercial', { params }),
+        api.get('/commercial', { params: buildParams(activeTab, true) }),
         api.get('/commercial/stats', { params: buildParams(activeTab) }),
       ]);
-      setSubmissions(subRes.data);
+      setSubmissions(subRes.data.submissions || []);
+      setTotal(subRes.data.total || 0);
+      setTotalPages(subRes.data.totalPages || 1);
       setStats(statsRes.data);
     } catch {
       toast.error('Erreur lors du chargement');
@@ -134,6 +190,14 @@ export default function ReportingCommercialPage() {
       .then(res => setEmployees(res.data.data || res.data))
       .catch(() => {});
   }, []);
+
+  const handleSort = (col: string) => {
+    if (sortCol === col) setSortOrd(o => o === 'asc' ? 'desc' : 'asc');
+    else { setSortCol(col); setSortOrd('desc'); }
+    setPage(1);
+  };
+
+  const handleTabChange = (tab: SubmissionType) => { setActiveTab(tab); setPage(1); };
 
   const openCreate = () => {
     setEditItem(null);
@@ -276,7 +340,7 @@ export default function ReportingCommercialPage() {
           {TABS.map(tab => (
             <button
               key={tab.type}
-              onClick={() => setActiveTab(tab.type)}
+              onClick={() => handleTabChange(tab.type)}
               className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === tab.type
                   ? 'border-brand-700 text-brand-700'
@@ -341,7 +405,7 @@ export default function ReportingCommercialPage() {
         <div className="flex flex-wrap gap-3">
           <select
             value={filterStatus}
-            onChange={e => setFilterStatus(e.target.value)}
+            onChange={e => { setFilterStatus(e.target.value); setPage(1); }}
             className="input text-sm py-1.5 w-auto"
           >
             <option value="">Tous les statuts</option>
@@ -352,7 +416,7 @@ export default function ReportingCommercialPage() {
 
           <select
             value={filterServiceLine}
-            onChange={e => setFilterServiceLine(e.target.value)}
+            onChange={e => { setFilterServiceLine(e.target.value); setPage(1); }}
             className="input text-sm py-1.5 w-auto"
           >
             <option value="">Toutes les lignes</option>
@@ -363,7 +427,7 @@ export default function ReportingCommercialPage() {
 
           <select
             value={filterYear}
-            onChange={e => { setFilterYear(e.target.value); setFilterQuarter(''); setFilterMonth(''); }}
+            onChange={e => { setFilterYear(e.target.value); setFilterQuarter(''); setFilterMonth(''); setPage(1); }}
             className="input text-sm py-1.5 w-auto"
           >
             <option value="">Toutes les années</option>
@@ -403,7 +467,7 @@ export default function ReportingCommercialPage() {
 
           {(filterStatus || filterServiceLine || filterYear) && (
             <button
-              onClick={() => { setFilterStatus(''); setFilterServiceLine(''); setFilterYear(''); setFilterMonth(''); setFilterQuarter(''); }}
+              onClick={() => { setFilterStatus(''); setFilterServiceLine(''); setFilterYear(''); setFilterMonth(''); setFilterQuarter(''); setPage(1); }}
               className="text-sm text-gray-500 hover:text-gray-700 underline"
             >
               Réinitialiser
@@ -412,8 +476,53 @@ export default function ReportingCommercialPage() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="card overflow-hidden p-0">
+      {/* Mobile cards */}
+      <div className="sm:hidden space-y-3">
+        {loading ? (
+          <div className="py-8 text-center text-sm text-gray-400">Chargement...</div>
+        ) : submissions.length === 0 ? (
+          <EmptyState
+            icon={ChartBarIcon}
+            title="Aucune soumission trouvée"
+            description="Modifiez les filtres ou créez une nouvelle soumission"
+            action={canWrite ? { label: '+ Nouvelle soumission', onClick: openCreate } : undefined}
+          />
+        ) : submissions.map(sub => (
+          <div key={sub.id} className="card p-4">
+            <div className="flex items-start justify-between mb-2">
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-gray-800 text-sm truncate">{sub.title}</p>
+                <p className="text-xs text-gray-500 font-mono">{sub.reference}</p>
+              </div>
+              <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+                <StatusBadge status={sub.status} />
+                {canWrite && (
+                  <div className="flex gap-1">
+                    <button onClick={() => openEdit(sub)} className="p-1 text-gray-400 hover:text-amber-600"><PencilIcon className="w-4 h-4" /></button>
+                    <button onClick={() => handleDelete(sub.id)} className="p-1 text-gray-400 hover:text-red-600"><TrashIcon className="w-4 h-4" /></button>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+              <span>{sub.client}</span>
+              {sub.submission_date && <span>{new Date(sub.submission_date).toLocaleDateString('fr-FR')}</span>}
+              <span>{SERVICE_LINE_LABELS[sub.service_line] || sub.service_line}</span>
+            </div>
+            {canViewAmounts && sub.status === 'GAGNE' && sub.contract_amount != null && (
+              <p className="mt-1 text-xs font-semibold text-green-700">
+                {new Intl.NumberFormat('fr-FR').format(sub.contract_amount)} FCFA
+              </p>
+            )}
+          </div>
+        ))}
+        {totalPages > 1 && (
+          <CommercialPaginationBar page={page} totalPages={totalPages} total={total} limit={LIMIT} onPage={setPage} />
+        )}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden sm:block card overflow-hidden p-0">
         {loading ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -442,13 +551,13 @@ export default function ReportingCommercialPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Référence</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Objet / Intitulé</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Client</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date soumission</th>
+                  <CommercialSortTh col="reference"       label="Référence"        current={sortCol} order={sortOrd} onClick={handleSort} />
+                  <CommercialSortTh col="title"           label="Objet / Intitulé" current={sortCol} order={sortOrd} onClick={handleSort} />
+                  <CommercialSortTh col="client"          label="Client"           current={sortCol} order={sortOrd} onClick={handleSort} />
+                  <CommercialSortTh col="submission_date" label="Date soumission"  current={sortCol} order={sortOrd} onClick={handleSort} />
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Ligne de service</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Responsable</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Statut</th>
+                  <CommercialSortTh col="status" label="Statut" current={sortCol} order={sortOrd} onClick={handleSort} />
                   {canViewAmounts && (
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Montant (FCFA)</th>
                   )}
@@ -481,18 +590,10 @@ export default function ReportingCommercialPage() {
                     {canWrite && (
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => openEdit(sub)}
-                            className="text-brand-600 hover:text-brand-800"
-                            title="Modifier"
-                          >
+                          <button onClick={() => openEdit(sub)} className="text-brand-600 hover:text-brand-800" title="Modifier">
                             <PencilIcon className="w-4 h-4" />
                           </button>
-                          <button
-                            onClick={() => handleDelete(sub.id)}
-                            className="text-red-400 hover:text-red-600"
-                            title="Supprimer"
-                          >
+                          <button onClick={() => handleDelete(sub.id)} className="text-red-400 hover:text-red-600" title="Supprimer">
                             <TrashIcon className="w-4 h-4" />
                           </button>
                         </div>
@@ -502,6 +603,9 @@ export default function ReportingCommercialPage() {
                 ))}
               </tbody>
             </table>
+            {totalPages > 1 && (
+              <CommercialPaginationBar page={page} totalPages={totalPages} total={total} limit={LIMIT} onPage={setPage} />
+            )}
           </div>
         )}
       </div>

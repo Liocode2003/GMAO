@@ -118,26 +118,8 @@ export default function TeamCalendarPage() {
       const lastDay = getDaysInMonth(year, month);
       const endDate = toDateStr(year, month, lastDay);
 
-      const allLeaves: Leave[] = [];
-      await Promise.all(allEmps.slice(0, 50).map(async emp => {
-        try {
-          const lRes = await api.get(`/leaves/employee/${emp.id}`, { params: { year } });
-          const empLeaves: Leave[] = (lRes.data || [])
-            .filter((l: Leave) => l.status === 'APPROUVE' || l.status === 'EN_ATTENTE')
-            .filter((l: Leave) => {
-              const ls = new Date(l.start_date);
-              const le = new Date(l.end_date);
-              return ls <= new Date(endDate) && le >= new Date(startDate);
-            })
-            .map((l: Leave) => ({
-              ...l,
-              employee_name: `${emp.first_name} ${emp.last_name}`,
-              service_line: emp.service_line,
-            }));
-          allLeaves.push(...empLeaves);
-        } catch { /* skip */ }
-      }));
-      setLeaves(allLeaves);
+      const lRes = await api.get('/leaves/calendar', { params: { year, startDate, endDate } });
+      setLeaves(lRes.data || []);
 
       if (isDRH) {
         try {

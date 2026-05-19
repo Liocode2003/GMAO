@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { PlusIcon, TrashIcon, PencilIcon, AcademicCapIcon, XMarkIcon } from '@heroicons/react/24/outline';
@@ -23,39 +23,109 @@ interface Training {
 }
 
 const TYPE_COLORS: Record<string, string> = {
-  INTRA: 'badge-blue',
+  INTRA:   'badge-blue',
   INTERNE: 'badge-green',
-  AOC: 'badge-yellow',
-  GROUPE: 'badge-purple',
+  AOC:     'badge-yellow',
+  GROUPE:  'badge-purple',
 };
+
+const LIMIT = 20;
+
+function SortTh({ col, label, current, order, onClick }: {
+  col: string; label: string; current: string; order: 'asc' | 'desc'; onClick: (col: string) => void;
+}) {
+  const active = current === col;
+  return (
+    <th className="cursor-pointer select-none hover:bg-gray-100 transition-colors" onClick={() => onClick(col)}>
+      <span className="flex items-center gap-1">
+        {label}
+        <span className={`text-xs ${active ? 'text-brand-600' : 'text-gray-300'}`}>
+          {active ? (order === 'asc' ? '↑' : '↓') : '↕'}
+        </span>
+      </span>
+    </th>
+  );
+}
+
+function PaginationBar({ page, totalPages, total, limit, onPage }: {
+  page: number; totalPages: number; total: number; limit: number; onPage: (p: number) => void;
+}) {
+  if (totalPages <= 1) return null;
+  const from = Math.min((page - 1) * limit + 1, total);
+  const to   = Math.min(page * limit, total);
+  const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+  return (
+    <div className="flex items-center justify-between py-3 px-2 border-t border-gray-100 mt-1">
+      <span className="text-xs text-gray-500">{from}–{to} sur {total}</span>
+      <div className="flex gap-1">
+        <button disabled={page === 1} onClick={() => onPage(page - 1)}
+          className="px-2 py-1 text-xs border rounded disabled:opacity-30 hover:bg-gray-50">◀</button>
+        {pages.map(p => (
+          <button key={p} onClick={() => onPage(p)}
+            className={`px-2.5 py-1 text-xs border rounded ${p === page ? 'bg-brand-700 text-white border-brand-700' : 'hover:bg-gray-50'}`}>
+            {p}
+          </button>
+        ))}
+        <button disabled={page === totalPages} onClick={() => onPage(page + 1)}
+          className="px-2 py-1 text-xs border rounded disabled:opacity-30 hover:bg-gray-50">▶</button>
+      </div>
+    </div>
+  );
+}
 
 export default function TrainingsPage() {
   const { user } = useAuthStore();
-  const [trainings, setTrainings] = useState<Training[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [year, setYear] = useState(new Date().getFullYear());
-  const [showModal, setShowModal] = useState(false);
-  const [editing, setEditing] = useState<Training | null>(null);
+  const [trainings, setTrainings]       = useState<Training[]>([]);
+  const [allTrainings, setAllTrainings] = useState<Training[]>([]);
+  const [loading, setLoading]           = useState(true);
+  const [year, setYear]                 = useState(new Date().getFullYear());
+  const [showModal, setShowModal]       = useState(false);
+  const [editing, setEditing]           = useState<Training | null>(null);
+
+  const [page, setPage]           = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal]         = useState(0);
+  const [sort, setSort]           = useState('date');
+  const [order, setOrder]         = useState<'asc' | 'desc'>('desc');
 
   const canManage = ['DRH', 'MANAGER'].includes(user?.role || '');
 
-  const fetchTrainings = () => {
+  const fetchAllTrainings = useCallback(() => {
+    api.get('/trainings', { params: { year, limit: 500 } })
+      .then(res => setAllTrainings(res.data.trainings || []));
+  }, [year]);
+
+  const fetchTrainings = useCallback(() => {
     setLoading(true);
-    api.get('/trainings', { params: { year } })
-      .then(res => setTrainings(res.data))
+    api.get('/trainings', { params: { year, page, limit: LIMIT, sort, order } })
+      .then(res => {
+        setTrainings(res.data.trainings || []);
+        setTotal(res.data.total || 0);
+        setTotalPages(res.data.totalPages || 1);
+      })
       .finally(() => setLoading(false));
+  }, [year, page, sort, order]);
+
+  useEffect(() => { fetchAllTrainings(); }, [fetchAllTrainings]);
+  useEffect(() => { fetchTrainings(); }, [fetchTrainings]);
+
+  const handleSort = (col: string) => {
+    if (sort === col) setOrder(o => o === 'asc' ? 'desc' : 'asc');
+    else { setSort(col); setOrder('desc'); }
+    setPage(1);
   };
 
-  useEffect(() => { fetchTrainings(); }, [year]);
+  const handleYearChange = (y: number) => { setYear(y); setPage(1); };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Supprimer cette formation ?')) return;
     await api.delete(`/trainings/${id}`);
     toast.success('Formation supprimée');
+    fetchAllTrainings();
     fetchTrainings();
   };
 
-  const totalHours = trainings.reduce((sum, t) => sum + (parseFloat(String(t.duration_hours)) || 0), 0);
+  const totalHours = allTrainings.reduce((sum, t) => sum + (parseFloat(String(t.duration_hours)) || 0), 0);
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -63,10 +133,10 @@ export default function TrainingsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Formations</h2>
-          <p className="text-gray-500 text-sm mt-1">{trainings.length} formation(s) — {totalHours.toFixed(0)}h au total</p>
+          <p className="text-gray-500 text-sm mt-1">{total} formation(s) — {totalHours.toFixed(0)}h au total</p>
         </div>
         <div className="flex items-center gap-3">
-          <select value={year} onChange={e => setYear(parseInt(e.target.value))} className="input w-28">
+          <select value={year} onChange={e => handleYearChange(parseInt(e.target.value))} className="input w-28">
             {Array.from({ length: new Date().getFullYear() - 2022 + 1 }, (_, i) => 2022 + i).map(y => <option key={y} value={y}>{y}</option>)}
           </select>
           {canManage && (
@@ -80,8 +150,8 @@ export default function TrainingsPage() {
       {/* Stats par type */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {['INTRA', 'INTERNE', 'AOC', 'GROUPE'].map(type => {
-          const count = trainings.filter(t => t.type === type).length;
-          const hours = trainings.filter(t => t.type === type).reduce((s, t) => s + (parseFloat(String(t.duration_hours)) || 0), 0);
+          const count = allTrainings.filter(t => t.type === type).length;
+          const hours = allTrainings.filter(t => t.type === type).reduce((s, t) => s + (parseFloat(String(t.duration_hours)) || 0), 0);
           return (
             <div key={type} className="card text-center p-4">
               <span className={`badge ${TYPE_COLORS[type] || 'badge-gray'} mb-2`}>{type}</span>
@@ -92,26 +162,62 @@ export default function TrainingsPage() {
         })}
       </div>
 
-      {/* Table */}
-      <div className="table-container">
+      {/* Mobile cards */}
+      <div className="sm:hidden space-y-3">
+        {loading ? (
+          <div className="py-8 text-center text-sm text-gray-400">Chargement...</div>
+        ) : trainings.length === 0 ? (
+          <EmptyState
+            icon={AcademicCapIcon}
+            title="Aucune formation enregistrée"
+            description={`Aucune session de formation pour l'année ${year}`}
+            action={canManage ? { label: '+ Nouvelle formation', onClick: () => setShowModal(true) } : undefined}
+          />
+        ) : trainings.map(t => (
+          <div key={t.id} className="card p-4">
+            <div className="flex items-start justify-between mb-2">
+              <span className={`badge text-xs ${TYPE_COLORS[t.type] || 'badge-gray'}`}>{t.type}</span>
+              {canManage && (
+                <div className="flex gap-1">
+                  <button onClick={() => { setEditing(t); setShowModal(true); }}
+                    className="p-1.5 text-gray-400 hover:text-amber-600 rounded"><PencilIcon className="w-4 h-4" /></button>
+                  <button onClick={() => handleDelete(t.id)}
+                    className="p-1.5 text-gray-400 hover:text-red-600 rounded"><TrashIcon className="w-4 h-4" /></button>
+                </div>
+              )}
+            </div>
+            <p className="font-medium text-gray-800 text-sm">{t.title}</p>
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+              <span>{new Date(t.date).toLocaleDateString('fr-FR')}</span>
+              {t.location && <span>{t.location}</span>}
+              {t.duration_hours && <span>{t.duration_hours}h</span>}
+              <span>{t.participant_count} pers.</span>
+            </div>
+          </div>
+        ))}
+        <PaginationBar page={page} totalPages={totalPages} total={total} limit={LIMIT} onPage={setPage} />
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden sm:block table-container">
         <table className="table">
           <thead>
             <tr>
-              <th>Type</th>
-              <th>Thème / Formation</th>
-              <th>Date</th>
+              <SortTh col="type"           label="Type"          current={sort} order={order} onClick={handleSort} />
+              <SortTh col="title"          label="Thème / Formation" current={sort} order={order} onClick={handleSort} />
+              <SortTh col="date"           label="Date"          current={sort} order={order} onClick={handleSort} />
               <th>Lieu</th>
-              <th>Durée</th>
-              <th>Formateur</th>
+              <SortTh col="duration_hours" label="Durée"         current={sort} order={order} onClick={handleSort} />
+              <SortTh col="trainer"        label="Formateur"     current={sort} order={order} onClick={handleSort} />
               <th>Participants</th>
               {canManage && <th>Actions</th>}
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <TableSkeletonRows cols={8} rows={5} />
+              <TableSkeletonRows cols={canManage ? 8 : 7} rows={5} />
             ) : trainings.length === 0 ? (
-              <tr><td colSpan={8}>
+              <tr><td colSpan={canManage ? 8 : 7}>
                 <EmptyState
                   icon={AcademicCapIcon}
                   title="Aucune formation enregistrée"
@@ -127,22 +233,16 @@ export default function TrainingsPage() {
                 <td className="text-sm text-gray-600">{t.location || '—'}</td>
                 <td className="text-sm">{t.duration_hours ? `${t.duration_hours}h` : '—'}</td>
                 <td className="text-sm text-gray-600">{t.trainer || '—'}</td>
-                <td>
-                  <span className="badge badge-gray">{t.participant_count} pers.</span>
-                </td>
+                <td><span className="badge badge-gray">{t.participant_count} pers.</span></td>
                 {canManage && (
                   <td>
                     <div className="flex gap-1">
-                      <button
-                        onClick={() => { setEditing(t); setShowModal(true); }}
-                        className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded"
-                      >
+                      <button onClick={() => { setEditing(t); setShowModal(true); }}
+                        className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded">
                         <PencilIcon className="w-4 h-4" />
                       </button>
-                      <button
-                        onClick={() => handleDelete(t.id)}
-                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
-                      >
+                      <button onClick={() => handleDelete(t.id)}
+                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded">
                         <TrashIcon className="w-4 h-4" />
                       </button>
                     </div>
@@ -151,7 +251,7 @@ export default function TrainingsPage() {
               </tr>
             ))}
           </tbody>
-          {trainings.length > 0 && (
+          {allTrainings.length > 0 && (
             <tfoot>
               <tr className="bg-gray-50 font-semibold">
                 <td colSpan={4} className="px-4 py-2 text-right text-sm text-gray-700">Total heures:</td>
@@ -161,6 +261,7 @@ export default function TrainingsPage() {
             </tfoot>
           )}
         </table>
+        <PaginationBar page={page} totalPages={totalPages} total={total} limit={LIMIT} onPage={setPage} />
       </div>
 
       {/* Modal */}
@@ -168,7 +269,7 @@ export default function TrainingsPage() {
         <TrainingModal
           training={editing}
           onClose={() => setShowModal(false)}
-          onSaved={() => { setShowModal(false); fetchTrainings(); }}
+          onSaved={() => { setShowModal(false); fetchAllTrainings(); fetchTrainings(); }}
         />
       )}
     </div>
@@ -182,15 +283,15 @@ function TrainingModal({ training, onClose, onSaved }: {
 }) {
   useModalEscape(onClose);
   const [form, setForm] = useState({
-    type: training?.type || 'INTRA',
-    title: training?.title || '',
-    date: training?.date ? training.date.split('T')[0] : '',
-    location: training?.location || '',
-    start_time: training?.start_time || '',
-    end_time: training?.end_time || '',
+    type:           training?.type || 'INTRA',
+    title:          training?.title || '',
+    date:           training?.date ? training.date.split('T')[0] : '',
+    location:       training?.location || '',
+    start_time:     training?.start_time || '',
+    end_time:       training?.end_time || '',
     duration_hours: training?.duration_hours || '',
-    trainer: training?.trainer || '',
-    observations: training?.observations || '',
+    trainer:        training?.trainer || '',
+    observations:   training?.observations || '',
   });
   const [saving, setSaving] = useState(false);
 
@@ -221,7 +322,9 @@ function TrainingModal({ training, onClose, onSaved }: {
           <h3 id="training-modal-title" className="text-lg font-semibold text-gray-800">
             {training ? 'Modifier la formation' : 'Nouvelle formation'}
           </h3>
-          <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100" aria-label="Fermer"><XMarkIcon className="w-5 h-5" /></button>
+          <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100" aria-label="Fermer">
+            <XMarkIcon className="w-5 h-5" />
+          </button>
         </div>
         <div className="flex-1 overflow-y-auto p-6 space-y-3">
           <div>

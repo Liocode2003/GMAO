@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { PlusIcon, PencilIcon, TrashIcon, StarIcon, XMarkIcon } from '@heroicons/react/24/outline';
@@ -44,58 +44,122 @@ const PERIOD_LABELS: Record<string, string> = {
 
 const STATUS_COLORS: Record<string, string> = {
   BROUILLON: 'badge-gray',
-  EN_COURS: 'badge-yellow',
-  TERMINE: 'badge-green',
+  EN_COURS:  'badge-yellow',
+  TERMINE:   'badge-green',
 };
 
-const ScoreBar = ({ label, score }: { label: string; score: number | null }) => {
-  const pct = score !== null ? (score / 20) * 100 : 0;
-  const color = score === null ? 'bg-gray-200' : score >= 16 ? 'bg-green-500' : score >= 12 ? 'bg-blue-500' : score >= 8 ? 'bg-yellow-400' : 'bg-red-400';
+const STATUS_LABELS: Record<string, string> = {
+  BROUILLON: 'Brouillon',
+  EN_COURS:  'En cours',
+  TERMINE:   'Terminé',
+};
+
+const LIMIT = 20;
+
+function SortTh({ col, label, current, order, onClick }: {
+  col: string; label: string; current: string; order: 'asc' | 'desc'; onClick: (col: string) => void;
+}) {
+  const active = current === col;
   return (
-    <div>
-      <div className="flex justify-between text-xs text-gray-500 mb-1">
-        <span>{label}</span>
-        <span className="font-semibold text-gray-800">{score !== null ? `${score}/20` : '—'}</span>
-      </div>
-      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-        <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
+    <th className="cursor-pointer select-none hover:bg-gray-100 transition-colors" onClick={() => onClick(col)}>
+      <span className="flex items-center gap-1">
+        {label}
+        <span className={`text-xs ${active ? 'text-brand-600' : 'text-gray-300'}`}>
+          {active ? (order === 'asc' ? '↑' : '↓') : '↕'}
+        </span>
+      </span>
+    </th>
+  );
+}
+
+function PaginationBar({ page, totalPages, total, limit, onPage }: {
+  page: number; totalPages: number; total: number; limit: number; onPage: (p: number) => void;
+}) {
+  if (totalPages <= 1) return null;
+  const from = Math.min((page - 1) * limit + 1, total);
+  const to   = Math.min(page * limit, total);
+  const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+  return (
+    <div className="flex items-center justify-between py-3 px-2 border-t border-gray-100 mt-1">
+      <span className="text-xs text-gray-500">{from}–{to} sur {total}</span>
+      <div className="flex gap-1">
+        <button disabled={page === 1} onClick={() => onPage(page - 1)}
+          className="px-2 py-1 text-xs border rounded disabled:opacity-30 hover:bg-gray-50">◀</button>
+        {pages.map(p => (
+          <button key={p} onClick={() => onPage(p)}
+            className={`px-2.5 py-1 text-xs border rounded ${p === page ? 'bg-brand-700 text-white border-brand-700' : 'hover:bg-gray-50'}`}>
+            {p}
+          </button>
+        ))}
+        <button disabled={page === totalPages} onClick={() => onPage(page + 1)}
+          className="px-2 py-1 text-xs border rounded disabled:opacity-30 hover:bg-gray-50">▶</button>
       </div>
     </div>
   );
-};
+}
 
 export default function EvaluationsPage() {
   const { user } = useAuthStore();
-  const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [year, setYear] = useState(new Date().getFullYear());
-  const [period, setPeriod] = useState('');
-  const [showModal, setShowModal] = useState(false);
-  const [editing, setEditing] = useState<Evaluation | null>(null);
+  const [evaluations, setEvaluations]       = useState<Evaluation[]>([]);
+  const [allEvaluations, setAllEvaluations] = useState<Evaluation[]>([]);
+  const [loading, setLoading]               = useState(true);
+  const [year, setYear]                     = useState(new Date().getFullYear());
+  const [period, setPeriod]                 = useState('');
+  const [showModal, setShowModal]           = useState(false);
+  const [editing, setEditing]               = useState<Evaluation | null>(null);
+
+  const [page, setPage]             = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal]           = useState(0);
+  const [sort, setSort]             = useState('created_at');
+  const [order, setOrder]           = useState<'asc' | 'desc'>('desc');
 
   const canManage = ['DRH', 'MANAGER'].includes(user?.role || '');
 
-  const fetchEvaluations = () => {
+  const fetchAllEvaluations = useCallback(() => {
+    api.get('/evaluations', { params: { year, ...(period && { period }), limit: 500 } })
+      .then(res => setAllEvaluations(res.data.evaluations || []));
+  }, [year, period]);
+
+  const fetchEvaluations = useCallback(() => {
     setLoading(true);
-    api.get('/evaluations', { params: { year, ...(period && { period }) } })
-      .then(res => setEvaluations(res.data))
+    api.get('/evaluations', { params: { year, ...(period && { period }), page, limit: LIMIT, sort, order } })
+      .then(res => {
+        setEvaluations(res.data.evaluations || []);
+        setTotal(res.data.total || 0);
+        setTotalPages(res.data.totalPages || 1);
+      })
       .finally(() => setLoading(false));
+  }, [year, period, page, sort, order]);
+
+  useEffect(() => { fetchAllEvaluations(); }, [fetchAllEvaluations]);
+  useEffect(() => { fetchEvaluations(); }, [fetchEvaluations]);
+
+  const handleSort = (col: string) => {
+    if (sort === col) setOrder(o => o === 'asc' ? 'desc' : 'asc');
+    else { setSort(col); setOrder('desc'); }
+    setPage(1);
   };
 
-  useEffect(() => { fetchEvaluations(); }, [year, period]);
+  const handleFilterChange = (newYear: number, newPeriod: string) => {
+    setYear(newYear);
+    setPeriod(newPeriod);
+    setPage(1);
+  };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Supprimer cette évaluation ?')) return;
     await api.delete(`/evaluations/${id}`);
     toast.success('Évaluation supprimée');
+    fetchAllEvaluations();
     fetchEvaluations();
   };
 
-  const avgScore = evaluations
+  const avgScore = allEvaluations
     .filter(e => e.overall_score !== null)
     .reduce((sum, e, _, arr) => sum + (e.overall_score! / arr.length), 0);
 
-  const terminated = evaluations.filter(e => e.status === 'TERMINE').length;
+  const terminated = allEvaluations.filter(e => e.status === 'TERMINE').length;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -104,18 +168,18 @@ export default function EvaluationsPage() {
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Évaluations</h2>
           <p className="text-gray-500 text-sm mt-1">
-            {evaluations.length} évaluation(s) — {terminated} terminée(s)
-            {evaluations.filter(e => e.overall_score !== null).length > 0 && ` — Moyenne: ${avgScore.toFixed(1)}/20`}
+            {total} évaluation(s) — {terminated} terminée(s)
+            {allEvaluations.filter(e => e.overall_score !== null).length > 0 && ` — Moyenne: ${avgScore.toFixed(1)}/20`}
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <select value={period} onChange={e => setPeriod(e.target.value)} className="input w-36">
+          <select value={period} onChange={e => handleFilterChange(year, e.target.value)} className="input w-36">
             <option value="">Toutes périodes</option>
             <option value="ANNUEL">Annuel</option>
             <option value="MI_ANNUEL">Mi-annuel</option>
             <option value="PROBATOIRE">Probatoire</option>
           </select>
-          <select value={year} onChange={e => setYear(parseInt(e.target.value))} className="input w-24">
+          <select value={year} onChange={e => handleFilterChange(parseInt(e.target.value), period)} className="input w-24">
             {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(y => (
               <option key={y} value={y}>{y}</option>
             ))}
@@ -131,10 +195,10 @@ export default function EvaluationsPage() {
       {/* Stats cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {['BROUILLON', 'EN_COURS', 'TERMINE'].map(s => {
-          const count = evaluations.filter(e => e.status === s).length;
+          const count = allEvaluations.filter(e => e.status === s).length;
           return (
             <div key={s} className="card text-center p-4">
-              <span className={`badge ${STATUS_COLORS[s]} mb-2`}>{s === 'BROUILLON' ? 'Brouillon' : s === 'EN_COURS' ? 'En cours' : 'Terminé'}</span>
+              <span className={`badge ${STATUS_COLORS[s]} mb-2`}>{STATUS_LABELS[s]}</span>
               <p className="text-2xl font-bold text-gray-800">{count}</p>
             </div>
           );
@@ -145,32 +209,80 @@ export default function EvaluationsPage() {
             <span className="text-xs font-semibold text-yellow-600">Moyenne</span>
           </div>
           <p className="text-2xl font-bold text-gray-800">
-            {evaluations.filter(e => e.overall_score !== null).length > 0 ? `${avgScore.toFixed(1)}` : '—'}
+            {allEvaluations.filter(e => e.overall_score !== null).length > 0 ? `${avgScore.toFixed(1)}` : '—'}
           </p>
           <p className="text-xs text-gray-400">/20</p>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="table-container">
+      {/* Mobile cards */}
+      <div className="sm:hidden space-y-3">
+        {loading ? (
+          <div className="py-8 text-center text-sm text-gray-400">Chargement...</div>
+        ) : evaluations.length === 0 ? (
+          <EmptyState
+            icon={StarIcon}
+            title="Aucune évaluation"
+            description={`Aucune évaluation enregistrée pour ${year}`}
+            action={canManage ? { label: '+ Créer une évaluation', onClick: () => { setEditing(null); setShowModal(true); } } : undefined}
+          />
+        ) : evaluations.map(ev => {
+          const scoreColor = ev.overall_score === null ? 'text-gray-400' :
+            ev.overall_score >= 16 ? 'text-green-600' :
+            ev.overall_score >= 12 ? 'text-blue-600' :
+            ev.overall_score >= 8 ? 'text-yellow-600' : 'text-red-600';
+          return (
+            <div key={ev.id} className="card p-4">
+              <div className="flex items-start justify-between mb-2">
+                <div>
+                  <p className="font-medium text-gray-800 text-sm">{ev.employee_name}</p>
+                  <p className="text-xs text-gray-400">{ev.employee_service_line?.replace(/_/g, ' ')}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {ev.overall_score !== null && (
+                    <span className={`text-base font-bold ${scoreColor}`}>{ev.overall_score}/20</span>
+                  )}
+                  {canManage && (
+                    <div className="flex gap-1">
+                      <button onClick={() => { setEditing(ev); setShowModal(true); }}
+                        className="p-1.5 text-gray-400 hover:text-amber-600 rounded"><PencilIcon className="w-4 h-4" /></button>
+                      <button onClick={() => handleDelete(ev.id)}
+                        className="p-1.5 text-gray-400 hover:text-red-600 rounded"><TrashIcon className="w-4 h-4" /></button>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 text-xs">
+                <span className={`badge ${STATUS_COLORS[ev.status] || 'badge-gray'}`}>{STATUS_LABELS[ev.status] || ev.status}</span>
+                <span className="badge badge-blue">{PERIOD_LABELS[ev.period] || ev.period}</span>
+                <span className="text-gray-500">{ev.year}</span>
+              </div>
+            </div>
+          );
+        })}
+        <PaginationBar page={page} totalPages={totalPages} total={total} limit={LIMIT} onPage={setPage} />
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden sm:block table-container">
         <table className="table">
           <thead>
             <tr>
-              <th>Collaborateur</th>
+              <SortTh col="employee_name" label="Collaborateur"  current={sort} order={order} onClick={handleSort} />
               <th>Période</th>
               <th>Statut</th>
               <th className="text-center">Objectifs</th>
               <th className="text-center">Compétences</th>
               <th className="text-center">Comportement</th>
-              <th className="text-center">Note globale</th>
+              <SortTh col="overall_score" label="Note globale" current={sort} order={order} onClick={handleSort} />
               {canManage && <th>Actions</th>}
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <TableSkeletonRows cols={8} rows={5} />
+              <TableSkeletonRows cols={canManage ? 8 : 7} rows={5} />
             ) : evaluations.length === 0 ? (
-              <tr><td colSpan={8}>
+              <tr><td colSpan={canManage ? 8 : 7}>
                 <EmptyState
                   icon={StarIcon}
                   title="Aucune évaluation"
@@ -190,7 +302,7 @@ export default function EvaluationsPage() {
                     <p className="text-xs text-gray-400">{ev.employee_service_line?.replace(/_/g, ' ')}</p>
                   </td>
                   <td><span className="badge badge-blue">{PERIOD_LABELS[ev.period] || ev.period}</span></td>
-                  <td><span className={`badge ${STATUS_COLORS[ev.status] || 'badge-gray'}`}>{ev.status === 'BROUILLON' ? 'Brouillon' : ev.status === 'EN_COURS' ? 'En cours' : 'Terminé'}</span></td>
+                  <td><span className={`badge ${STATUS_COLORS[ev.status] || 'badge-gray'}`}>{STATUS_LABELS[ev.status] || ev.status}</span></td>
                   <td className="text-center text-sm font-medium">{ev.objectives_score !== null ? `${ev.objectives_score}/20` : '—'}</td>
                   <td className="text-center text-sm font-medium">{ev.skills_score !== null ? `${ev.skills_score}/20` : '—'}</td>
                   <td className="text-center text-sm font-medium">{ev.behavior_score !== null ? `${ev.behavior_score}/20` : '—'}</td>
@@ -218,6 +330,7 @@ export default function EvaluationsPage() {
             })}
           </tbody>
         </table>
+        <PaginationBar page={page} totalPages={totalPages} total={total} limit={LIMIT} onPage={setPage} />
       </div>
 
       {showModal && (
@@ -225,7 +338,7 @@ export default function EvaluationsPage() {
           evaluation={editing}
           year={year}
           onClose={() => setShowModal(false)}
-          onSaved={() => { setShowModal(false); fetchEvaluations(); }}
+          onSaved={() => { setShowModal(false); fetchAllEvaluations(); fetchEvaluations(); }}
         />
       )}
     </div>
@@ -241,17 +354,17 @@ function EvaluationModal({ evaluation, year, onClose, onSaved }: {
   useModalEscape(onClose);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [form, setForm] = useState({
-    employee_id: evaluation?.employee_id || '',
-    year: evaluation?.year || year,
-    period: evaluation?.period || 'ANNUEL',
-    status: evaluation?.status || 'BROUILLON',
+    employee_id:      evaluation?.employee_id || '',
+    year:             evaluation?.year || year,
+    period:           evaluation?.period || 'ANNUEL',
+    status:           evaluation?.status || 'BROUILLON',
     objectives_score: evaluation?.objectives_score ?? '',
-    skills_score: evaluation?.skills_score ?? '',
-    behavior_score: evaluation?.behavior_score ?? '',
-    comments: evaluation?.comments || '',
-    objectives: evaluation?.objectives || '',
-    strengths: evaluation?.strengths || '',
-    improvements: evaluation?.improvements || '',
+    skills_score:     evaluation?.skills_score ?? '',
+    behavior_score:   evaluation?.behavior_score ?? '',
+    comments:         evaluation?.comments || '',
+    objectives:       evaluation?.objectives || '',
+    strengths:        evaluation?.strengths || '',
+    improvements:     evaluation?.improvements || '',
   });
   const [saving, setSaving] = useState(false);
 
@@ -299,7 +412,9 @@ function EvaluationModal({ evaluation, year, onClose, onSaved }: {
           <h3 id="eval-modal-title" className="text-lg font-semibold text-gray-800">
             {evaluation ? 'Modifier l\'évaluation' : 'Nouvelle évaluation'}
           </h3>
-          <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100" aria-label="Fermer"><XMarkIcon className="w-5 h-5" /></button>
+          <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100" aria-label="Fermer">
+            <XMarkIcon className="w-5 h-5" />
+          </button>
         </div>
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
