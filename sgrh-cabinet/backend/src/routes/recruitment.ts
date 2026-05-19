@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { authenticate, authorize } from '../middleware/auth';
+import { validate } from '../middleware/validate';
+import { createCandidateSchema, updateCandidateSchema } from '../schemas/recruitmentSchemas';
 import {
   listCandidates, getCandidate, createCandidate, updateCandidate, deleteCandidate, getStats,
 } from '../controllers/recruitmentController';
@@ -139,7 +141,7 @@ router.get('/:id', getCandidate);
  *       201:
  *         description: Candidat créé
  */
-router.post('/', authorize('DRH', 'MANAGER'), createCandidate);
+router.post('/', authorize('DRH', 'MANAGER'), validate(createCandidateSchema), createCandidate);
 
 /**
  * @swagger
@@ -170,7 +172,7 @@ router.post('/', authorize('DRH', 'MANAGER'), createCandidate);
  *       404:
  *         description: Candidat introuvable
  */
-router.put('/:id', authorize('DRH', 'MANAGER'), updateCandidate);
+router.put('/:id', authorize('DRH', 'MANAGER'), validate(updateCandidateSchema), updateCandidate);
 
 /**
  * @swagger

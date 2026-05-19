@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { authenticate, authorize } from '../middleware/auth';
+import { validate } from '../middleware/validate';
+import { createPayslipSchema, updatePayslipSchema, previewPayslipSchema } from '../schemas/payslipSchemas';
 import {
   listPayslips, getPayslip, previewPayslip,
   createPayslip, updatePayslip, publishPayslip,
@@ -271,7 +273,7 @@ router.get('/:id/pdf', downloadPayslipPDF);
  *       200:
  *         description: Résultat de calcul (brut, net, IGR, déductions)
  */
-router.post('/preview', authorize('DRH'), previewPayslip);
+router.post('/preview', authorize('DRH'), validate(previewPayslipSchema), previewPayslip);
 
 /**
  * @swagger
@@ -308,7 +310,7 @@ router.post('/preview', authorize('DRH'), previewPayslip);
  *       409:
  *         description: Un bulletin existe déjà pour cette période
  */
-router.post('/', authorize('DRH'), createPayslip);
+router.post('/', authorize('DRH'), validate(createPayslipSchema), createPayslip);
 
 /**
  * @swagger
@@ -342,7 +344,7 @@ router.post('/', authorize('DRH'), createPayslip);
  *       404:
  *         description: Bulletin introuvable
  */
-router.put('/:id', authorize('DRH'), updatePayslip);
+router.put('/:id', authorize('DRH'), validate(updatePayslipSchema), updatePayslip);
 
 /**
  * @swagger

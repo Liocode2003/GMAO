@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { authenticate, authorize } from '../middleware/auth';
+import { validate } from '../middleware/validate';
+import { createSubmissionSchema, updateSubmissionSchema } from '../schemas/commercialSchemas';
 import {
   listSubmissions,
   getStats,
@@ -257,7 +259,7 @@ router.get('/', listSubmissions);
  *       400:
  *         description: Données invalides
  */
-router.post('/', authorize('DRH', 'ASSOCIE', 'MANAGER'), createSubmission);
+router.post('/', authorize('DRH', 'ASSOCIE', 'MANAGER'), validate(createSubmissionSchema), createSubmission);
 
 /**
  * @swagger
@@ -293,7 +295,7 @@ router.post('/', authorize('DRH', 'ASSOCIE', 'MANAGER'), createSubmission);
  *       404:
  *         description: Soumission introuvable
  */
-router.put('/:id', authorize('DRH', 'ASSOCIE', 'MANAGER'), updateSubmission);
+router.put('/:id', authorize('DRH', 'ASSOCIE', 'MANAGER'), validate(updateSubmissionSchema), updateSubmission);
 
 /**
  * @swagger

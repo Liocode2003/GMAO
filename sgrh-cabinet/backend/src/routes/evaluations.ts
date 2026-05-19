@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { authenticate, authorize } from '../middleware/auth';
+import { validate } from '../middleware/validate';
+import { createEvaluationSchema, updateEvaluationSchema } from '../schemas/evaluationSchemas';
 import {
   listEvaluations, getEvaluation, createEvaluation, updateEvaluation, deleteEvaluation,
 } from '../controllers/evaluationsController';
@@ -124,7 +126,7 @@ router.get('/:id', getEvaluation);
  *       409:
  *         description: Évaluation déjà existante pour cet employé/année/période
  */
-router.post('/', authorize('DRH', 'MANAGER'), createEvaluation);
+router.post('/', authorize('DRH', 'MANAGER'), validate(createEvaluationSchema), createEvaluation);
 
 /**
  * @swagger
@@ -158,7 +160,7 @@ router.post('/', authorize('DRH', 'MANAGER'), createEvaluation);
  *       404:
  *         description: Évaluation introuvable
  */
-router.put('/:id', authorize('DRH', 'MANAGER'), updateEvaluation);
+router.put('/:id', authorize('DRH', 'MANAGER'), validate(updateEvaluationSchema), updateEvaluation);
 
 /**
  * @swagger
