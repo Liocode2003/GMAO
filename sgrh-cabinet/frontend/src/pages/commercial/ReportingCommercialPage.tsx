@@ -14,6 +14,8 @@ import {
   BriefcaseIcon,
 } from '@heroicons/react/24/outline';
 import { useModalEscape } from '../../components/ui/useModalEscape';
+import SortTh from '../../components/ui/SortTh';
+import PaginationBar from '../../components/ui/PaginationBar';
 import api from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { TableSkeletonRows } from '../../components/ui/Skeleton';
@@ -62,49 +64,7 @@ interface Employee {
   last_name: string;
 }
 
-function CommercialSortTh({ col, label, current, order, onClick }: {
-  col: string; label: string; current: string; order: 'asc' | 'desc'; onClick: (col: string) => void;
-}) {
-  const active = current === col;
-  return (
-    <th
-      className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100 transition-colors"
-      onClick={() => onClick(col)}
-    >
-      <span className="flex items-center gap-1">
-        {label}
-        <span className={`text-xs ${active ? 'text-brand-600' : 'text-gray-300'}`}>
-          {active ? (order === 'asc' ? '↑' : '↓') : '↕'}
-        </span>
-      </span>
-    </th>
-  );
-}
-
-function CommercialPaginationBar({ page, totalPages, total, limit, onPage }: {
-  page: number; totalPages: number; total: number; limit: number; onPage: (p: number) => void;
-}) {
-  const from = Math.min((page - 1) * limit + 1, total);
-  const to   = Math.min(page * limit, total);
-  const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
-  return (
-    <div className="flex items-center justify-between py-3 px-4 border-t border-gray-100">
-      <span className="text-xs text-gray-500">{from}–{to} sur {total}</span>
-      <div className="flex gap-1">
-        <button disabled={page === 1} onClick={() => onPage(page - 1)}
-          className="px-2 py-1 text-xs border rounded disabled:opacity-30 hover:bg-gray-50">◀</button>
-        {pages.map(p => (
-          <button key={p} onClick={() => onPage(p)}
-            className={`px-2.5 py-1 text-xs border rounded ${p === page ? 'bg-brand-700 text-white border-brand-700' : 'hover:bg-gray-50'}`}>
-            {p}
-          </button>
-        ))}
-        <button disabled={page === totalPages} onClick={() => onPage(page + 1)}
-          className="px-2 py-1 text-xs border rounded disabled:opacity-30 hover:bg-gray-50">▶</button>
-      </div>
-    </div>
-  );
-}
+const TH_COMMERCIAL = 'text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider';
 
 const StatusBadge = ({ status }: { status: SubmissionStatus }) => {
   const styles: Record<SubmissionStatus, string> = {
@@ -152,23 +112,30 @@ export default function ReportingCommercialPage() {
   const { register, handleSubmit, watch, reset, formState: { errors } } = useForm<FormData>();
   const watchStatus = watch('status');
 
-  const buildParams = useCallback((type: SubmissionType, withPagination = false) => {
+  const buildFilterParams = useCallback((type: SubmissionType) => {
     const p: Record<string, string | number> = { type };
-    if (filterStatus) p.status = filterStatus;
-    if (filterServiceLine) p.service_line = filterServiceLine;
-    if (filterYear) p.year = filterYear;
-    if (filterMonth) p.month = filterMonth;
-    if (filterQuarter) p.quarter = filterQuarter;
-    if (withPagination) { p.page = page; p.limit = LIMIT; p.sort = sortCol; p.order = sortOrd; }
+    if (filterStatus)      p.status       = filterStatus;
+    if (filterServiceLine) p.service_line  = filterServiceLine;
+    if (filterYear)        p.year          = filterYear;
+    if (filterMonth)       p.month         = filterMonth;
+    if (filterQuarter)     p.quarter       = filterQuarter;
     return p;
-  }, [filterStatus, filterServiceLine, filterYear, filterMonth, filterQuarter, page, sortCol, sortOrd]);
+  }, [filterStatus, filterServiceLine, filterYear, filterMonth, filterQuarter]);
+
+  const buildListParams = useCallback((type: SubmissionType) => ({
+    ...buildFilterParams(type),
+    page,
+    limit: LIMIT,
+    sort:  sortCol,
+    order: sortOrd,
+  }), [buildFilterParams, page, sortCol, sortOrd]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [subRes, statsRes] = await Promise.all([
-        api.get('/commercial', { params: buildParams(activeTab, true) }),
-        api.get('/commercial/stats', { params: buildParams(activeTab) }),
+        api.get('/commercial', { params: buildListParams(activeTab) }),
+        api.get('/commercial/stats', { params: buildFilterParams(activeTab) }),
       ]);
       setSubmissions(subRes.data.submissions || []);
       setTotal(subRes.data.total || 0);
@@ -179,7 +146,7 @@ export default function ReportingCommercialPage() {
     } finally {
       setLoading(false);
     }
-  }, [activeTab, buildParams]);
+  }, [activeTab, buildListParams, buildFilterParams]);
 
   useEffect(() => {
     fetchData();
@@ -273,7 +240,7 @@ export default function ReportingCommercialPage() {
 
   const handleExport = async (format: 'excel' | 'pdf') => {
     try {
-      const params = buildParams(activeTab);
+      const params = buildFilterParams(activeTab);
       const response = await api.get(`/commercial/export/${format}`, {
         params,
         responseType: 'blob',
@@ -517,7 +484,7 @@ export default function ReportingCommercialPage() {
           </div>
         ))}
         {totalPages > 1 && (
-          <CommercialPaginationBar page={page} totalPages={totalPages} total={total} limit={LIMIT} onPage={setPage} />
+          <PaginationBar page={page} totalPages={totalPages} total={total} limit={LIMIT} onPage={setPage} />
         )}
       </div>
 
@@ -551,13 +518,13 @@ export default function ReportingCommercialPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <CommercialSortTh col="reference"       label="Référence"        current={sortCol} order={sortOrd} onClick={handleSort} />
-                  <CommercialSortTh col="title"           label="Objet / Intitulé" current={sortCol} order={sortOrd} onClick={handleSort} />
-                  <CommercialSortTh col="client"          label="Client"           current={sortCol} order={sortOrd} onClick={handleSort} />
-                  <CommercialSortTh col="submission_date" label="Date soumission"  current={sortCol} order={sortOrd} onClick={handleSort} />
+                  <SortTh col="reference"       label="Référence"        current={sortCol} order={sortOrd} onSort={handleSort} />
+                  <SortTh col="title"           label="Objet / Intitulé" current={sortCol} order={sortOrd} onSort={handleSort} />
+                  <SortTh col="client"          label="Client"           current={sortCol} order={sortOrd} onSort={handleSort} />
+                  <SortTh col="submission_date" label="Date soumission"  current={sortCol} order={sortOrd} onSort={handleSort} />
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Ligne de service</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Responsable</th>
-                  <CommercialSortTh col="status" label="Statut" current={sortCol} order={sortOrd} onClick={handleSort} />
+                  <SortTh col="status" label="Statut" current={sortCol} order={sortOrd} onSort={handleSort} className={TH_COMMERCIAL} />
                   {canViewAmounts && (
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Montant (FCFA)</th>
                   )}
@@ -604,7 +571,7 @@ export default function ReportingCommercialPage() {
               </tbody>
             </table>
             {totalPages > 1 && (
-              <CommercialPaginationBar page={page} totalPages={totalPages} total={total} limit={LIMIT} onPage={setPage} />
+              <PaginationBar page={page} totalPages={totalPages} total={total} limit={LIMIT} onPage={setPage} />
             )}
           </div>
         )}

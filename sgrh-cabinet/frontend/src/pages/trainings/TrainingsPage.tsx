@@ -3,6 +3,8 @@ import api from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { PlusIcon, TrashIcon, PencilIcon, AcademicCapIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useModalEscape } from '../../components/ui/useModalEscape';
+import SortTh from '../../components/ui/SortTh';
+import PaginationBar from '../../components/ui/PaginationBar';
 import toast from 'react-hot-toast';
 import { TableSkeletonRows } from '../../components/ui/Skeleton';
 import EmptyState from '../../components/ui/EmptyState';
@@ -30,48 +32,6 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 const LIMIT = 20;
-
-function SortTh({ col, label, current, order, onClick }: {
-  col: string; label: string; current: string; order: 'asc' | 'desc'; onClick: (col: string) => void;
-}) {
-  const active = current === col;
-  return (
-    <th className="cursor-pointer select-none hover:bg-gray-100 transition-colors" onClick={() => onClick(col)}>
-      <span className="flex items-center gap-1">
-        {label}
-        <span className={`text-xs ${active ? 'text-brand-600' : 'text-gray-300'}`}>
-          {active ? (order === 'asc' ? '↑' : '↓') : '↕'}
-        </span>
-      </span>
-    </th>
-  );
-}
-
-function PaginationBar({ page, totalPages, total, limit, onPage }: {
-  page: number; totalPages: number; total: number; limit: number; onPage: (p: number) => void;
-}) {
-  if (totalPages <= 1) return null;
-  const from = Math.min((page - 1) * limit + 1, total);
-  const to   = Math.min(page * limit, total);
-  const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
-  return (
-    <div className="flex items-center justify-between py-3 px-2 border-t border-gray-100 mt-1">
-      <span className="text-xs text-gray-500">{from}–{to} sur {total}</span>
-      <div className="flex gap-1">
-        <button disabled={page === 1} onClick={() => onPage(page - 1)}
-          className="px-2 py-1 text-xs border rounded disabled:opacity-30 hover:bg-gray-50">◀</button>
-        {pages.map(p => (
-          <button key={p} onClick={() => onPage(p)}
-            className={`px-2.5 py-1 text-xs border rounded ${p === page ? 'bg-brand-700 text-white border-brand-700' : 'hover:bg-gray-50'}`}>
-            {p}
-          </button>
-        ))}
-        <button disabled={page === totalPages} onClick={() => onPage(page + 1)}
-          className="px-2 py-1 text-xs border rounded disabled:opacity-30 hover:bg-gray-50">▶</button>
-      </div>
-    </div>
-  );
-}
 
 export default function TrainingsPage() {
   const { user } = useAuthStore();
@@ -203,12 +163,12 @@ export default function TrainingsPage() {
         <table className="table">
           <thead>
             <tr>
-              <SortTh col="type"           label="Type"          current={sort} order={order} onClick={handleSort} />
-              <SortTh col="title"          label="Thème / Formation" current={sort} order={order} onClick={handleSort} />
-              <SortTh col="date"           label="Date"          current={sort} order={order} onClick={handleSort} />
+              <SortTh col="type"           label="Type"          current={sort} order={order} onSort={handleSort} />
+              <SortTh col="title"          label="Thème / Formation" current={sort} order={order} onSort={handleSort} />
+              <SortTh col="date"           label="Date"          current={sort} order={order} onSort={handleSort} />
               <th>Lieu</th>
-              <SortTh col="duration_hours" label="Durée"         current={sort} order={order} onClick={handleSort} />
-              <SortTh col="trainer"        label="Formateur"     current={sort} order={order} onClick={handleSort} />
+              <SortTh col="duration_hours" label="Durée"         current={sort} order={order} onSort={handleSort} />
+              <SortTh col="trainer"        label="Formateur"     current={sort} order={order} onSort={handleSort} />
               <th>Participants</th>
               {canManage && <th>Actions</th>}
             </tr>

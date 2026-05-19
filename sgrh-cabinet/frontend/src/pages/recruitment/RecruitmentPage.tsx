@@ -2,10 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import {
-  PlusIcon, PencilIcon, TrashIcon, UserGroupIcon,
-  ChevronUpIcon, ChevronDownIcon, ChevronUpDownIcon,
-  ChevronLeftIcon, ChevronRightIcon, XMarkIcon,
+  PlusIcon, PencilIcon, TrashIcon, UserGroupIcon, XMarkIcon,
 } from '@heroicons/react/24/outline';
+import SortTh from '../../components/ui/SortTh';
+import PaginationBar from '../../components/ui/PaginationBar';
 import toast from 'react-hot-toast';
 import { PageSpinner } from '../../components/ui/Spinner';
 import EmptyState from '../../components/ui/EmptyState';
@@ -40,74 +40,6 @@ const STATUS_CONFIG: Record<CandidateStatus, { label: string; color: string; bg:
 };
 
 const PIPELINE_STAGES: CandidateStatus[] = ['NOUVEAU', 'EN_COURS', 'ENTRETIEN', 'OFFRE', 'EMBAUCHE'];
-
-// ─── SortTh ──────────────────────────────────────────────────────────────────
-function SortTh({ label, field, sort, order, onSort }: {
-  label: string; field: string; sort: string; order: 'asc' | 'desc'; onSort: (f: string) => void;
-}) {
-  const active = sort === field;
-  return (
-    <th
-      className="cursor-pointer select-none group hover:bg-gray-100 transition-colors"
-      onClick={() => onSort(field)}
-      aria-sort={active ? (order === 'asc' ? 'ascending' : 'descending') : 'none'}
-    >
-      <span className="flex items-center gap-1">
-        {label}
-        {active
-          ? order === 'asc'
-            ? <ChevronUpIcon className="w-3 h-3 text-brand-600 flex-shrink-0" />
-            : <ChevronDownIcon className="w-3 h-3 text-brand-600 flex-shrink-0" />
-          : <ChevronUpDownIcon className="w-3 h-3 text-gray-300 group-hover:text-gray-400 flex-shrink-0" />}
-      </span>
-    </th>
-  );
-}
-
-// ─── Pagination Bar ───────────────────────────────────────────────────────────
-function PaginationBar({ page, totalPages, total, limit, onPage }: {
-  page: number; totalPages: number; total: number; limit: number; onPage: (p: number) => void;
-}) {
-  if (totalPages <= 1) return null;
-  const from = (page - 1) * limit + 1;
-  const to = Math.min(page * limit, total);
-  return (
-    <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-      <span className="text-sm text-gray-500">{from}–{to} sur {total}</span>
-      <div className="flex items-center gap-1">
-        <button
-          onClick={() => onPage(page - 1)}
-          disabled={page === 1}
-          className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
-          aria-label="Page précédente"
-        >
-          <ChevronLeftIcon className="w-4 h-4" />
-        </button>
-        {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
-          const p = totalPages <= 7 ? i + 1 : i < 3 ? i + 1 : i >= 4 ? totalPages - 6 + i : page;
-          return (
-            <button
-              key={p}
-              onClick={() => onPage(p)}
-              className={`w-8 h-8 text-sm rounded font-medium transition-colors ${p === page ? 'bg-brand-600 text-white' : 'hover:bg-gray-100 text-gray-600'}`}
-              aria-current={p === page ? 'page' : undefined}
-            >
-              {p}
-            </button>
-          );
-        })}
-        <button
-          onClick={() => onPage(page + 1)}
-          disabled={page === totalPages}
-          className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
-          aria-label="Page suivante"
-        >
-          <ChevronRightIcon className="w-4 h-4" />
-        </button>
-      </div>
-    </div>
-  );
-}
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -395,12 +327,12 @@ export default function RecruitmentPage() {
             <table className="table">
               <thead>
                 <tr>
-                  <SortTh label="Candidat" field="last_name" sort={sort} order={sortOrder} onSort={handleSort} />
-                  <SortTh label="Poste" field="position" sort={sort} order={sortOrder} onSort={handleSort} />
+                  <SortTh label="Candidat" col="last_name" current={sort} order={sortOrder} onSort={handleSort} />
+                  <SortTh label="Poste" col="position" current={sort} order={sortOrder} onSort={handleSort} />
                   <th>Statut</th>
                   <th>Source</th>
-                  <SortTh label="Entretien" field="interview_date" sort={sort} order={sortOrder} onSort={handleSort} />
-                  <SortTh label="Salaire souhaité" field="salary_expected" sort={sort} order={sortOrder} onSort={handleSort} />
+                  <SortTh label="Entretien" col="interview_date" current={sort} order={sortOrder} onSort={handleSort} />
+                  <SortTh label="Salaire souhaité" col="salary_expected" current={sort} order={sortOrder} onSort={handleSort} />
                   {canManage && <th>Actions</th>}
                 </tr>
               </thead>
