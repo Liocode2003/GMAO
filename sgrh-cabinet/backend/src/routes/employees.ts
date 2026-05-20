@@ -14,9 +14,6 @@ import { createEmployeeSchema, updateEmployeeSchema } from '../schemas/employeeS
 
 const router = Router();
 
-// Photo publique — doit être AVANT router.use(authenticate)
-router.get('/:id/photo/file/:filename', servePhoto);
-
 router.use(authenticate);
 
 /**
@@ -278,6 +275,8 @@ router.post('/:id/photo', authorize('DRH'), (req: Request, res: Response, next: 
     next();
   });
 }, handlePhotoUpload);
+
+router.get('/:id/photo/file/:filename', servePhoto);
 
 /**
  * @swagger
