@@ -23,7 +23,7 @@ const submissionBaseSchema = z.object({
 const gaGneRefine = (data: { status?: string; contract_amount?: number; contract_start_date?: string; contract_end_date?: string }) =>
   data.status !== 'GAGNE' || (!!data.contract_amount && !!data.contract_start_date && !!data.contract_end_date);
 
-const gagneMessage = { message: 'Montant, date début et date fin sont requis pour le statut GAGNE', path: ['contract_amount'] } as const;
+const gagneMessage = { message: 'Montant, date début et date fin sont requis pour le statut GAGNE', path: ['contract_amount'] };
 
 export const createSubmissionSchema = submissionBaseSchema.refine(gaGneRefine, gagneMessage);
 export const updateSubmissionSchema  = submissionBaseSchema.partial().refine(gaGneRefine, gagneMessage);
