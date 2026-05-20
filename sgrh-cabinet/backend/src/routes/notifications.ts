@@ -79,7 +79,7 @@ router.get('/', async (req: Request, res: Response) => {
 
     // Congés en attente de validation
     const pendingLeaves = await query(`
-      SELECT l.id, l.leave_type, l.start_date, l.end_date,
+      SELECT l.id, l.type AS leave_type, l.start_date, l.end_date,
              e.first_name, e.last_name, e.id as employee_id,
              (l.end_date - l.start_date + 1) as days
       FROM leaves l
