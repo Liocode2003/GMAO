@@ -1,7 +1,6 @@
 export const ROLES = {
   DRH:               'DRH',
   DIRECTION_GENERALE: 'DIRECTION_GENERALE',
-  ADG:               'ADG',
   MANAGER:           'MANAGER',
   ASSOCIE:           'ASSOCIE',
   UTILISATEUR:       'UTILISATEUR',

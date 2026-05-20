@@ -61,7 +61,7 @@ export const login = async (req: Request, res: Response) => {
 };
 
 export const refresh = async (req: Request, res: Response) => {
-  const { refreshToken } = req.body;
+  const refreshToken = req.body.refreshToken || req.cookies?.refreshToken;
   if (!refreshToken) return res.status(400).json({ error: 'Token de rafraîchissement manquant' });
 
   try {
@@ -69,6 +69,16 @@ export const refresh = async (req: Request, res: Response) => {
     if (!accessToken) {
       return res.status(401).json({ error: 'Token de rafraîchissement invalide' });
     }
+
+    const isProduction = process.env.NODE_ENV === 'production';
+    res.cookie('accessToken', accessToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'strict' : 'lax',
+      maxAge: 60 * 60 * 1000,
+      path: '/',
+    });
+
     return res.json({ accessToken });
   } catch (err) {
     logger.error('Erreur refresh', err);

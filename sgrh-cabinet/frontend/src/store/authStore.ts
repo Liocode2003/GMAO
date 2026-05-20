@@ -5,21 +5,16 @@ import { User } from '../types';
 
 interface AuthState {
   user: User | null;
-  accessToken: string | null;
-  refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  setTokens: (access: string, refresh: string) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       user: null,
-      accessToken: null,
-      refreshToken: null,
       isAuthenticated: false,
       isLoading: false,
 
@@ -27,12 +22,9 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true });
         try {
           const { data } = await api.post('/auth/login', { email, password });
-          localStorage.setItem('accessToken', data.accessToken);
-          localStorage.setItem('refreshToken', data.refreshToken);
+          // Les tokens sont dans les cookies httpOnly posés par le serveur
           set({
             user: data.user,
-            accessToken: data.accessToken,
-            refreshToken: data.refreshToken,
             isAuthenticated: true,
             isLoading: false,
           });
@@ -43,27 +35,18 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: async () => {
-        const { refreshToken } = get();
         try {
-          await api.post('/auth/logout', { refreshToken });
+          // Le serveur révoque le refreshToken et efface les cookies
+          await api.post('/auth/logout', {});
         } catch {}
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false });
-      },
-
-      setTokens: (access, refresh) => {
-        set({ accessToken: access, refreshToken: refresh });
-        localStorage.setItem('accessToken', access);
-        localStorage.setItem('refreshToken', refresh);
+        set({ user: null, isAuthenticated: false });
       },
     }),
     {
       name: 'sgrh-auth',
+      // Ne persister que les infos utilisateur — jamais les tokens
       partialize: (state) => ({
         user: state.user,
-        accessToken: state.accessToken,
-        refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
       }),
     }

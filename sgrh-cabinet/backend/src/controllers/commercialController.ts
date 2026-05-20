@@ -335,6 +335,7 @@ export const exportExcel = async (req: Request, res: Response) => {
       EN_COURS: 'En cours',
       GAGNE: 'Gagné',
       PERDU: 'Perdu',
+      SANS_SUITE: 'Sans suite',
     };
 
     for (const row of result.rows) {
@@ -409,7 +410,7 @@ export const exportPDF = async (req: Request, res: Response) => {
     doc.moveDown(1);
 
     const TYPE_LABELS: Record<string, string> = { AMI: 'AMI', APPEL_OFFRE: "Appel d'offre" };
-    const STATUS_LABELS: Record<string, string> = { EN_COURS: 'En cours', GAGNE: 'Gagné', PERDU: 'Perdu' };
+    const STATUS_LABELS: Record<string, string> = { EN_COURS: 'En cours', GAGNE: 'Gagné', PERDU: 'Perdu', SANS_SUITE: 'Sans suite' };
 
     // Simple table
     const headers = ['Type', 'Référence', 'Objet', 'Client', 'Date', 'Ligne', 'Responsable', 'Statut'];
