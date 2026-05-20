@@ -6,7 +6,8 @@
 -- Nullifier les FK avant suppression
 UPDATE employees      SET created_by = NULL;
 UPDATE leaves         SET approved_by = NULL, created_by = NULL;
-UPDATE salary_history SET changed_by = NULL;
+-- colonne changed_by absente de salary_history (supprimée dans le schéma actuel)
+-- UPDATE salary_history SET changed_by = NULL;
 DELETE FROM audit_logs;
 DELETE FROM users;
 
