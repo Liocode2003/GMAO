@@ -14,10 +14,11 @@ UPDATE leaves          SET approved_by = NULL, created_by = NULL WHERE approved_
   'a0000001-0000-0000-0000-000000000001',
   'a0000002-0000-0000-0000-000000000002'
 );
-UPDATE salary_history  SET changed_by = NULL WHERE changed_by NOT IN (
-  'a0000001-0000-0000-0000-000000000001',
-  'a0000002-0000-0000-0000-000000000002'
-);
+-- colonne changed_by supprimée de salary_history (n'existe plus dans le schéma actuel)
+-- UPDATE salary_history  SET changed_by = NULL WHERE changed_by NOT IN (
+--   'a0000001-0000-0000-0000-000000000001',
+--   'a0000002-0000-0000-0000-000000000002'
+-- );
 DELETE FROM audit_logs WHERE user_id NOT IN (
   'a0000001-0000-0000-0000-000000000001',
   'a0000002-0000-0000-0000-000000000002'

@@ -17,7 +17,8 @@ const diplomaSchema = z.object({
   domaine_other:  z.string().max(200).optional(),
 });
 
-export const createEmployeeSchema = z.object({
+// Schéma de base sans refine — nécessaire pour que .partial() fonctionne en Zod v4
+const employeeBaseSchema = z.object({
   matricule:       z.string().min(1, 'Matricule requis').max(20),
   first_name:      z.string().min(1, 'Prénom requis').max(100),
   last_name:       z.string().min(1, 'Nom requis').max(100),
@@ -46,9 +47,16 @@ export const createEmployeeSchema = z.object({
   spouse_phone:    z.string().max(25).optional(),
   children_count:  z.number().int().nonnegative().max(20).optional(),
   diplomas:        z.array(diplomaSchema).optional(),
-}).refine(
+});
+
+// Applique le refine APRÈS la définition du schéma complet (Zod v4 compatible)
+export const createEmployeeSchema = employeeBaseSchema.refine(
   data => !data.exit_date || !data.entry_date || new Date(data.exit_date) >= new Date(data.entry_date),
-  { message: 'La date de sortie doit être postérieure à la date d\'entrée', path: ['exit_date'] }
+  { message: "La date de sortie doit être postérieure à la date d'entrée", path: ['exit_date'] }
 );
 
-export const updateEmployeeSchema = createEmployeeSchema.partial();
+// .partial() sur le schéma de base (sans refine), puis refine appliqué dessus
+export const updateEmployeeSchema = employeeBaseSchema.partial().refine(
+  data => !data.exit_date || !data.entry_date || new Date(data.exit_date) >= new Date(data.entry_date),
+  { message: "La date de sortie doit être postérieure à la date d'entrée", path: ['exit_date'] }
+);

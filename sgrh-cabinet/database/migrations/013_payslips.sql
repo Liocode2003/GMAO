@@ -2,6 +2,16 @@
 -- MODULE BULLETINS DE PAIE
 -- ============================================================
 
+-- Fonction trigger updated_at (définie ici au cas où les migrations précédentes
+-- ne l'auraient pas encore créée dans ce contexte d'exécution)
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE TABLE IF NOT EXISTS payslips (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
