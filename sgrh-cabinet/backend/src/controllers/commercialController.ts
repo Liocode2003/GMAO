@@ -110,6 +110,7 @@ export const getStats = async (req: Request, res: Response) => {
         COUNT(*) FILTER (WHERE cs.status = 'GAGNE') AS wins,
         COUNT(*) FILTER (WHERE cs.status = 'PERDU') AS losses,
         COUNT(*) FILTER (WHERE cs.status = 'EN_COURS') AS en_cours,
+        COUNT(*) FILTER (WHERE cs.status = 'SANS_SUITE') AS sans_suite,
         ${canViewAmounts
           ? `COALESCE(SUM(cs.contract_amount) FILTER (WHERE cs.status = 'GAGNE'), 0) AS total_amount`
           : `0 AS total_amount`}
@@ -121,7 +122,7 @@ export const getStats = async (req: Request, res: Response) => {
 
     const stats: Record<string, {
       total: number; wins: number; losses: number; en_cours: number;
-      success_rate: number; total_amount: number;
+      sans_suite: number; success_rate: number; total_amount: number;
     }> = {};
 
     for (const row of result.rows) {
@@ -132,6 +133,7 @@ export const getStats = async (req: Request, res: Response) => {
         wins,
         losses: parseInt(row.losses),
         en_cours: parseInt(row.en_cours),
+        sans_suite: parseInt(row.sans_suite),
         success_rate: total > 0 ? Math.round((wins / total) * 100) : 0,
         total_amount: parseFloat(row.total_amount),
       };

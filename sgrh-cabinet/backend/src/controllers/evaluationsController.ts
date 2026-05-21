@@ -32,8 +32,8 @@ export const listEvaluations = async (req: Request, res: Response) => {
     if (employee_id) { params.push(employee_id); conditions.push(`ev.employee_id = $${params.length}`); }
 
     if (userRole === 'MANAGER') {
-      params.push(userId);
-      conditions.push(`e.manager_id IN (SELECT id FROM employees WHERE id IN (SELECT employee_id FROM users WHERE id = $${params.length}))`);
+      params.push(req.user!.email);
+      conditions.push(`e.manager_id IN (SELECT id FROM employees WHERE email = $${params.length})`);
     }
 
     const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';

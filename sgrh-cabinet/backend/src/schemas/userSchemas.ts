@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const VALID_ROLES = ['DRH', 'DIRECTION_GENERALE', 'ASSOCIE', 'MANAGER', 'RH', 'CONSULTANT'] as const;
+const VALID_ROLES = ['DRH', 'DIRECTION_GENERALE', 'ASSOCIE', 'MANAGER', 'UTILISATEUR'] as const;
 
 export const createUserSchema = z.object({
   email: z.string().email('Email invalide').toLowerCase(),
