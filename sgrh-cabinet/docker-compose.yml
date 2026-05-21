@@ -24,7 +24,9 @@ services:
       - ./database/migrations/012_departure_reason.sql:/docker-entrypoint-initdb.d/12_departure_reason.sql:ro
       - ./database/migrations/013_payslips.sql:/docker-entrypoint-initdb.d/13_payslips.sql:ro
       - ./database/migrations/014_reset_users.sql:/docker-entrypoint-initdb.d/14_reset_users.sql:ro
+      - ./database/migrations/008_password_reset_tokens.sql:/docker-entrypoint-initdb.d/08_password_reset_tokens.sql:ro
       - ./database/migrations/015_commercial_sans_suite.sql:/docker-entrypoint-initdb.d/15_commercial_sans_suite.sql:ro
+      - ./database/migrations/016_commercial_nullable.sql:/docker-entrypoint-initdb.d/16_commercial_nullable.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-sgrh_user} -d ${DB_NAME:-sgrh_cabinet}"]
       interval: 10s
