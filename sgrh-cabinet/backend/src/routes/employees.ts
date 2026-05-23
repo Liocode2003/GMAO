@@ -6,8 +6,10 @@ import {
 } from '../controllers/employeeController';
 import {
   uploadExcel, parseImport, executeImport, downloadImportTemplate,
+} from '../controllers/importController';
+import {
   exportEmployeesExcel, exportEmployeesPDF, exportEmployeePDF,
-} from '../controllers/importExportController';
+} from '../controllers/exportController';
 import { authenticate, authorize, auditLog } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { createEmployeeSchema, updateEmployeeSchema } from '../schemas/employeeSchemas';

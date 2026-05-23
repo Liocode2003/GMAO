@@ -1,3 +1,5 @@
+// TZ must be set before any date-handling imports resolve.
+// dotenv/config is synchronous, so this order is safe in Node.js CommonJS.
 import 'dotenv/config';
 
 process.env.TZ = process.env.TZ || 'Africa/Ouagadougou';
@@ -54,12 +56,13 @@ if (process.env.NODE_ENV !== 'test') {
 
 app.use('/api', routes);
 
-// Documentation API — accessible en dev et prod
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-  customSiteTitle: 'SGRH Cabinet API',
-  swaggerOptions: { persistAuthorization: true },
-}));
-app.get('/api/docs.json', (_req, res) => res.json(swaggerSpec));
+if (process.env.NODE_ENV !== 'production') {
+  app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+    customSiteTitle: 'SGRH Cabinet API',
+    swaggerOptions: { persistAuthorization: true },
+  }));
+  app.get('/api/docs.json', (_req, res) => res.json(swaggerSpec));
+}
 
 app.get('/health', async (_req, res) => {
   try {
