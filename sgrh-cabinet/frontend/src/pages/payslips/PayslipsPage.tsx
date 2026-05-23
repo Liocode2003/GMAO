@@ -282,7 +282,8 @@ function MasseSalarialeTab({ year }: { year: number }) {
   useEffect(() => {
     setLoading(true);
     api.get('/payslips/masse-salariale', { params: { year } })
-      .then(r => setData(r.data))
+      .then(r => setData(r.data && Array.isArray(r.data.months) ? r.data : null))
+      .catch(() => setData(null))
       .finally(() => setLoading(false));
   }, [year]);
 
@@ -348,7 +349,7 @@ function MasseSalarialeTab({ year }: { year: number }) {
           <div key={kpi.label} className="card p-4">
             <p className="text-xs text-gray-500 font-medium mb-1">{kpi.label}</p>
             <p className={`text-lg font-bold font-mono ${kpi.color}`}>{fmt(kpi.value)}</p>
-            <p className="text-xs text-gray-400">MAD</p>
+            <p className="text-xs text-gray-400">FCFA</p>
           </div>
         ))}
       </div>
@@ -423,14 +424,22 @@ function CumulAnnuelTab({ year }: { year: number }) {
 
   useEffect(() => {
     api.get('/employees', { params: { limit: 500 } })
-      .then(r => setEmployees(r.data.employees || r.data));
+      .then(r => {
+        const list = r.data?.employees ?? r.data;
+        setEmployees(Array.isArray(list) ? list : []);
+      })
+      .catch(() => setEmployees([]));
   }, []);
 
   useEffect(() => {
     if (!selectedId) { setData(null); return; }
     setLoading(true);
     api.get(`/payslips/employee/${selectedId}/annual`, { params: { year } })
-      .then(r => setData(r.data))
+      .then(r => {
+        const d = r.data;
+        if (d && Array.isArray(d.slips)) setData(d);
+        else setData(null);
+      })
       .catch(() => setData(null))
       .finally(() => setLoading(false));
   }, [selectedId, year]);
@@ -602,9 +611,12 @@ function PayslipModal({ editing, onClose, onSaved }: { editing: Payslip | null; 
   });
 
   useEffect(() => {
-    api.get('/employees', { params: { limit: 500, status: 'ACTIF' } }).then(r => {
-      setEmployees(r.data.employees || r.data);
-    });
+    api.get('/employees', { params: { limit: 500, status: 'ACTIF' } })
+      .then(r => {
+        const list = r.data?.employees ?? r.data;
+        setEmployees(Array.isArray(list) ? list : []);
+      })
+      .catch(() => setEmployees([]));
   }, []);
 
   useEffect(() => {
@@ -730,7 +742,7 @@ function PayslipModal({ editing, onClose, onSaved }: { editing: Payslip | null; 
           {/* Étape 2 : Rémunérations */}
           {step === 1 && (
             <div className="space-y-4">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Éléments de rémunération (MAD)</p>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Éléments de rémunération (FCFA)</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="label" htmlFor="ps-base">Salaire de base *</label>
