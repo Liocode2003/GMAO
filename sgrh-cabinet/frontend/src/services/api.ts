@@ -9,6 +9,9 @@ const api = axios.create({
 
 // Pas d'injection manuelle de token — les cookies httpOnly sont envoyés automatiquement
 
+// Single-flight refresh : toutes les 401 simultanées attendent le même appel refresh
+let refreshPromise: Promise<void> | null = null;
+
 // Response interceptor: handle 401 → refresh via cookie httpOnly
 api.interceptors.response.use(
   (response) => response,
@@ -19,12 +22,18 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        // Le cookie refreshToken est envoyé automatiquement (withCredentials)
-        // Le serveur pose un nouveau cookie accessToken dans la réponse
-        await axios.post('/api/auth/refresh', {}, { withCredentials: true });
+        // Un seul appel refresh à la fois, même si plusieurs 401 arrivent simultanément
+        if (!refreshPromise) {
+          refreshPromise = axios
+            .post('/api/auth/refresh', {}, { withCredentials: true })
+            .then(() => { refreshPromise = null; })
+            .catch((err) => { refreshPromise = null; throw err; });
+        }
+        await refreshPromise;
         return api(originalRequest);
       } catch {
         window.location.href = '/login';
+        return Promise.reject(error);
       }
     }
 

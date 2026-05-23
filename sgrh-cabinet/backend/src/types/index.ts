@@ -70,7 +70,6 @@ export interface Employee {
   has_other_dec: boolean;
   has_cisa: boolean;
   has_cfa: boolean;
-  department?: string;
   is_expatriate: boolean;
   created_at: Date;
   updated_at: Date;

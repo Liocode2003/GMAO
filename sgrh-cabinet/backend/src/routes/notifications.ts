@@ -40,27 +40,45 @@ router.use(authenticate);
  */
 router.get('/', async (req: Request, res: Response) => {
   try {
-    // Anniversaires cette semaine (correction: comparaison DOY robuste, gère le passage fin d'année)
+    // Anniversaires cette semaine — MAKE_DATE sécurisé : cap le jour au dernier jour du mois
+    // (évite l'erreur PostgreSQL sur les 29 février dans les années non-bissextiles)
     const birthdays = await query(`
-      SELECT id, first_name, last_name, birth_date,
-             TO_CHAR(birth_date, 'DD/MM') as birth_day_month,
-             DATE_PART('year', AGE(birth_date)) + 1 as upcoming_age
-      FROM employees
-      WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE)
-        AND birth_date IS NOT NULL
-        AND (
-          MAKE_DATE(EXTRACT(YEAR FROM CURRENT_DATE)::int, EXTRACT(MONTH FROM birth_date)::int, EXTRACT(DAY FROM birth_date)::int)
-            BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '7 days'
-          OR
-          MAKE_DATE(EXTRACT(YEAR FROM CURRENT_DATE)::int + 1, EXTRACT(MONTH FROM birth_date)::int, EXTRACT(DAY FROM birth_date)::int)
-            BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '7 days'
-        )
+      WITH anniversary AS (
+        SELECT id, first_name, last_name, birth_date,
+               TO_CHAR(birth_date, 'DD/MM') as birth_day_month,
+               DATE_PART('year', AGE(birth_date)) + 1 as upcoming_age,
+               MAKE_DATE(
+                 EXTRACT(YEAR FROM CURRENT_DATE)::int,
+                 EXTRACT(MONTH FROM birth_date)::int,
+                 LEAST(
+                   EXTRACT(DAY FROM birth_date)::int,
+                   DATE_PART('day',
+                     MAKE_DATE(EXTRACT(YEAR FROM CURRENT_DATE)::int, EXTRACT(MONTH FROM birth_date)::int, 1)
+                     + INTERVAL '1 month' - INTERVAL '1 day'
+                   )::int
+                 )
+               ) AS anniv_this_year,
+               MAKE_DATE(
+                 EXTRACT(YEAR FROM CURRENT_DATE)::int + 1,
+                 EXTRACT(MONTH FROM birth_date)::int,
+                 LEAST(
+                   EXTRACT(DAY FROM birth_date)::int,
+                   DATE_PART('day',
+                     MAKE_DATE(EXTRACT(YEAR FROM CURRENT_DATE)::int + 1, EXTRACT(MONTH FROM birth_date)::int, 1)
+                     + INTERVAL '1 month' - INTERVAL '1 day'
+                   )::int
+                 )
+               ) AS anniv_next_year
+        FROM employees
+        WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE)
+          AND birth_date IS NOT NULL
+      )
+      SELECT id, first_name, last_name, birth_date, birth_day_month, upcoming_age
+      FROM anniversary
+      WHERE anniv_this_year BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '7 days'
+         OR anniv_next_year BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '7 days'
       ORDER BY
-        CASE
-          WHEN MAKE_DATE(EXTRACT(YEAR FROM CURRENT_DATE)::int, EXTRACT(MONTH FROM birth_date)::int, EXTRACT(DAY FROM birth_date)::int) >= CURRENT_DATE
-          THEN MAKE_DATE(EXTRACT(YEAR FROM CURRENT_DATE)::int, EXTRACT(MONTH FROM birth_date)::int, EXTRACT(DAY FROM birth_date)::int)
-          ELSE MAKE_DATE(EXTRACT(YEAR FROM CURRENT_DATE)::int + 1, EXTRACT(MONTH FROM birth_date)::int, EXTRACT(DAY FROM birth_date)::int)
-        END
+        CASE WHEN anniv_this_year >= CURRENT_DATE THEN anniv_this_year ELSE anniv_next_year END
       LIMIT 20
     `);
 

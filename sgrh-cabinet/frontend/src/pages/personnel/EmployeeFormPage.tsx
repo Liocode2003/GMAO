@@ -26,7 +26,6 @@ type FormData = {
   exit_date: string;
   salary: string;
   notes: string;
-  department: string;
   is_expatriate: boolean;
   manager_id: string;
   marital_status: string;
@@ -421,10 +420,6 @@ export default function EmployeeFormPage() {
                 {errors.salary && <p className="text-red-500 text-xs mt-1">{errors.salary.message}</p>}
               </div>
             )}
-            <div>
-              <label className="label">Département / Équipe</label>
-              <input className="input" {...register('department')} placeholder="Audit, Tax, IT..." />
-            </div>
             <div>
               <label className="label">Supérieur hiérarchique</label>
               <select className="input" {...register('manager_id')}>

@@ -18,7 +18,6 @@ interface Candidate {
   email: string | null;
   phone: string | null;
   position: string;
-  department: string | null;
   status: CandidateStatus;
   source: string | null;
   notes: string | null;
@@ -192,7 +191,7 @@ export default function RecruitmentPage() {
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-gray-800 truncate">{c.first_name} {c.last_name}</p>
                           <p className="text-xs text-gray-500 truncate">{c.position}</p>
-                          {c.department && <p className="text-xs text-gray-400 truncate">{c.department}</p>}
+                
                         </div>
                         {canManage && (
                           <div className="flex gap-1 flex-shrink-0">
@@ -298,7 +297,6 @@ export default function RecruitmentPage() {
                       <span className={`badge text-xs ${cfg.badge}`}>{cfg.label}</span>
                     </div>
                     <p className="text-xs text-gray-500 mt-0.5">{c.position}</p>
-                    {c.department && <p className="text-xs text-gray-400">{c.department}</p>}
                     {c.interview_date && (
                       <p className="text-xs text-blue-600 mt-1">
                         Entretien : {new Date(c.interview_date).toLocaleDateString('fr-FR')}
@@ -356,7 +354,6 @@ export default function RecruitmentPage() {
                     </td>
                     <td>
                       <p className="text-sm text-gray-700">{c.position}</p>
-                      {c.department && <p className="text-xs text-gray-400">{c.department}</p>}
                     </td>
                     <td>
                       <span className={`badge text-xs ${STATUS_CONFIG[c.status]?.badge}`}>
@@ -419,7 +416,6 @@ function CandidateModal({ candidate, onClose, onSaved }: {
     email: candidate?.email || '',
     phone: candidate?.phone || '',
     position: candidate?.position || '',
-    department: candidate?.department || '',
     status: candidate?.status || 'NOUVEAU',
     source: candidate?.source || '',
     notes: candidate?.notes || '',
@@ -497,15 +493,9 @@ function CandidateModal({ candidate, onClose, onSaved }: {
               <input id="c-phone" className="input" value={form.phone} onChange={f('phone')} />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label" htmlFor="c-dept">Département</label>
-              <input id="c-dept" className="input" value={form.department} onChange={f('department')} placeholder="Audit & Assurance" />
-            </div>
-            <div>
-              <label className="label" htmlFor="c-source">Source</label>
-              <input id="c-source" className="input" value={form.source} onChange={f('source')} placeholder="LinkedIn, Recommandation..." />
-            </div>
+          <div>
+            <label className="label" htmlFor="c-source">Source</label>
+            <input id="c-source" className="input" value={form.source} onChange={f('source')} placeholder="LinkedIn, Recommandation..." />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

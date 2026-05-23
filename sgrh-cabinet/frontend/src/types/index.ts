@@ -45,7 +45,6 @@ export interface Employee {
   status: EmployeeStatus;
   notes?: string;
   diplomas?: EmployeeDiploma[];
-  department?: string;
   is_expatriate: boolean;
   // Nouveaux champs v2
   photo_url?: string;

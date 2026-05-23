@@ -8,7 +8,6 @@ export const createCandidateSchema = z.object({
   email:            z.string().email('Email invalide').optional().or(z.literal('')),
   phone:            z.string().max(25).optional(),
   position:         z.string().min(1, 'Poste requis').max(200),
-  department:       z.string().max(100).optional(),
   status:           z.enum(STATUSES).optional(),
   source:           z.string().max(100).optional(),
   cover_letter:     z.string().max(5000).optional(),
