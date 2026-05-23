@@ -86,10 +86,11 @@ export default function KPIsPage() {
       {/* Effectifs globaux */}
       <div>
         <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Effectifs globaux</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
           <KPICard label="Total actif" value={data.headcount.total} color="text-brand-700" />
           <KPICard label="CDI" value={data.headcount.cdi} />
           <KPICard label="CDD" value={data.headcount.cdd} />
+          <KPICard label="Consultants" value={data.headcount.prestataires} />
           <KPICard label="Stagiaires" value={data.headcount.stagiaires} />
           <KPICard label="Hommes" value={data.headcount.hommes} color="text-blue-700" />
           <KPICard label="Femmes" value={data.headcount.femmes} color="text-pink-600" />
