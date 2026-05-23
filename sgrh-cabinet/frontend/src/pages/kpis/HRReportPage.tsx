@@ -264,7 +264,7 @@ export default function HRReportPage() {
             <p className="text-xs text-gray-400 mb-4">Effectif total (hors stagiaires)</p>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart
-                data={['20-30 ans', '30-40 ans', '40-50 ans', '+50 ans'].map(label => ({
+                data={['< 30 ans', '30-39 ans', '40-49 ans', '50 ans et +'].map(label => ({
                   name: label,
                   count: data.ageGroups.find(a => a.label === label)?.count ?? 0,
                 }))}

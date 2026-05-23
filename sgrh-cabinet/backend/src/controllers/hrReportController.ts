@@ -116,10 +116,10 @@ export const getHRReport = async (req: Request, res: Response) => {
       query(
         `SELECT
            CASE
-             WHEN DATE_PART('year', AGE(birth_date)) BETWEEN 20 AND 29 THEN '20-30 ans'
-             WHEN DATE_PART('year', AGE(birth_date)) BETWEEN 30 AND 39 THEN '30-40 ans'
-             WHEN DATE_PART('year', AGE(birth_date)) BETWEEN 40 AND 49 THEN '40-50 ans'
-             ELSE '+50 ans'
+             WHEN DATE_PART('year', AGE(birth_date)) < 30 THEN '< 30 ans'
+             WHEN DATE_PART('year', AGE(birth_date)) BETWEEN 30 AND 39 THEN '30-39 ans'
+             WHEN DATE_PART('year', AGE(birth_date)) BETWEEN 40 AND 49 THEN '40-49 ans'
+             ELSE '50 ans et +'
            END as age_group,
            COUNT(*) as n
          FROM employees
