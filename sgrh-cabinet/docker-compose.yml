@@ -31,6 +31,7 @@ services:
       - ./database/migrations/018_fix_trigger_department.sql:/docker-entrypoint-initdb.d/18_fix_trigger_department.sql:ro
       - ./database/seeds/real_employees.sql:/docker-entrypoint-initdb.d/90_real_employees.sql:ro
       - ./database/seeds/complete_seed.sql:/docker-entrypoint-initdb.d/99_complete_seed.sql:ro
+      - ./database/seeds/payslips_seed.sql:/docker-entrypoint-initdb.d/100_payslips_seed.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-sgrh_user} -d ${DB_NAME:-sgrh_cabinet}"]
       interval: 10s
