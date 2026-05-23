@@ -76,7 +76,6 @@ export const exportEmployeesExcel = async (req: Request, res: Response) => {
       { header: 'Statut', key: 'status', width: 12 },
       { header: 'Email', key: 'email', width: 30 },
       { header: 'Téléphone', key: 'phone', width: 16 },
-      { header: 'Département', key: 'department', width: 18 },
       { header: 'Ancienneté', key: 'seniority', width: 18 },
     ];
     if (showSalary) columns.push({ header: 'Salaire (FCFA)', key: 'salary', width: 18 });
@@ -107,7 +106,6 @@ export const exportEmployeesExcel = async (req: Request, res: Response) => {
         status: (emp.exit_date && new Date(emp.exit_date) <= new Date()) ? 'INACTIF' : 'ACTIF',
         email: emp.email || '',
         phone: emp.phone || '',
-        department: emp.department || '',
         seniority: emp.seniority?.label || '',
       };
       if (showSalary) row.salary = emp.salary || 0;
@@ -298,7 +296,6 @@ export const exportEmployeePDF = async (req: Request, res: Response) => {
     field('Ligne de service', emp.service_line);
     field('Grade', emp.grade);
     field('Type de contrat', emp.contract_type);
-    field('Département', emp.department);
     field("Date d'entrée", emp.entry_date ? new Date(emp.entry_date).toLocaleDateString('fr-FR') : null);
     if (emp.exit_date) field('Date de sortie', new Date(emp.exit_date).toLocaleDateString('fr-FR'));
     field('Statut', emp.status);

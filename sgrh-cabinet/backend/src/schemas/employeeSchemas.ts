@@ -46,7 +46,6 @@ const employeeBaseSchema = z.object({
   has_other_dec:   z.boolean().optional(),
   has_cisa:        z.boolean().optional(),
   has_cfa:         z.boolean().optional(),
-  department:      z.string().max(100).optional(),
   is_expatriate:   z.boolean().optional(),
   manager_id:      z.string().uuid('ID manager invalide').optional().or(z.literal('')),
   marital_status:  z.enum(MARITAL_STATUSES).optional(),

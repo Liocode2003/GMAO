@@ -131,7 +131,6 @@ router.get('/:id', getCandidate);
  *               email: { type: string, format: email }
  *               phone: { type: string }
  *               position: { type: string }
- *               department: { type: string }
  *               status: { type: string, enum: [NOUVEAU, EN_COURS, ENTRETIEN, OFFRE, EMBAUCHE, REFUSE], default: NOUVEAU }
  *               source: { type: string }
  *               interview_date: { type: string, format: date-time }

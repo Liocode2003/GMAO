@@ -133,7 +133,7 @@ export const createEmployee = async (req: Request, res: Response) => {
     matricule, first_name, last_name, gender, email, phone, birth_date,
     function: fn, service_line, grade, contract_type, entry_date, exit_date,
     salary, notes, has_dec_french, has_decofi, has_other_dec,
-    has_cisa, has_cfa, department, is_expatriate,
+    has_cisa, has_cfa, is_expatriate,
     manager_id, marital_status, spouse_name, spouse_phone, children_count,
     diplomas,
   } = req.body;
@@ -163,16 +163,16 @@ export const createEmployee = async (req: Request, res: Response) => {
          matricule, first_name, last_name, gender, email, phone, birth_date,
          function, service_line, grade, contract_type, entry_date, exit_date,
          salary, notes, has_dec_french, has_decofi, has_other_dec, has_cisa, has_cfa,
-         department, is_expatriate, manager_id, marital_status, spouse_name, spouse_phone,
+         is_expatriate, manager_id, marital_status, spouse_name, spouse_phone,
          children_count, created_by
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28)
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27)
        RETURNING *`,
       [
         matricule, first_name, last_name, gender, email || null, phone || null, birth_date,
         fn, service_line, grade, contract_type, entry_date, exit_date || null,
         salary || null, notes || null,
         has_dec_french || false, has_decofi || false, has_other_dec || false,
-        has_cisa || false, has_cfa || false, department || null,
+        has_cisa || false, has_cfa || false,
         is_expatriate || false, manager_id || null,
         marital_status || 'CELIBATAIRE', spouse_name || null, spouse_phone || null,
         children_count || 0, req.user?.userId,
@@ -224,7 +224,7 @@ export const updateEmployee = async (req: Request, res: Response) => {
     'first_name', 'last_name', 'gender', 'email', 'phone', 'birth_date',
     'function', 'service_line', 'grade', 'contract_type', 'entry_date', 'exit_date',
     'salary', 'notes', 'has_dec_french', 'has_decofi', 'has_other_dec', 'has_cisa', 'has_cfa',
-    'department', 'is_expatriate', 'manager_id', 'marital_status', 'spouse_name', 'spouse_phone',
+    'is_expatriate', 'manager_id', 'marital_status', 'spouse_name', 'spouse_phone',
     'children_count', 'leave_balance', 'matricule', 'departure_reason',
   ]);
 

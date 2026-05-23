@@ -397,7 +397,6 @@ export default function EmployeeDetailPage() {
               <h3 className="font-semibold text-gray-700">Poste & Contrat</h3>
             </div>
             <Field label="Fonction" value={FUNCTION_LABELS[employee.function] || employee.function} />
-            <Field label="Département" value={employee.department} />
             <Field label="Ligne de service" value={SERVICE_LINE_LABELS[employee.service_line]} />
             <Field label="Grade" value={GRADE_LABELS[employee.grade]} />
             <Field label="Type de contrat" value={CONTRACT_LABELS[employee.contract_type]} />

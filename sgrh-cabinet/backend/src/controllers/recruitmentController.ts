@@ -75,7 +75,7 @@ export const getCandidate = async (req: Request, res: Response) => {
 
 export const createCandidate = async (req: Request, res: Response) => {
   const {
-    first_name, last_name, email, phone, position, department,
+    first_name, last_name, email, phone, position,
     status, source, cover_letter, notes, interview_date, salary_expected,
   } = req.body;
 
@@ -86,13 +86,13 @@ export const createCandidate = async (req: Request, res: Response) => {
   try {
     const result = await query(
       `INSERT INTO candidates
-         (first_name, last_name, email, phone, position, department, status, source,
+         (first_name, last_name, email, phone, position, status, source,
           cover_letter, notes, interview_date, salary_expected, created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
        RETURNING *`,
       [
         first_name, last_name, email || null, phone || null, position,
-        department || null, status || 'NOUVEAU', source || null,
+        status || 'NOUVEAU', source || null,
         cover_letter || null, notes || null,
         interview_date || null, salary_expected || null,
         req.user?.userId,
@@ -109,7 +109,7 @@ export const createCandidate = async (req: Request, res: Response) => {
 export const updateCandidate = async (req: Request, res: Response) => {
   const { id } = req.params;
   const {
-    first_name, last_name, email, phone, position, department,
+    first_name, last_name, email, phone, position,
     status, source, cover_letter, notes, interview_date, salary_expected,
   } = req.body;
 
@@ -121,19 +121,18 @@ export const updateCandidate = async (req: Request, res: Response) => {
          email = $3,
          phone = $4,
          position = COALESCE($5, position),
-         department = $6,
-         status = COALESCE($7, status),
-         source = $8,
-         cover_letter = $9,
-         notes = $10,
-         interview_date = $11,
-         salary_expected = $12,
+         status = COALESCE($6, status),
+         source = $7,
+         cover_letter = $8,
+         notes = $9,
+         interview_date = $10,
+         salary_expected = $11,
          updated_at = NOW()
-       WHERE id = $13
+       WHERE id = $12
        RETURNING *`,
       [
         first_name || null, last_name || null, email || null, phone || null,
-        position || null, department || null, status || null, source || null,
+        position || null, status || null, source || null,
         cover_letter || null, notes || null,
         interview_date || null, salary_expected || null,
         id,

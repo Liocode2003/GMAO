@@ -144,7 +144,7 @@ async function generatePDF(payslipId: string): Promise<string> {
   const res = await query(`
     SELECT p.*,
       e.matricule, e.first_name, e.last_name, e.grade, e.function,
-      e.service_line, e.contract_type, e.entry_date, e.department
+      e.service_line, e.contract_type, e.entry_date
     FROM payslips p
     JOIN employees e ON e.id = p.employee_id
     WHERE p.id = $1
@@ -351,7 +351,7 @@ export const getPayslip = async (req: Request, res: Response) => {
   try {
     const result = await query(`
       SELECT p.*, e.matricule, e.first_name, e.last_name, e.grade, e.function,
-        e.service_line, e.contract_type, e.entry_date, e.department
+        e.service_line, e.contract_type, e.entry_date
       FROM payslips p
       JOIN employees e ON e.id = p.employee_id
       WHERE p.id = $1

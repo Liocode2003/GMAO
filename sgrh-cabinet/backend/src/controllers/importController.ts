@@ -287,16 +287,16 @@ export const executeImport = async (req: Request, res: Response) => {
         `INSERT INTO employees (
            matricule, first_name, last_name, gender, email, phone, birth_date,
            function, service_line, grade, contract_type, entry_date, exit_date,
-           salary, department, is_expatriate, marital_status, spouse_name,
+           salary, is_expatriate, marital_status, spouse_name,
            spouse_phone, children_count, created_by
-         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
          RETURNING id, matricule`,
         [
           d.matricule, d.first_name, d.last_name, d.gender || 'M',
           d.email || null, d.phone || null, d.birth_date,
           d.function, d.service_line, d.grade, d.contract_type,
           d.entry_date, d.exit_date || null,
-          d.salary || null, d.department || null, d.is_expatriate || false,
+          d.salary || null, d.is_expatriate || false,
           d.marital_status || 'CELIBATAIRE', d.spouse_name || null,
           d.spouse_phone || null, d.children_count || 0, req.user?.userId,
         ]
