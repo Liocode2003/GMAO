@@ -187,22 +187,36 @@ export const listLeaves = async (req: Request, res: Response) => {
 // ============================================================
 
 export const listPendingLeaves = async (req: Request, res: Response) => {
+  const page  = Math.max(1, parseInt(String(req.query.page  || '1')));
+  const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit || '50'))));
+  const offset = (page - 1) * limit;
+
   try {
-    const result = await query(
-      `SELECT l.*,
-         e.first_name || ' ' || e.last_name  AS employee_name,
-         e.service_line,
-         e.function                           AS employee_function,
-         u.first_name || ' ' || u.last_name  AS created_by_name,
-         mgr.first_name || ' ' || mgr.last_name AS manager_name
-       FROM leaves l
-       JOIN employees e   ON e.id  = l.employee_id
-       LEFT JOIN users u  ON u.id  = l.created_by
-       LEFT JOIN employees mgr ON mgr.id = e.manager_id
-       WHERE l.status = 'EN_ATTENTE'
-       ORDER BY l.created_at ASC`
-    );
-    return res.json(result.rows);
+    const [countRes, dataRes] = await Promise.all([
+      query(`SELECT COUNT(*) FROM leaves WHERE status = 'EN_ATTENTE'`),
+      query(
+        `SELECT l.*,
+           e.first_name || ' ' || e.last_name  AS employee_name,
+           e.service_line,
+           e.function                           AS employee_function,
+           u.first_name || ' ' || u.last_name  AS created_by_name,
+           mgr.first_name || ' ' || mgr.last_name AS manager_name
+         FROM leaves l
+         JOIN employees e   ON e.id  = l.employee_id
+         LEFT JOIN users u  ON u.id  = l.created_by
+         LEFT JOIN employees mgr ON mgr.id = e.manager_id
+         WHERE l.status = 'EN_ATTENTE'
+         ORDER BY l.created_at ASC
+         LIMIT $1 OFFSET $2`,
+        [limit, offset]
+      ),
+    ]);
+
+    const total = parseInt(countRes.rows[0].count);
+    return res.json({
+      data: dataRes.rows,
+      pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    });
   } catch (err) {
     logger.error('listPendingLeaves error', err);
     return res.status(500).json({ error: 'Erreur serveur' });

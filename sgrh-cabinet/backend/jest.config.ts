@@ -11,7 +11,6 @@ const config: Config = {
     '!src/index.ts',
     '!src/jobs/**',
     '!src/services/reportService.ts',
-    '!src/controllers/importExportController.ts',
     '!src/services/emailService.ts',
   ],
   coverageThreshold: {
@@ -28,9 +27,7 @@ const config: Config = {
   },
   globals: {
     'ts-jest': {
-      tsconfig: {
-        module: 'commonjs',
-      },
+      tsconfig: 'tsconfig.test.json',
     },
   },
 };
