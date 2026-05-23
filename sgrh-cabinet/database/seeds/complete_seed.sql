@@ -109,7 +109,7 @@ UPDATE employees SET manager_id='0232c465-e837-40d1-9261-fb17e803d031' WHERE mat
 UPDATE employees SET contract_type='CDD', exit_date=CURRENT_DATE + INTERVAL '8 days'  WHERE matricule='FM-019';
 UPDATE employees SET contract_type='CDD', exit_date=CURRENT_DATE + INTERVAL '14 days' WHERE matricule='FM-021';
 UPDATE employees SET contract_type='CDD', exit_date=CURRENT_DATE + INTERVAL '22 days' WHERE matricule='FM-035';
-UPDATE employees SET contract_type='STAGE', exit_date=CURRENT_DATE + INTERVAL '5 days'  WHERE matricule='FM-038';
+UPDATE employees SET contract_type='STAGE', exit_date=CURRENT_DATE + INTERVAL '5 days'  WHERE matricule='FM-040';
 
 -- ============================================================
 -- 4. SOLDES DE CONGÉS 2025 & 2026
