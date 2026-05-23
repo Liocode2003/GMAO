@@ -11,14 +11,14 @@ import path from 'path';
 // ============================================================
 
 const CNSS_RATE_EMPLOYEE = 0.0448;
-const CNSS_CEILING = 6000;           // plafond mensuel MAD
+const CNSS_CEILING = 6000;           // plafond mensuel FCFA
 const CNSS_RATE_EMPLOYER_SOCIAL = 0.0898;  // plafonné
 const CNSS_RATE_EMPLOYER_FAMILY = 0.0640;  // non plafonné
 const AMO_RATE_EMPLOYEE = 0.0226;
 const AMO_RATE_EMPLOYER = 0.0365;
 const PROF_DEDUCTION_RATE = 0.20;
-const PROF_DEDUCTION_MAX = 2500;     // MAD/mois (30 000/an)
-const FAMILY_DEDUCTION_PER_CHARGE = 30; // MAD/mois par ayant droit
+const PROF_DEDUCTION_MAX = 2500;     // FCFA/mois (30 000/an)
+const FAMILY_DEDUCTION_PER_CHARGE = 30; // FCFA/mois par ayant droit
 
 // Barème IGR annuel (régime général)
 function calculateAnnualIGR(taxable: number): number {
@@ -67,7 +67,7 @@ function computePayslip(inp: PayslipInput): PayslipCalc {
     inp.overtime_pay + inp.prime_amount + inp.other_earnings_amount
   );
 
-  // CNSS salarié (plafonné à 6 000 MAD)
+  // CNSS salarié (plafonné à 6 000 FCFA)
   const cnssBase = Math.min(gross, CNSS_CEILING);
   const cnss_employee = r2(cnssBase * CNSS_RATE_EMPLOYEE);
 
@@ -90,7 +90,7 @@ function computePayslip(inp: PayslipInput): PayslipCalc {
   const annualIGR = calculateAnnualIGR(annualTaxable);
   const igrRaw = r2(annualIGR / 12);
 
-  // Déduction charges de famille (30 MAD/mois par ayant droit, max 6)
+  // Déduction charges de famille (30 FCFA/mois par ayant droit, max 6)
   const family_charge_deduction = r2(Math.min(inp.family_charges, 6) * FAMILY_DEDUCTION_PER_CHARGE);
   const igr = r2(Math.max(0, igrRaw - family_charge_deduction));
 
@@ -132,7 +132,7 @@ function computePayslip(inp: PayslipInput): PayslipCalc {
 const PAYSLIPS_DIR = path.join(process.cwd(), 'uploads', 'payslips');
 
 function fmt(n: number | string) {
-  return Number(n).toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return Number(n).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 const MONTHS_FR = [
@@ -235,7 +235,7 @@ async function generatePDF(payslipId: string): Promise<string> {
     const drawLine = (label: string, amount: number, cx: number, ly: number, isEven: boolean) => {
       if (isEven) doc.rect(cx, ly, halfW, lineH).fill('#f9fafb');
       doc.fillColor('#374151').fontSize(8.5).font('Helvetica').text(label, cx + 4, ly + 4, { width: halfW - 70 });
-      doc.fillColor('#111827').font('Helvetica-Bold').text(`${fmt(amount)} MAD`, cx + halfW - 76, ly + 4, { width: 72, align: 'right' });
+      doc.fillColor('#111827').font('Helvetica-Bold').text(`${fmt(amount)} FCFA`, cx + halfW - 76, ly + 4, { width: 72, align: 'right' });
     };
 
     const maxLines = Math.max(leftLines.length, rightLines.length);
@@ -251,27 +251,27 @@ async function generatePDF(payslipId: string): Promise<string> {
     doc.rect(40, y, halfW, 18).fill('#dbeafe');
     doc.rect(44 + halfW, y, halfW, 18).fill('#fee2e2');
     doc.fillColor(navy).fontSize(9).font('Helvetica-Bold')
-      .text(`SALAIRE BRUT : ${fmt(ps.gross_salary)} MAD`, 44, y + 5)
+      .text(`SALAIRE BRUT : ${fmt(ps.gross_salary)} FCFA`, 44, y + 5)
       .fillColor(red)
       .text(`TOTAL RETENUES : ${fmt(
         parseFloat(ps.cnss_employee) + parseFloat(ps.amo_employee) +
         parseFloat(ps.cimr_employee) + parseFloat(ps.igr) +
         parseFloat(ps.advance_amount) + parseFloat(ps.other_deduction_amount)
-      )} MAD`, 48 + halfW, y + 5);
+      )} FCFA`, 48 + halfW, y + 5);
     y += 24;
 
     // ── NET À PAYER ───────────────────────────────────────
     doc.rect(40, y, W, 28).fill(navy);
     doc.fillColor('white').fontSize(14).font('Helvetica-Bold')
-      .text(`NET À PAYER : ${fmt(ps.net_salary)} MAD`, 0, y + 8, { align: 'center', width: W + 80 });
+      .text(`NET À PAYER : ${fmt(ps.net_salary)} FCFA`, 0, y + 8, { align: 'center', width: W + 80 });
     y += 38;
 
     // ── DÉTAIL IGR ────────────────────────────────────────
     doc.rect(40, y, W, 12).fill(light);
     doc.fillColor('#6b7280').fontSize(7.5).font('Helvetica')
-      .text(`Base imposable mensuelle : ${fmt(ps.net_taxable_monthly)} MAD   |   ` +
-        `Déduction prof. (20%) : ${fmt(ps.professional_deduction)} MAD   |   ` +
-        `Charges de famille : ${ps.family_charges} (−${fmt(ps.family_charge_deduction)} MAD/mois)`, 44, y + 3);
+      .text(`Base imposable mensuelle : ${fmt(ps.net_taxable_monthly)} FCFA   |   ` +
+        `Déduction prof. (20%) : ${fmt(ps.professional_deduction)} FCFA   |   ` +
+        `Charges de famille : ${ps.family_charges} (−${fmt(ps.family_charge_deduction)} FCFA/mois)`, 44, y + 3);
     y += 18;
 
     // ── COTISATIONS PATRONALES ────────────────────────────
@@ -280,13 +280,13 @@ async function generatePDF(payslipId: string): Promise<string> {
     const amoEmpl = parseFloat(ps.amo_employer);
     const cimrEmpl = parseFloat(ps.cimr_employer);
     doc.fillColor('#15803d').fontSize(7.5).font('Helvetica')
-      .text(`Cotisations patronales (informatif) — CNSS : ${fmt(cnssEmpl)} MAD  |  AMO : ${fmt(amoEmpl)} MAD  |  CIMR : ${fmt(cimrEmpl)} MAD  |  Coût total employeur : ${fmt(parseFloat(ps.gross_salary) + cnssEmpl + amoEmpl + cimrEmpl)} MAD`, 44, y + 3);
+      .text(`Cotisations patronales (informatif) — CNSS : ${fmt(cnssEmpl)} FCFA  |  AMO : ${fmt(amoEmpl)} FCFA  |  CIMR : ${fmt(cimrEmpl)} FCFA  |  Coût total employeur : ${fmt(parseFloat(ps.gross_salary) + cnssEmpl + amoEmpl + cimrEmpl)} FCFA`, 44, y + 3);
     y += 18;
 
     // ── CUMULS ANNUELS ────────────────────────────────────
     doc.rect(40, y, W, 12).fill(light);
     doc.fillColor('#374151').fontSize(7.5).font('Helvetica')
-      .text(`Cumuls ${ps.period_year} — Brut : ${fmt(ps.annual_gross_ytd)} MAD  |  Net : ${fmt(ps.annual_net_ytd)} MAD  |  IGR : ${fmt(ps.annual_igr_ytd)} MAD`, 44, y + 3);
+      .text(`Cumuls ${ps.period_year} — Brut : ${fmt(ps.annual_gross_ytd)} FCFA  |  Net : ${fmt(ps.annual_net_ytd)} FCFA  |  IGR : ${fmt(ps.annual_igr_ytd)} FCFA`, 44, y + 3);
     y += 24;
 
     // ── SIGNATURES ────────────────────────────────────────
@@ -777,7 +777,7 @@ async function generateAttestation9421(employeeId: string, year: number): Promis
       else if (i % 2 === 0) doc.rect(50, y, W, 16).fill('#f9fafb');
       doc.fillColor('#374151').fontSize(9).font('Helvetica').text(label, 56, y + 4, { width: W - 120 });
       doc.fillColor(isHighlight ? navy : '#111827').font('Helvetica-Bold')
-        .text(`${fmt(amount)} MAD`, 50, y + 4, { align: 'right', width: W });
+        .text(`${fmt(amount)} FCFA`, 50, y + 4, { align: 'right', width: W });
       y += 16;
     });
 
@@ -860,9 +860,9 @@ export const exportMasseSalarialeExcel = async (req: Request, res: Response) => 
     sheet.columns = [
       { header: 'Mois',              key: 'month',     width: 16 },
       { header: 'Bulletins',         key: 'count',     width: 12 },
-      { header: 'Total brut (MAD)',  key: 'brut',      width: 20 },
-      { header: 'Total net (MAD)',   key: 'net',       width: 20 },
-      { header: 'IGR total (MAD)',   key: 'igr',       width: 18 },
+      { header: 'Total brut (FCFA)',  key: 'brut',      width: 20 },
+      { header: 'Total net (FCFA)',   key: 'net',       width: 20 },
+      { header: 'IGR total (FCFA)',   key: 'igr',       width: 18 },
       { header: 'CNSS salarié',      key: 'cnss',      width: 16 },
       { header: 'AMO salarié',       key: 'amo',       width: 16 },
       { header: 'CIMR salarié',      key: 'cimr',      width: 16 },

@@ -66,7 +66,7 @@ const MONTHS = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
   'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
 const fmt = (n: string | number) =>
-  Number(n).toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  Number(n).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 // ─── Composant principal ──────────────────────────────────────────────────────
 
@@ -88,7 +88,9 @@ export default function PayslipsPage() {
       const params: Record<string, string> = { year: String(filterYear) };
       if (filterMonth) params.month = String(filterMonth);
       const { data } = await api.get('/payslips', { params });
-      setPayslips(data);
+      setPayslips(Array.isArray(data) ? data : []);
+    } catch {
+      setPayslips([]);
     } finally {
       setLoading(false);
     }
@@ -132,7 +134,7 @@ export default function PayslipsPage() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Paie</h2>
-          <p className="text-gray-500 text-sm">Moteur de paie marocain — CNSS · AMO · IGR</p>
+          <p className="text-gray-500 text-sm">Gestion des bulletins de paie — CNSS · ITS</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <select value={filterYear} onChange={e => setFilterYear(+e.target.value)} className="input w-28">
@@ -280,7 +282,8 @@ function MasseSalarialeTab({ year }: { year: number }) {
   useEffect(() => {
     setLoading(true);
     api.get('/payslips/masse-salariale', { params: { year } })
-      .then(r => setData(r.data))
+      .then(r => setData(r.data && Array.isArray(r.data.months) ? r.data : null))
+      .catch(() => setData(null))
       .finally(() => setLoading(false));
   }, [year]);
 
@@ -346,7 +349,7 @@ function MasseSalarialeTab({ year }: { year: number }) {
           <div key={kpi.label} className="card p-4">
             <p className="text-xs text-gray-500 font-medium mb-1">{kpi.label}</p>
             <p className={`text-lg font-bold font-mono ${kpi.color}`}>{fmt(kpi.value)}</p>
-            <p className="text-xs text-gray-400">MAD</p>
+            <p className="text-xs text-gray-400">FCFA</p>
           </div>
         ))}
       </div>
@@ -421,14 +424,22 @@ function CumulAnnuelTab({ year }: { year: number }) {
 
   useEffect(() => {
     api.get('/employees', { params: { limit: 500 } })
-      .then(r => setEmployees(r.data.employees || r.data));
+      .then(r => {
+        const list = r.data?.employees ?? r.data;
+        setEmployees(Array.isArray(list) ? list : []);
+      })
+      .catch(() => setEmployees([]));
   }, []);
 
   useEffect(() => {
     if (!selectedId) { setData(null); return; }
     setLoading(true);
     api.get(`/payslips/employee/${selectedId}/annual`, { params: { year } })
-      .then(r => setData(r.data))
+      .then(r => {
+        const d = r.data;
+        if (d && Array.isArray(d.slips)) setData(d);
+        else setData(null);
+      })
       .catch(() => setData(null))
       .finally(() => setLoading(false));
   }, [selectedId, year]);
@@ -600,9 +611,12 @@ function PayslipModal({ editing, onClose, onSaved }: { editing: Payslip | null; 
   });
 
   useEffect(() => {
-    api.get('/employees', { params: { limit: 500, status: 'ACTIF' } }).then(r => {
-      setEmployees(r.data.employees || r.data);
-    });
+    api.get('/employees', { params: { limit: 500, status: 'ACTIF' } })
+      .then(r => {
+        const list = r.data?.employees ?? r.data;
+        setEmployees(Array.isArray(list) ? list : []);
+      })
+      .catch(() => setEmployees([]));
   }, []);
 
   useEffect(() => {
@@ -728,7 +742,7 @@ function PayslipModal({ editing, onClose, onSaved }: { editing: Payslip | null; 
           {/* Étape 2 : Rémunérations */}
           {step === 1 && (
             <div className="space-y-4">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Éléments de rémunération (MAD)</p>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Éléments de rémunération (FCFA)</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="label" htmlFor="ps-base">Salaire de base *</label>
@@ -814,10 +828,10 @@ function PayslipModal({ editing, onClose, onSaved }: { editing: Payslip | null; 
                   </div>
                   <div className="border-t border-white/20 pt-3 flex items-center justify-between">
                     <span className="text-sm text-white/80">NET À PAYER</span>
-                    <span className="text-2xl font-bold">{fmt(calc.net_salary)} MAD</span>
+                    <span className="text-2xl font-bold">{fmt(calc.net_salary)} FCFA</span>
                   </div>
                   <p className="text-xs text-white/50 mt-2">
-                    Charges patronales : {fmt(calc.cnss_employer + calc.amo_employer + calc.cimr_employer)} MAD
+                    Charges patronales : {fmt(calc.cnss_employer + calc.amo_employer + calc.cimr_employer)} FCFA
                   </p>
                 </div>
               )}
