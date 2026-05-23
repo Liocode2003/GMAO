@@ -356,7 +356,7 @@ DECLARE
 BEGIN
   FOREACH col IN ARRAY ARRAY['first_name','last_name','gender','email','phone','function',
     'service_line','grade','contract_type','entry_date','exit_date','salary','status',
-    'department','is_expatriate'] LOOP
+    'is_expatriate'] LOOP
     EXECUTE format('SELECT ($1).%I::TEXT', col) INTO old_val USING OLD;
     EXECUTE format('SELECT ($1).%I::TEXT', col) INTO new_val USING NEW;
     IF old_val IS DISTINCT FROM new_val THEN
