@@ -88,7 +88,9 @@ export default function PayslipsPage() {
       const params: Record<string, string> = { year: String(filterYear) };
       if (filterMonth) params.month = String(filterMonth);
       const { data } = await api.get('/payslips', { params });
-      setPayslips(data);
+      setPayslips(Array.isArray(data) ? data : []);
+    } catch {
+      setPayslips([]);
     } finally {
       setLoading(false);
     }
