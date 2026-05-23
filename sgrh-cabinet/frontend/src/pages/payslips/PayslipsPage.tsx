@@ -66,7 +66,7 @@ const MONTHS = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
   'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
 const fmt = (n: string | number) =>
-  Number(n).toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  Number(n).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 // ─── Composant principal ──────────────────────────────────────────────────────
 
@@ -132,7 +132,7 @@ export default function PayslipsPage() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Paie</h2>
-          <p className="text-gray-500 text-sm">Moteur de paie marocain — CNSS · AMO · IGR</p>
+          <p className="text-gray-500 text-sm">Gestion des bulletins de paie — CNSS · ITS</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <select value={filterYear} onChange={e => setFilterYear(+e.target.value)} className="input w-28">
@@ -814,10 +814,10 @@ function PayslipModal({ editing, onClose, onSaved }: { editing: Payslip | null; 
                   </div>
                   <div className="border-t border-white/20 pt-3 flex items-center justify-between">
                     <span className="text-sm text-white/80">NET À PAYER</span>
-                    <span className="text-2xl font-bold">{fmt(calc.net_salary)} MAD</span>
+                    <span className="text-2xl font-bold">{fmt(calc.net_salary)} FCFA</span>
                   </div>
                   <p className="text-xs text-white/50 mt-2">
-                    Charges patronales : {fmt(calc.cnss_employer + calc.amo_employer + calc.cimr_employer)} MAD
+                    Charges patronales : {fmt(calc.cnss_employer + calc.amo_employer + calc.cimr_employer)} FCFA
                   </p>
                 </div>
               )}
