@@ -176,7 +176,7 @@ INSERT INTO employees (
    'CONSULTANT'::"grade", 'AUDIT_ASSURANCE'::"service_line", 'AUDITEUR'::"employee_function", 'CONSULTANT'::"contract_type", '2026-01-01',
    '1990-01-01', 'ACTIF'::"employee_status", 22.50, NOW(), NOW()),
   ('50800967-ea50-414a-afa4-0d255854e1bd', 'CONS-005', 'Bénéwendé Dieudonnée', 'SAWADOGO', 'F'::"gender", 'benewende.sawadogo@forvismazars.com',
-   'CONSULTANT'::"grade", 'AUDIT_ASSURANCE'::"service_line", 'AUDITEUR'::"employee_function", 'CONSULTANT'::"contract_type", '2026-12-07',
+   'CONSULTANT'::"grade", 'AUDIT_ASSURANCE'::"service_line", 'AUDITEUR'::"employee_function", 'CONSULTANT'::"contract_type", '2026-02-09',
    '1990-01-01', 'ACTIF'::"employee_status", 22.50, NOW(), NOW());
 
 -- 4. Vérification
