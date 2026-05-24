@@ -4,336 +4,783 @@ import fs from 'fs';
 import { query } from '../config/database';
 import { logger } from '../utils/logger';
 
-const MONTH_NAMES = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+// ─── Constantes ───────────────────────────────────────────────────────────────
+
+const MONTH_NAMES = [
+  'Janvier','Février','Mars','Avril','Mai','Juin',
+  'Juillet','Août','Septembre','Octobre','Novembre','Décembre',
+];
 
 const GRADE_LABELS: Record<string, string> = {
   ASSOCIE: 'Associé',
   DIRECTEUR: 'Directeur',
-  SENIOR_MANAGER_3: 'Senior Manager 3',
-  SENIOR_MANAGER_2: 'Senior Manager 2',
-  SENIOR_MANAGER_1: 'Senior Manager 1',
+  SENIOR_MANAGER_3: 'Sénior Manager 3',
+  SENIOR_MANAGER_2: 'Sénior Manager 2',
+  SENIOR_MANAGER_1: 'Sénior Manager 1',
   ASSISTANT_MANAGER_3: 'Manager 3',
   ASSISTANT_MANAGER_2: 'Manager 2',
   ASSISTANT_MANAGER_1: 'Manager 1',
-  CONSULTANT: 'Consultant',
+  CONSULTANT: 'Sénior Consultant',
   SENIOR_3: 'Senior 3',
   SENIOR_2: 'Senior 2',
   SENIOR_1: 'Senior 1',
-  ASSISTANT_CONFIRME: 'Assistant Confirmé',
-  ASSISTANT_DEBUTANT: 'Assistant Débutant',
+  ASSISTANT_CONFIRME: 'Assistant confirmé',
+  ASSISTANT_DEBUTANT: 'Assistant débutant',
   JUNIOR: 'Junior',
 };
 
-const HEADER_STYLE: Partial<ExcelJS.Style> = {
-  fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A5F' } },
-  font: { color: { argb: 'FFFFFFFF' }, bold: true, size: 11 },
-  alignment: { horizontal: 'center', vertical: 'middle', wrapText: true },
-  border: {
-    top: { style: 'thin' }, bottom: { style: 'thin' },
-    left: { style: 'thin' }, right: { style: 'thin' },
-  },
+const DEPT_LABELS: Record<string, string> = {
+  AUDIT_ASSURANCE: 'Audit & Assurances',
+  CONSULTING_FA: 'Consulting & FA',
+  OUTSOURCING: 'Outsourcing',
+  JURIDIQUE_FISCALITE: 'Tax & Legal',
+  ADMINISTRATION: 'Administration',
 };
 
-const DATA_STYLE: Partial<ExcelJS.Style> = {
-  alignment: { horizontal: 'center', vertical: 'middle' },
-  border: {
-    top: { style: 'thin', color: { argb: 'FFD1D5DB' } },
-    bottom: { style: 'thin', color: { argb: 'FFD1D5DB' } },
-    left: { style: 'thin', color: { argb: 'FFD1D5DB' } },
-    right: { style: 'thin', color: { argb: 'FFD1D5DB' } },
-  },
+const REASON_LABELS: Record<string, string> = {
+  NOUVELLES_OPPORTUNITES: 'Nouvelles opportunités',
+  RAISONS_PERSONNELLES: 'Raisons personnelles',
+  REMUNERATION: 'Rémunération',
+  MANAGEMENT: 'Management',
+  AUTRES: 'Autres',
 };
+
+// ─── Couleurs & styles ────────────────────────────────────────────────────────
+
+const C = {
+  NAVY:       'FF1B3A5C',
+  NAVY_LIGHT: 'FF2C5282',
+  SECTION_BG: 'FFD6E4F0',
+  TOTAL_BG:   'FFE8F0F8',
+  ALT_ROW:    'FFF7FAFC',
+  WHITE:      'FFFFFFFF',
+  TEXT_DARK:  'FF1A202C',
+  TEXT_MUTED: 'FF718096',
+  GREEN:      'FF276749',
+  GREEN_BG:   'FFC6F6D5',
+  RED:        'FF9B2335',
+  RED_BG:     'FFFED7D7',
+};
+
+const borders = (color = 'FFD1D5DB'): ExcelJS.Borders => ({
+  top: { style: 'thin', color: { argb: color } },
+  bottom: { style: 'thin', color: { argb: color } },
+  left: { style: 'thin', color: { argb: color } },
+  right: { style: 'thin', color: { argb: color } },
+});
+
+const styleHeader = (cell: ExcelJS.Cell) => {
+  cell.style = {
+    fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: C.NAVY } },
+    font: { bold: true, color: { argb: C.WHITE }, size: 10 },
+    alignment: { horizontal: 'center', vertical: 'middle', wrapText: true },
+    border: borders('FF4A5568'),
+  };
+};
+
+const styleSection = (cell: ExcelJS.Cell) => {
+  cell.style = {
+    fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: C.SECTION_BG } },
+    font: { bold: true, color: { argb: C.NAVY }, size: 10 },
+    alignment: { horizontal: 'left', vertical: 'middle' },
+    border: borders(),
+  };
+};
+
+const styleTotal = (cell: ExcelJS.Cell, alignRight = false) => {
+  cell.style = {
+    fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: C.TOTAL_BG } },
+    font: { bold: true, color: { argb: C.NAVY }, size: 10 },
+    alignment: { horizontal: alignRight ? 'right' : 'center', vertical: 'middle' },
+    border: borders('FF4A5568'),
+  };
+};
+
+const styleData = (cell: ExcelJS.Cell, align: ExcelJS.Alignment['horizontal'] = 'center', alt = false) => {
+  cell.style = {
+    fill: alt ? { type: 'pattern', pattern: 'solid', fgColor: { argb: C.ALT_ROW } } : { type: 'pattern', pattern: 'none' },
+    font: { size: 10, color: { argb: C.TEXT_DARK } },
+    alignment: { horizontal: align, vertical: 'middle', wrapText: true },
+    border: borders(),
+  };
+};
+
+const styleTitle = (cell: ExcelJS.Cell) => {
+  cell.style = {
+    fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: C.NAVY } },
+    font: { bold: true, color: { argb: C.WHITE }, size: 13 },
+    alignment: { horizontal: 'center', vertical: 'middle' },
+  };
+};
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const fmtDate = (d: unknown): string => {
+  if (!d) return '';
+  return new Date(d as string).toLocaleDateString('fr-FR');
+};
+
+const fmtPct = (n: number): string => `${(n * 100).toFixed(1)}%`;
+
+const calcAge = (birthDate: unknown): number | string => {
+  if (!birthDate) return '';
+  const birth = new Date(birthDate as string);
+  const now = new Date();
+  let age = now.getFullYear() - birth.getFullYear();
+  const m = now.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
+  return age;
+};
+
+const departureType = (reason: string | null): string => {
+  if (!reason) return '—';
+  if (['NOUVELLES_OPPORTUNITES', 'RAISONS_PERSONNELLES', 'REMUNERATION', 'MANAGEMENT'].includes(reason))
+    return 'Volontaire';
+  return '—';
+};
+
+// ─── Point d'entrée ───────────────────────────────────────────────────────────
 
 export const generateMonthlyReport = async (year: number, month: number): Promise<string> => {
-  const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'SGRH Cabinet';
-  workbook.created = new Date();
+  const monthName   = MONTH_NAMES[month - 1];
+  const endDate     = new Date(year, month, 0).toISOString().split('T')[0];   // dernier jour du mois
+  const prevEndDate = new Date(year - 1, month, 0).toISOString().split('T')[0];
+  const startYear   = `${year}-01-01`;
+  const prevStartYear = `${year - 1}-01-01`;
 
-  const monthName = MONTH_NAMES[month - 1];
-  const prevMonth = month === 1 ? 12 : month - 1;
-  const prevYear = month === 1 ? year - 1 : year;
-  const prevMonthName = MONTH_NAMES[prevMonth - 1];
+  const wb = new ExcelJS.Workbook();
+  wb.creator  = 'SGRH Forvis Mazars';
+  wb.created  = new Date();
 
-  // ====== ONGLET 1: KPI Année ======
-  await buildKPISheet(workbook, year, monthName);
+  await buildListePersonnel(wb, monthName, year, endDate);
+  await buildEffectifs(wb, monthName, year, endDate, prevEndDate);
+  await buildMouvements(wb, year, startYear, endDate, prevStartYear, prevEndDate);
+  await buildParDepartement(wb, monthName, year, endDate, prevEndDate);
+  await buildTranchesAge(wb, monthName, year, endDate);
+  await buildTurnOver(wb, monthName, year, endDate, prevEndDate, startYear, prevStartYear);
+  await buildMotifsDeparture(wb, monthName, year, startYear, endDate, prevStartYear, prevEndDate);
 
-  // ====== ONGLET 2: Effectif par ligne de service ======
-  await buildHeadcountSheet(workbook);
-
-  // ====== ONGLET 3: Formation mois courant ======
-  await buildTrainingSheet(workbook, year, month, `Formation - ${monthName} ${year}`);
-
-  // ====== ONGLET 4: Formation mois précédent ======
-  await buildTrainingSheet(workbook, prevYear, prevMonth, `Formation - ${prevMonthName} ${prevYear}`);
-
-  // Sauvegarde
   const reportsDir = path.join(process.cwd(), 'reports');
   if (!fs.existsSync(reportsDir)) fs.mkdirSync(reportsDir, { recursive: true });
 
-  const filename = `Données_du_mois_RH_${year}_${String(month).padStart(2, '0')}.xlsx`;
+  const filename = `Reporting_RH_ForvisMazars_BF_${monthName}${year}.xlsx`;
   const filePath = path.join(reportsDir, filename);
-  await workbook.xlsx.writeFile(filePath);
-
-  logger.info(`Rapport généré: ${filePath}`);
+  await wb.xlsx.writeFile(filePath);
+  logger.info(`Rapport généré : ${filePath}`);
   return filePath;
 };
 
-async function buildKPISheet(workbook: ExcelJS.Workbook, year: number, monthName: string) {
-  const sheet = workbook.addWorksheet('KPI Année');
-  sheet.pageSetup = { orientation: 'landscape', fitToPage: true };
+// ─── Feuille 1 : Liste Personnel ─────────────────────────────────────────────
 
-  // Titre principal (ligne 1)
-  sheet.mergeCells('A1:O1');
-  const titleCell = sheet.getCell('A1');
-  titleCell.value = `TABLEAU DE BORD RH - ANNÉE ${year}`;
-  titleCell.style = {
-    font: { bold: true, size: 14, color: { argb: 'FF1E3A5F' } },
-    alignment: { horizontal: 'center' },
-  };
-  sheet.getRow(1).height = 30;
-
-  // Ligne 2: espaceur
-  sheet.getRow(2).height = 8;
-
-  // Ligne 3: Titre entreprise
-  sheet.mergeCells('A3:O3');
-  const companyTitleCell = sheet.getCell('A3');
-  companyTitleCell.value = "KPI's Ressources Humaines Forvis Mazars West And Central Africa : BURKINA FASO";
-  companyTitleCell.style = {
-    font: { bold: true, size: 16, color: { argb: 'FF1E3A5F' } },
-    alignment: { horizontal: 'center', vertical: 'middle' },
-  };
-  sheet.getRow(3).height = 40;
-
-  // En-têtes colonnes (ligne 4)
-  const months = MONTH_NAMES.slice(0, 12);
-  const headers = ['Indicateur', 'YTD', ...months, 'TARGET'];
-  const headerRow = sheet.addRow(headers);
-  headerRow.eachCell((cell) => { cell.style = HEADER_STYLE; });
-  sheet.getRow(4).height = 25;
-
-  // Largeurs colonnes
-  sheet.getColumn(1).width = 35;
-  for (let i = 2; i <= 15; i++) sheet.getColumn(i).width = 12;
-
-  // Données KPI
-  const kpiData = await query(`
-    SELECT
-      EXTRACT(YEAR FROM entry_date) as year,
-      EXTRACT(MONTH FROM entry_date) as month,
-      COUNT(*) as entries
-    FROM employees
-    WHERE EXTRACT(YEAR FROM entry_date) = $1
-    GROUP BY EXTRACT(YEAR FROM entry_date), EXTRACT(MONTH FROM entry_date)
-    ORDER BY month
-  `, [year]);
-
-  const monthlyEntries: number[] = new Array(12).fill(0);
-  kpiData.rows.forEach(r => { monthlyEntries[parseInt(r.month) - 1] = parseInt(r.entries); });
-  const ytdEntries = monthlyEntries.reduce((a, b) => a + b, 0);
-
-  const targets = await query('SELECT indicator_key, target_value FROM kpi_targets WHERE year = $1', [year]);
-  const targetMap: Record<string, number> = {};
-  targets.rows.forEach(t => { targetMap[t.indicator_key] = t.target_value; });
-
-  // Ligne section
-  const addSection = (title: string) => {
-    const row = sheet.addRow([title, ...new Array(14).fill('')]);
-    row.getCell(1).style = {
-      fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE5E7EB' } },
-      font: { bold: true, color: { argb: 'FF1E3A5F' } },
-    };
-    sheet.mergeCells(`A${row.number}:P${row.number}`);
-  };
-
-  const addKPIRow = (label: string, ytd: number, monthly: number[], target: number | null) => {
-    const row = sheet.addRow([label, ytd, ...monthly, target ?? '—']);
-    row.eachCell((cell, colNumber) => {
-      cell.style = { ...DATA_STYLE };
-      if (colNumber === 1) cell.alignment = { horizontal: 'left', vertical: 'middle' };
-    });
-    // Alterner couleur
-    if (sheet.rowCount % 2 === 0) {
-      row.eachCell(cell => {
-        cell.style = { ...cell.style, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF9FAFB' } } };
-      });
-    }
-  };
-
-  addSection('EFFECTIFS GLOBAUX');
-  addKPIRow('Entrées', ytdEntries, monthlyEntries, targetMap['HEADCOUNT'] || null);
-
-  // Sorties
-  const exitData = await query(`
-    SELECT EXTRACT(MONTH FROM exit_date) as month, COUNT(*) as exits
-    FROM employees WHERE exit_date IS NOT NULL AND EXTRACT(YEAR FROM exit_date) = $1
-    GROUP BY month ORDER BY month
-  `, [year]);
-  const monthlyExits: number[] = new Array(12).fill(0);
-  exitData.rows.forEach(r => { monthlyExits[parseInt(r.month) - 1] = parseInt(r.exits); });
-  addKPIRow('Sorties', monthlyExits.reduce((a,b) => a+b, 0), monthlyExits, null);
-
-  // Formation
-  addSection('FORMATION');
-  const trainingData = await query(`
-    SELECT EXTRACT(MONTH FROM date) as month, type, COALESCE(SUM(duration_hours),0) as hours
-    FROM trainings WHERE EXTRACT(YEAR FROM date) = $1
-    GROUP BY month, type ORDER BY month
-  `, [year]);
-
-  const formationTypes = ['INTRA','INTERNE','AOC','GROUPE'];
-  const formationLabels: Record<string, string> = { INTRA: 'Formation INTRA', INTERNE: 'Formation INTERNE', AOC: 'Formation AOC', GROUPE: 'Formation GROUPE' };
-
-  for (const type of formationTypes) {
-    const monthly = new Array(12).fill(0);
-    trainingData.rows.filter(r => r.type === type).forEach(r => {
-      monthly[parseInt(r.month) - 1] = parseFloat(r.hours);
-    });
-    addKPIRow(formationLabels[type], monthly.reduce((a,b) => a+b, 0), monthly, null);
-  }
-
-  const totalHoursMonthly = new Array(12).fill(0);
-  trainingData.rows.forEach(r => { totalHoursMonthly[parseInt(r.month) - 1] += parseFloat(r.hours); });
-  addKPIRow('Total heures formation', totalHoursMonthly.reduce((a,b) => a+b, 0), totalHoursMonthly, targetMap['TRAINING_HOURS'] || 200);
-}
-
-async function buildHeadcountSheet(workbook: ExcelJS.Workbook) {
-  const sheet = workbook.addWorksheet('Effectifs par Département');
-
-  const gradeGroups = [
-    { key: 'ASSOCIE', label: 'Associé' },
-    { key: 'DIRECTEUR', label: 'Directeur' },
-    { key: 'SENIOR_MANAGER', label: 'Senior Manager' },
-    { key: 'MANAGER_AM', label: 'Manager/AM' },
-    { key: 'SENIOR', label: 'Senior' },
-    { key: 'ASSISTANT', label: 'Assistant' },
-    { key: 'PERS_ADMIN', label: 'Pers. Admin' },
-  ];
+async function buildListePersonnel(wb: ExcelJS.Workbook, monthName: string, year: number, endDate: string) {
+  const ws = wb.addWorksheet('Liste Personnel');
+  ws.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1 };
 
   // Titre
-  sheet.mergeCells('A1:J1');
-  sheet.getCell('A1').value = 'EFFECTIFS PAR LIGNE DE SERVICE ET GRADE';
-  sheet.getCell('A1').style = { font: { bold: true, size: 13, color: { argb: 'FF1E3A5F' } }, alignment: { horizontal: 'center' } };
+  ws.mergeCells('A1:K1');
+  styleTitle(ws.getCell('A1'));
+  ws.getCell('A1').value = `LISTE DU PERSONNEL – FIN ${monthName.toUpperCase()} ${year}`;
+  ws.getRow(1).height = 28;
 
-  // Headers
-  const headerRow = sheet.addRow(['Ligne de Service', ...gradeGroups.map(g => g.label), 'Total']);
-  headerRow.eachCell(cell => { cell.style = HEADER_STYLE; });
-
-  sheet.getColumn(1).width = 28;
-  for (let i = 2; i <= 10; i++) sheet.getColumn(i).width = 15;
-
-  const data = await query(`
-    SELECT service_line, grade, COUNT(*) as count
-    FROM employees WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE)
-    GROUP BY service_line, grade
-  `);
-
-  const serviceLines = [
-    { key: 'AUDIT_ASSURANCE', label: 'Audit & Assurance' },
-    { key: 'CONSULTING_FA', label: 'Consulting & FA' },
-    { key: 'OUTSOURCING', label: 'Outsourcing' },
-    { key: 'JURIDIQUE_FISCALITE', label: 'Juridique & Fiscalité' },
-    { key: 'ADMINISTRATION', label: 'Administration' },
+  // En-têtes
+  const hdrs = [
+    'N°', 'Nom et Prénoms', "Date d'Entrée", 'Date de Naissance',
+    'Genre', 'Grade', 'Département', 'Catégorie', 'Date de sortie', 'Motif', 'Âge',
   ];
+  const hRow = ws.addRow(hdrs);
+  hRow.eachCell(styleHeader);
+  hRow.height = 22;
 
-  const gradeMapping: Record<string, string> = {
-    'ASSOCIE': 'ASSOCIE',
-    'DIRECTEUR': 'DIRECTEUR',
-    'SENIOR_MANAGER_1': 'SENIOR_MANAGER', 'SENIOR_MANAGER_2': 'SENIOR_MANAGER', 'SENIOR_MANAGER_3': 'SENIOR_MANAGER',
-    'ASSISTANT_MANAGER_1': 'MANAGER_AM', 'ASSISTANT_MANAGER_2': 'MANAGER_AM', 'ASSISTANT_MANAGER_3': 'MANAGER_AM',
-    'CONSULTANT': 'MANAGER_AM',
-    'SENIOR_1': 'SENIOR', 'SENIOR_2': 'SENIOR', 'SENIOR_3': 'SENIOR',
-    'JUNIOR': 'ASSISTANT',
-    'ASSISTANT_CONFIRME': 'ASSISTANT', 'ASSISTANT_DEBUTANT': 'ASSISTANT',
-  };
+  // Largeurs colonnes
+  const widths = [5, 34, 13, 15, 8, 22, 20, 12, 14, 36, 6];
+  widths.forEach((w, i) => { ws.getColumn(i + 1).width = w; });
 
-  let grandTotal = new Array(gradeGroups.length).fill(0);
+  // Données : actifs d'abord, puis sortants
+  const rows = await query(
+    `SELECT matricule, first_name, last_name, entry_date, birth_date, gender,
+            grade, service_line, contract_type, exit_date, departure_reason
+     FROM employees
+     ORDER BY
+       CASE WHEN exit_date IS NULL OR exit_date > $1 THEN 0 ELSE 1 END,
+       last_name, first_name`,
+    [endDate]
+  );
 
-  serviceLines.forEach(sl => {
-    const rowData = [sl.label, ...new Array(gradeGroups.length).fill(0)];
-    data.rows
-      .filter(r => r.service_line === sl.key)
-      .forEach(r => {
-        const grpKey = gradeMapping[r.grade];
-        const idx = gradeGroups.findIndex(g => g.key === grpKey);
-        if (idx >= 0) {
-          (rowData[idx + 1] as number) += parseInt(r.count);
-          grandTotal[idx] += parseInt(r.count);
-        }
-      });
-    const total = (rowData.slice(1) as number[]).reduce((a,b) => a+b, 0);
-    rowData.push(total);
-    const row = sheet.addRow(rowData);
-    row.eachCell((cell, ci) => {
-      cell.style = DATA_STYLE;
-      if (ci === 1) cell.alignment = { horizontal: 'left', vertical: 'middle' };
+  rows.rows.forEach((r, i) => {
+    const alt = i % 2 === 1;
+    const isActive = !r.exit_date || new Date(r.exit_date) > new Date(endDate);
+    const genre   = r.gender === 'M' ? 'Homme' : 'Dame';
+    const cat     = r.contract_type === 'CONSULTANT' ? 'Consultant' : 'Permanent';
+    const motif   = r.departure_reason ? REASON_LABELS[r.departure_reason] ?? r.departure_reason : '';
+    const age     = isActive ? calcAge(r.birth_date) : '';
+
+    const dataRow = ws.addRow([
+      i + 1,
+      `${r.last_name} ${r.first_name}`,
+      r.entry_date ? new Date(r.entry_date) : '',
+      r.birth_date ? new Date(r.birth_date) : '',
+      genre,
+      GRADE_LABELS[r.grade] ?? r.grade,
+      DEPT_LABELS[r.service_line] ?? r.service_line,
+      cat,
+      r.exit_date ? new Date(r.exit_date) : '',
+      motif,
+      age,
+    ]);
+
+    dataRow.eachCell((cell, ci) => {
+      styleData(cell, ci === 2 || ci === 10 ? 'left' : 'center', alt);
     });
-  });
 
-  // Total row
-  const totalRow = sheet.addRow(['TOTAL', ...grandTotal, grandTotal.reduce((a,b) => a+b, 0)]);
-  totalRow.eachCell(cell => {
-    cell.style = {
-      ...HEADER_STYLE,
-      fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF374151' } },
-    };
+    // Formatage dates
+    [3, 4, 9].forEach(ci => {
+      const cell = dataRow.getCell(ci);
+      if (cell.value instanceof Date) cell.numFmt = 'dd/mm/yyyy';
+    });
+
+    // Surlignage rouge pour les sortants
+    if (!isActive) {
+      dataRow.eachCell(cell => {
+        cell.font = { ...cell.font, color: { argb: C.RED } };
+      });
+    }
+
+    dataRow.height = 18;
   });
 }
 
-async function buildTrainingSheet(workbook: ExcelJS.Workbook, year: number, month: number, sheetName: string) {
-  const sheet = workbook.addWorksheet(sheetName);
+// ─── Feuille 2 : Effectifs ────────────────────────────────────────────────────
 
-  sheet.mergeCells('A1:J1');
-  sheet.getCell('A1').value = sheetName.toUpperCase();
-  sheet.getCell('A1').style = { font: { bold: true, size: 13, color: { argb: 'FF1E3A5F' } }, alignment: { horizontal: 'center' } };
+async function buildEffectifs(
+  wb: ExcelJS.Workbook, monthName: string, year: number, endDate: string, prevEndDate: string
+) {
+  const ws = wb.addWorksheet('Effectifs');
 
-  const headers = ['Type', 'Date', 'Lieu', 'Heure début', 'Heure fin', 'Durée (h)', 'Thème', 'Formateur', 'Participants', 'Observations'];
-  const headerRow = sheet.addRow(headers);
-  headerRow.eachCell(cell => { cell.style = HEADER_STYLE; });
+  const colLabel = `Fin ${monthName} ${year}`;
+  const colPrev  = `Fin ${monthName} ${year - 1}`;
 
-  const colWidths = [12, 12, 20, 12, 12, 10, 30, 25, 30, 30];
-  colWidths.forEach((w, i) => { sheet.getColumn(i + 1).width = w; });
+  // Titre
+  ws.mergeCells('A1:E1');
+  styleTitle(ws.getCell('A1'));
+  ws.getCell('A1').value = 'EFFECTIFS – FORVIS MAZARS BURKINA FASO';
+  ws.getRow(1).height = 28;
 
-  const trainings = await query(`
-    SELECT t.*,
-      ARRAY_AGG(e.first_name || ' ' || e.last_name) FILTER (WHERE e.id IS NOT NULL) as participants
-    FROM trainings t
-    LEFT JOIN training_participants tp ON tp.training_id = t.id
-    LEFT JOIN employees e ON e.id = tp.employee_id
-    WHERE EXTRACT(YEAR FROM t.date) = $1 AND EXTRACT(MONTH FROM t.date) = $2
-    GROUP BY t.id
-    ORDER BY t.date
-  `, [year, month]);
+  ws.getColumn(1).width = 28;
+  ws.getColumn(2).width = 16;
+  ws.getColumn(3).width = 16;
+  ws.getColumn(4).width = 12;
+  ws.getColumn(5).width = 14;
 
-  let totalHours = 0;
+  const addBlank = () => { ws.addRow([]); };
 
-  trainings.rows.forEach(t => {
-    const row = sheet.addRow([
-      t.type,
-      t.date ? new Date(t.date).toLocaleDateString('fr-FR') : '',
-      t.location || '',
-      t.start_time || '',
-      t.end_time || '',
-      t.duration_hours || 0,
-      t.title,
-      t.trainer || '',
-      Array.isArray(t.participants) ? t.participants.filter(Boolean).join(', ') : '',
-      t.observations || '',
+  // ── Section 1 : Effectif total ──
+  addBlank();
+  ws.mergeCells(`A${ws.rowCount}:E${ws.rowCount}`);
+  styleSection(ws.getCell(`A${ws.rowCount}`));
+  ws.getCell(`A${ws.rowCount}`).value = '1. EFFECTIF TOTAL (HORS STAGIAIRES ÉCOLE)';
+
+  const hRow1 = ws.addRow(['Catégorie', colLabel, colPrev, 'Variation', '% Variation']);
+  hRow1.eachCell(styleHeader);
+  hRow1.height = 22;
+
+  const permCur = await headcount(endDate, 'CDI', 'CDD');
+  const permPrv = await headcount(prevEndDate, 'CDI', 'CDD');
+  const consCur = await headcount(endDate, 'CONSULTANT');
+  const consPrv = await headcount(prevEndDate, 'CONSULTANT');
+  const totCur  = permCur + consCur;
+  const totPrv  = permPrv + consPrv;
+
+  const addEff = (label: string, cur: number, prv: number, idx: number) => {
+    const delta = cur - prv;
+    const pct   = prv > 0 ? delta / prv : 0;
+    const alt   = idx % 2 === 1;
+    const row = ws.addRow([label, cur, prv, delta, fmtPct(pct)]);
+    row.eachCell((c, ci) => styleData(c, ci === 1 ? 'left' : 'center', alt));
+    row.height = 18;
+  };
+
+  addEff('Permanents',  permCur, permPrv, 0);
+  addEff('Consultants', consCur, consPrv, 1);
+
+  const totRow = ws.addRow(['TOTAL GÉNÉRAL', totCur, totPrv, totCur - totPrv, fmtPct(totPrv > 0 ? (totCur - totPrv) / totPrv : 0)]);
+  totRow.eachCell((c, ci) => styleTotal(c, ci !== 1));
+  if (ci1(totRow, 4) > 0) totRow.getCell(4).font = { ...totRow.getCell(4).font, color: { argb: C.GREEN } };
+  totRow.height = 20;
+
+  // ── Section 2 : H/F ──
+  addBlank();
+  ws.mergeCells(`A${ws.rowCount}:E${ws.rowCount}`);
+  styleSection(ws.getCell(`A${ws.rowCount}`));
+  ws.getCell(`A${ws.rowCount}`).value = '2. RÉPARTITION HOMMES / FEMMES';
+
+  const hRow2 = ws.addRow([
+    'Genre',
+    colLabel, `% ${monthName} ${year}`,
+    colPrev,  `% ${monthName} ${year - 1}`,
+  ]);
+  hRow2.eachCell(styleHeader);
+  hRow2.height = 22;
+
+  const gcur = await genderCount(endDate);
+  const gprv = await genderCount(prevEndDate);
+  const gtotCur = (gcur.M || 0) + (gcur.F || 0);
+  const gtotPrv = (gprv.M || 0) + (gprv.F || 0);
+
+  const addGender = (label: string, cur: number, prv: number, idx: number) => {
+    const row = ws.addRow([
+      label, cur,
+      fmtPct(gtotCur > 0 ? cur / gtotCur : 0),
+      prv,
+      fmtPct(gtotPrv > 0 ? prv / gtotPrv : 0),
     ]);
-    row.eachCell((cell, ci) => {
-      cell.style = DATA_STYLE;
-      if ([1,2,3,4,5,6].includes(ci)) cell.alignment = { horizontal: 'center', vertical: 'middle' };
-      else cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
-    });
-    totalHours += parseFloat(t.duration_hours) || 0;
+    row.eachCell((c, ci) => styleData(c, ci === 1 ? 'left' : 'center', idx % 2 === 1));
+    row.height = 18;
+  };
+
+  addGender('Hommes', gcur.M || 0, gprv.M || 0, 0);
+  addGender('Femmes', gcur.F || 0, gprv.F || 0, 1);
+
+  const totGRow = ws.addRow(['TOTAL', gtotCur, '100%', gtotPrv, '100%']);
+  totGRow.eachCell((c, ci) => styleTotal(c, ci !== 1));
+  totGRow.height = 20;
+}
+
+// helper: cellule numérique d'une ligne
+function ci1(row: ExcelJS.Row, colIndex: number): number {
+  return Number(row.getCell(colIndex).value) || 0;
+}
+
+async function headcount(date: string, ...contractTypes: string[]): Promise<number> {
+  const filter = contractTypes.length > 0
+    ? `AND contract_type = ANY($2::text[])`
+    : `AND contract_type NOT IN ('STAGE')`;
+  const params = contractTypes.length > 0 ? [date, contractTypes] : [date];
+  const res = await query(
+    `SELECT COUNT(*) as n FROM employees
+     WHERE entry_date <= $1 AND (exit_date IS NULL OR exit_date > $1) ${filter}`,
+    params
+  );
+  return parseInt(res.rows[0].n) || 0;
+}
+
+async function genderCount(date: string): Promise<Record<string, number>> {
+  const res = await query(
+    `SELECT gender, COUNT(*) as n FROM employees
+     WHERE entry_date <= $1 AND (exit_date IS NULL OR exit_date > $1)
+       AND contract_type NOT IN ('STAGE')
+     GROUP BY gender`,
+    [date]
+  );
+  const m: Record<string, number> = {};
+  res.rows.forEach((r: { gender: string; n: string }) => { m[r.gender] = parseInt(r.n) || 0; });
+  return m;
+}
+
+// ─── Feuille 3 : Mouvements ───────────────────────────────────────────────────
+
+async function buildMouvements(
+  wb: ExcelJS.Workbook, year: number,
+  startCur: string, endCur: string, startPrv: string, endPrv: string
+) {
+  const ws = wb.addWorksheet('Mouvements');
+
+  ws.mergeCells('A1:G1');
+  styleTitle(ws.getCell('A1'));
+  ws.getCell('A1').value = 'MOUVEMENTS DU PERSONNEL – DÉPARTS';
+  ws.getRow(1).height = 28;
+
+  const hdrs = [
+    'N°', 'Nom et Prénoms', 'Date de Départ',
+    'Motif de Départ', 'Type de Départ', 'Remplacé (O/N)', 'Période',
+  ];
+  const hRow = ws.addRow(hdrs);
+  hRow.eachCell(styleHeader);
+  hRow.height = 22;
+
+  const widths = [5, 34, 14, 24, 16, 14, 14];
+  widths.forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+
+  // Départs N-1 puis N
+  const rows = await query(
+    `SELECT last_name, first_name, exit_date, departure_reason
+     FROM employees
+     WHERE exit_date BETWEEN $1 AND $2 OR exit_date BETWEEN $3 AND $4
+     ORDER BY exit_date`,
+    [startPrv, endPrv, startCur, endCur]
+  );
+
+  rows.rows.forEach((r, i) => {
+    const alt = i % 2 === 1;
+    const exitDt  = new Date(r.exit_date);
+    const periode = `${MONTH_NAMES[exitDt.getMonth()]} ${exitDt.getFullYear()}`;
+    const motifLabel = r.departure_reason ? REASON_LABELS[r.departure_reason] ?? r.departure_reason : '—';
+    const typeDepart = departureType(r.departure_reason);
+
+    const row = ws.addRow([
+      i + 1,
+      `${r.last_name} ${r.first_name}`,
+      exitDt,
+      motifLabel,
+      typeDepart,
+      '—',
+      periode,
+    ]);
+
+    row.eachCell((c, ci) => styleData(c, ci === 2 || ci === 4 ? 'left' : 'center', alt));
+    row.getCell(3).numFmt = 'dd/mm/yyyy';
+    row.height = 18;
   });
 
-  if (trainings.rows.length === 0) {
-    sheet.addRow(['Aucune formation enregistrée pour cette période', ...new Array(9).fill('')]);
+  if (rows.rows.length === 0) {
+    const r = ws.addRow(['—', 'Aucun départ enregistré', '', '', '', '', '']);
+    r.eachCell(c => styleData(c, 'center'));
   }
+}
 
-  // Total
-  const totalRow = sheet.addRow(['', '', '', '', 'TOTAL HEURES', totalHours, '', '', '', '']);
-  totalRow.getCell(5).style = { font: { bold: true }, alignment: { horizontal: 'right' } };
-  totalRow.getCell(6).style = { font: { bold: true, color: { argb: 'FF1E3A5F' } }, alignment: { horizontal: 'center' } };
+// ─── Feuille 4 : Par Département ─────────────────────────────────────────────
+
+async function buildParDepartement(
+  wb: ExcelJS.Workbook, monthName: string, year: number, endDate: string, prevEndDate: string
+) {
+  const ws = wb.addWorksheet('Par Département');
+
+  ws.mergeCells('A1:E1');
+  styleTitle(ws.getCell('A1'));
+  ws.getCell('A1').value = 'EFFECTIFS PAR DÉPARTEMENT';
+  ws.getRow(1).height = 28;
+
+  ws.addRow([]);
+
+  const hRow = ws.addRow([
+    'Département',
+    `Fin ${monthName} ${year}`, `% Total ${year}`,
+    `Fin ${monthName} ${year - 1}`, `% Total ${year - 1}`,
+  ]);
+  hRow.eachCell(styleHeader);
+  hRow.height = 22;
+
+  ws.getColumn(1).width = 28;
+  [2, 3, 4, 5].forEach(i => { ws.getColumn(i).width = 16; });
+
+  const depts = [
+    'AUDIT_ASSURANCE', 'ADMINISTRATION', 'CONSULTING_FA', 'OUTSOURCING', 'JURIDIQUE_FISCALITE',
+  ];
+
+  const [curRes, prvRes] = await Promise.all([
+    query(
+      `SELECT service_line, COUNT(*) as n FROM employees
+       WHERE entry_date <= $1 AND (exit_date IS NULL OR exit_date > $1)
+         AND contract_type NOT IN ('STAGE')
+       GROUP BY service_line`,
+      [endDate]
+    ),
+    query(
+      `SELECT service_line, COUNT(*) as n FROM employees
+       WHERE entry_date <= $1 AND (exit_date IS NULL OR exit_date > $1)
+         AND contract_type NOT IN ('STAGE')
+       GROUP BY service_line`,
+      [prevEndDate]
+    ),
+  ]);
+
+  const curMap: Record<string, number> = {};
+  const prvMap: Record<string, number> = {};
+  curRes.rows.forEach((r: { service_line: string; n: string }) => { curMap[r.service_line] = parseInt(r.n) || 0; });
+  prvRes.rows.forEach((r: { service_line: string; n: string }) => { prvMap[r.service_line] = parseInt(r.n) || 0; });
+
+  const totCur = Object.values(curMap).reduce((a, b) => a + b, 0);
+  const totPrv = Object.values(prvMap).reduce((a, b) => a + b, 0);
+
+  depts.forEach((dept, i) => {
+    const cur = curMap[dept] || 0;
+    const prv = prvMap[dept] || 0;
+    const row = ws.addRow([
+      DEPT_LABELS[dept] ?? dept,
+      cur, fmtPct(totCur > 0 ? cur / totCur : 0),
+      prv, fmtPct(totPrv > 0 ? prv / totPrv : 0),
+    ]);
+    row.eachCell((c, ci) => styleData(c, ci === 1 ? 'left' : 'center', i % 2 === 1));
+    row.height = 18;
+  });
+
+  const totRow = ws.addRow(['TOTAL', totCur, '100%', totPrv, '100%']);
+  totRow.eachCell((c, ci) => styleTotal(c, ci !== 1));
+  totRow.height = 20;
+}
+
+// ─── Feuille 5 : Tranches d'Âge ──────────────────────────────────────────────
+
+async function buildTranchesAge(wb: ExcelJS.Workbook, monthName: string, year: number, endDate: string) {
+  const ws = wb.addWorksheet("Tranches d'Âge");
+
+  ws.mergeCells('A1:C1');
+  styleTitle(ws.getCell('A1'));
+  ws.getCell('A1').value = `RÉPARTITION PAR TRANCHES D'ÂGE – FIN ${monthName.toUpperCase()} ${year}`;
+  ws.getRow(1).height = 28;
+
+  ws.addRow([]);
+
+  const hRow = ws.addRow(["Tranche d'âge", 'Effectif', '% du Total']);
+  hRow.eachCell(styleHeader);
+  hRow.height = 22;
+
+  ws.getColumn(1).width = 22;
+  ws.getColumn(2).width = 12;
+  ws.getColumn(3).width = 14;
+
+  const tranches = [
+    { label: 'Moins de 25 ans', min: 0,  max: 24  },
+    { label: '25 – 29 ans',     min: 25, max: 29  },
+    { label: '30 – 34 ans',     min: 30, max: 34  },
+    { label: '35 – 39 ans',     min: 35, max: 39  },
+    { label: '40 – 44 ans',     min: 40, max: 44  },
+    { label: '45 – 49 ans',     min: 45, max: 49  },
+    { label: '50 ans et plus',  min: 50, max: 999 },
+  ];
+
+  const res = await query(
+    `SELECT
+       DATE_PART('year', AGE($1::date, birth_date))::int as age,
+       COUNT(*) as n
+     FROM employees
+     WHERE entry_date <= $1
+       AND (exit_date IS NULL OR exit_date > $1)
+       AND birth_date IS NOT NULL
+       AND contract_type NOT IN ('STAGE')
+     GROUP BY age`,
+    [endDate]
+  );
+
+  const ageCounts: Record<number, number> = {};
+  res.rows.forEach((r: { age: number; n: string }) => { ageCounts[r.age] = parseInt(r.n) || 0; });
+  const total = Object.values(ageCounts).reduce((a, b) => a + b, 0);
+
+  tranches.forEach((t, i) => {
+    const count = Object.entries(ageCounts)
+      .filter(([age]) => parseInt(age) >= t.min && parseInt(age) <= t.max)
+      .reduce((a, [, v]) => a + v, 0);
+    const row = ws.addRow([t.label, count, fmtPct(total > 0 ? count / total : 0)]);
+    row.eachCell((c, ci) => styleData(c, ci === 1 ? 'left' : 'center', i % 2 === 1));
+    row.height = 18;
+  });
+
+  const totRow = ws.addRow(['TOTAL', total, '100%']);
+  totRow.eachCell((c, ci) => styleTotal(c, ci !== 1));
+  totRow.height = 20;
+}
+
+// ─── Feuille 6 : Turn-Over ────────────────────────────────────────────────────
+
+async function buildTurnOver(
+  wb: ExcelJS.Workbook, monthName: string, year: number,
+  endCur: string, endPrv: string, startCur: string, startPrv: string
+) {
+  const ws = wb.addWorksheet('Turn-Over');
+
+  const colCur = `Fin ${monthName} ${year}`;
+  const colPrv = `Fin ${monthName} ${year - 1}`;
+
+  ws.getColumn(1).width = 40;
+  ws.getColumn(2).width = 18;
+  ws.getColumn(3).width = 18;
+
+  // ── Titre ──
+  ws.mergeCells('A1:C1');
+  styleTitle(ws.getCell('A1'));
+  ws.getCell('A1').value = 'ANALYSE DU TURN-OVER';
+  ws.getRow(1).height = 28;
+
+  // ── Rappel formules ──
+  ws.addRow([]);
+  const addFormuleSection = () => {
+    ws.mergeCells(`A${ws.rowCount}:C${ws.rowCount}`);
+    styleSection(ws.getCell(`A${ws.rowCount}`));
+    ws.getCell(`A${ws.rowCount}`).value = 'RAPPEL DES FORMULES';
+  };
+  addFormuleSection();
+
+  const formules = [
+    ['Turn-Over Global',      'Départs totaux / Effectif moyen x 100'],
+    ['Turn-Over Fonctionnel', 'Départs remplacés / Effectif moyen x 100'],
+    ['Effectif moyen',        '(Effectif début de période + Effectif fin de période) / 2'],
+  ];
+  formules.forEach(([label, formula]) => {
+    const r = ws.addRow([label, formula, '']);
+    r.getCell(1).style = { font: { bold: true, size: 10 }, alignment: { horizontal: 'left', vertical: 'middle' }, border: borders() };
+    r.getCell(2).style = {
+      fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: C.ALT_ROW } },
+      font: { size: 10, color: { argb: C.TEXT_MUTED } },
+      alignment: { horizontal: 'left', vertical: 'middle' }, border: borders(),
+    };
+    ws.mergeCells(`B${r.number}:C${r.number}`);
+    r.height = 18;
+  });
+
+  // ── Données de calcul ──
+  ws.addRow([]);
+  ws.mergeCells(`A${ws.rowCount}:C${ws.rowCount}`);
+  styleSection(ws.getCell(`A${ws.rowCount}`));
+  ws.getCell(`A${ws.rowCount}`).value = 'DONNÉES DE CALCUL';
+
+  const hRow = ws.addRow(['Indicateur', colCur, colPrv]);
+  hRow.eachCell(styleHeader);
+  hRow.height = 22;
+
+  const headStartCur = await headcount(startCur);
+  const headEndCur   = await headcount(endCur);
+  const headStartPrv = await headcount(startPrv);
+  const headEndPrv   = await headcount(endPrv);
+  const avgCur = Math.round((headStartCur + headEndCur) / 2);
+  const avgPrv = Math.round((headStartPrv + headEndPrv) / 2);
+
+  const depTotCur = await departuresCount(startCur, endCur);
+  const depTotPrv = await departuresCount(startPrv, endPrv);
+  const depVolCur = await departuresCount(startCur, endCur, 'voluntary');
+  const depVolPrv = await departuresCount(startPrv, endPrv, 'voluntary');
+  const depInvCur = depTotCur - depVolCur;
+  const depInvPrv = depTotPrv - depVolPrv;
+  const entriesCur = await entriesCount(startCur, endCur);
+  const entriesPrv = await entriesCount(startPrv, endPrv);
+
+  const calcLines: [string, number | string, number | string][] = [
+    [`Effectif début de période (01/${String(new Date(startCur).getMonth() + 1).padStart(2,'0')})`, headStartCur, headStartPrv],
+    [`Effectif fin de période (${endCur.slice(8)}/${String(month0(endCur))})`, headEndCur, headEndPrv],
+    ['Effectif moyen',                headEndCur > 0 ? avgCur : '—', headEndPrv > 0 ? avgPrv : '—'],
+    ['Départs totaux',                depTotCur, depTotPrv],
+    ['Dont : départs volontaires',    depVolCur, depVolPrv],
+    ['Dont : départs involontaires',  depInvCur, depInvPrv],
+    ['Départs remplacés',             '—',       '—'],
+    ['Nouvelles entrées',             entriesCur, entriesPrv],
+  ];
+
+  calcLines.forEach(([label, cur, prv], i) => {
+    const row = ws.addRow([label, cur, prv]);
+    row.eachCell((c, ci) => styleData(c, ci === 1 ? 'left' : 'center', i % 2 === 1));
+    row.height = 18;
+  });
+
+  // ── Résultats ──
+  ws.addRow([]);
+  ws.mergeCells(`A${ws.rowCount}:C${ws.rowCount}`);
+  styleSection(ws.getCell(`A${ws.rowCount}`));
+  ws.getCell(`A${ws.rowCount}`).value = 'RÉSULTATS';
+
+  const hRow2 = ws.addRow(['Indicateur', colCur, colPrv]);
+  hRow2.eachCell(styleHeader);
+  hRow2.height = 22;
+
+  const toGloCur = avgCur > 0 ? ((depTotCur / avgCur) * 100).toFixed(1) + '%' : '—';
+  const toGloPrv = avgPrv > 0 ? ((depTotPrv / avgPrv) * 100).toFixed(1) + '%' : '—';
+
+  const resultLines: [string, string, string][] = [
+    ['Turn-Over Global (%)',      toGloCur, toGloPrv],
+    ['Turn-Over Fonctionnel (%)', '—',      '—'],
+  ];
+
+  resultLines.forEach(([label, cur, prv], i) => {
+    const row = ws.addRow([label, cur, prv]);
+    row.eachCell((c, ci) => styleTotal(c, ci !== 1));
+    row.getCell(1).style = { ...row.getCell(1).style, alignment: { horizontal: 'left' } };
+    row.height = 20;
+  });
+}
+
+// ─── Feuille 7 : Motifs de Départ ────────────────────────────────────────────
+
+async function buildMotifsDeparture(
+  wb: ExcelJS.Workbook, monthName: string, year: number,
+  startCur: string, endCur: string, startPrv: string, endPrv: string
+) {
+  const ws = wb.addWorksheet('Motifs de Départ');
+
+  ws.mergeCells('A1:E1');
+  styleTitle(ws.getCell('A1'));
+  ws.getCell('A1').value = 'MOTIFS DE DÉPART';
+  ws.getRow(1).height = 28;
+
+  ws.addRow([]);
+
+  const hRow = ws.addRow([
+    'Motif',
+    `Départs ${monthName} ${year}`, `% ${year}`,
+    `Départs ${monthName} ${year - 1}`, `% ${year - 1}`,
+  ]);
+  hRow.eachCell(styleHeader);
+  hRow.height = 22;
+
+  ws.getColumn(1).width = 28;
+  [2, 3, 4, 5].forEach(i => { ws.getColumn(i).width = 16; });
+
+  const MOTIFS = ['NOUVELLES_OPPORTUNITES', 'RAISONS_PERSONNELLES', 'REMUNERATION', 'MANAGEMENT', 'AUTRES'];
+
+  const [resCur, resPrv] = await Promise.all([
+    query(
+      `SELECT COALESCE(departure_reason, 'AUTRES') as reason, COUNT(*) as n
+       FROM employees WHERE exit_date BETWEEN $1 AND $2
+         AND contract_type NOT IN ('STAGE')
+       GROUP BY reason`,
+      [startCur, endCur]
+    ),
+    query(
+      `SELECT COALESCE(departure_reason, 'AUTRES') as reason, COUNT(*) as n
+       FROM employees WHERE exit_date BETWEEN $1 AND $2
+         AND contract_type NOT IN ('STAGE')
+       GROUP BY reason`,
+      [startPrv, endPrv]
+    ),
+  ]);
+
+  const curMap: Record<string, number> = {};
+  const prvMap: Record<string, number> = {};
+  resCur.rows.forEach((r: { reason: string; n: string }) => { curMap[r.reason] = parseInt(r.n) || 0; });
+  resPrv.rows.forEach((r: { reason: string; n: string }) => { prvMap[r.reason] = parseInt(r.n) || 0; });
+
+  const totCur = Object.values(curMap).reduce((a, b) => a + b, 0);
+  const totPrv = Object.values(prvMap).reduce((a, b) => a + b, 0);
+
+  MOTIFS.forEach((motif, i) => {
+    const cur = curMap[motif] || 0;
+    const prv = prvMap[motif] || 0;
+    const row = ws.addRow([
+      REASON_LABELS[motif],
+      cur, fmtPct(totCur > 0 ? cur / totCur : 0),
+      prv, fmtPct(totPrv > 0 ? prv / totPrv : 0),
+    ]);
+    row.eachCell((c, ci) => styleData(c, ci === 1 ? 'left' : 'center', i % 2 === 1));
+    row.height = 18;
+  });
+
+  const totRow = ws.addRow(['TOTAL', totCur, '100%', totPrv, '100%']);
+  totRow.eachCell((c, ci) => styleTotal(c, ci !== 1));
+  totRow.height = 20;
+}
+
+// ─── Helpers supplémentaires ──────────────────────────────────────────────────
+
+async function departuresCount(from: string, to: string, type?: 'voluntary'): Promise<number> {
+  const voluntaryReasons = "('NOUVELLES_OPPORTUNITES','RAISONS_PERSONNELLES','REMUNERATION','MANAGEMENT')";
+  const filter = type === 'voluntary'
+    ? `AND departure_reason IN ${voluntaryReasons}`
+    : '';
+  const res = await query(
+    `SELECT COUNT(*) as n FROM employees
+     WHERE exit_date BETWEEN $1 AND $2
+       AND contract_type NOT IN ('STAGE') ${filter}`,
+    [from, to]
+  );
+  return parseInt(res.rows[0].n) || 0;
+}
+
+async function entriesCount(from: string, to: string): Promise<number> {
+  const res = await query(
+    `SELECT COUNT(*) as n FROM employees
+     WHERE entry_date BETWEEN $1 AND $2
+       AND contract_type NOT IN ('STAGE')`,
+    [from, to]
+  );
+  return parseInt(res.rows[0].n) || 0;
+}
+
+function month0(dateStr: string): number {
+  return new Date(dateStr).getMonth() + 1;
 }
