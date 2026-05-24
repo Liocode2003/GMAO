@@ -352,15 +352,23 @@ function ci1(row: ExcelJS.Row, colIndex: number): number {
 }
 
 async function headcount(date: string, ...contractTypes: string[]): Promise<number> {
-  const filter = contractTypes.length > 0
-    ? `AND contract_type = ANY($2::text[])`
-    : `AND contract_type NOT IN ('STAGE')`;
-  const params = contractTypes.length > 0 ? [date, contractTypes] : [date];
-  const res = await query(
-    `SELECT COUNT(*) as n FROM employees
-     WHERE entry_date <= $1 AND (exit_date IS NULL OR exit_date > $1) ${filter}`,
-    params
-  );
+  let sql: string;
+  let params: unknown[];
+
+  if (contractTypes.length === 0) {
+    sql = `SELECT COUNT(*) as n FROM employees
+           WHERE entry_date <= $1 AND (exit_date IS NULL OR exit_date > $1)
+             AND contract_type::text != 'STAGE'`;
+    params = [date];
+  } else {
+    const ph = contractTypes.map((_, i) => `$${i + 2}`).join(', ');
+    sql = `SELECT COUNT(*) as n FROM employees
+           WHERE entry_date <= $1 AND (exit_date IS NULL OR exit_date > $1)
+             AND contract_type::text IN (${ph})`;
+    params = [date, ...contractTypes];
+  }
+
+  const res = await query(sql, params);
   return parseInt(res.rows[0].n) || 0;
 }
 
