@@ -4,7 +4,7 @@ import { useAuthStore } from '../../store/authStore';
 import {
   DocumentArrowDownIcon, PlusIcon, PencilIcon, CheckCircleIcon, TrashIcon,
   CalculatorIcon, DocumentTextIcon, ChevronLeftIcon, ChevronRightIcon,
-  ChartBarIcon, UserGroupIcon, ArrowDownTrayIcon, TableCellsIcon,
+  ChartBarIcon, TableCellsIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { TableSkeletonRows } from '../../components/ui/Skeleton';
@@ -56,11 +56,6 @@ interface MasseSalarialeMonth {
   totalBrut: number; totalNet: number; totalIgr: number; totalCnss: number; totalAmo: number;
 }
 
-interface AnnualSlip {
-  month: number; monthLabel: string; grossSalary: number; netSalary: number; igr: number; cnss: number; amo: number; cimr: number;
-}
-
-interface AnnualCumul { grossSalary: number; netSalary: number; igr: number; cnss: number; amo: number; cimr: number; }
 
 const MONTHS = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
   'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
@@ -74,7 +69,7 @@ export default function PayslipsPage() {
   const { user } = useAuthStore();
   const isDRH = user?.role === 'DRH';
 
-  const [activeTab, setActiveTab] = useState<'bulletins' | 'masse' | 'cumul'>('bulletins');
+  const [activeTab, setActiveTab] = useState<'bulletins' | 'masse'>('bulletins');
   const [payslips, setPayslips] = useState<Payslip[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterYear, setFilterYear] = useState(new Date().getFullYear());
@@ -125,7 +120,6 @@ export default function PayslipsPage() {
   const TABS = [
     { id: 'bulletins' as const, label: 'Bulletins de paie', icon: DocumentTextIcon },
     { id: 'masse' as const, label: 'Masse salariale', icon: ChartBarIcon },
-    { id: 'cumul' as const, label: 'Cumul annuel', icon: UserGroupIcon },
   ];
 
   return (
@@ -258,8 +252,6 @@ export default function PayslipsPage() {
       {/* Tab: Masse salariale */}
       {activeTab === 'masse' && <MasseSalarialeTab year={filterYear} />}
 
-      {/* Tab: Cumul annuel */}
-      {activeTab === 'cumul' && <CumulAnnuelTab year={filterYear} />}
 
       {showForm && isDRH && (
         <PayslipModal
@@ -413,171 +405,6 @@ function MasseSalarialeTab({ year }: { year: number }) {
   );
 }
 
-// ─── Cumul annuel par employé ─────────────────────────────────────────────────
-
-function CumulAnnuelTab({ year }: { year: number }) {
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [selectedId, setSelectedId] = useState('');
-  const [data, setData] = useState<{ employee: Employee; slips: AnnualSlip[]; cumul: AnnualCumul } | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [downloading, setDownloading] = useState(false);
-
-  useEffect(() => {
-    api.get('/employees', { params: { limit: 500 } })
-      .then(r => {
-        const list = r.data?.employees ?? r.data;
-        setEmployees(Array.isArray(list) ? list : []);
-      })
-      .catch(() => setEmployees([]));
-  }, []);
-
-  useEffect(() => {
-    if (!selectedId) { setData(null); return; }
-    setLoading(true);
-    api.get(`/payslips/employee/${selectedId}/annual`, { params: { year } })
-      .then(r => {
-        const d = r.data;
-        if (d && Array.isArray(d.slips)) setData(d);
-        else setData(null);
-      })
-      .catch(() => setData(null))
-      .finally(() => setLoading(false));
-  }, [selectedId, year]);
-
-  const handleDownloadAttestation = async () => {
-    if (!selectedId || !data) return;
-    setDownloading(true);
-    try {
-      const res = await api.get(`/payslips/employee/${selectedId}/attestation`, {
-        params: { year },
-        responseType: 'blob',
-      });
-      const url = URL.createObjectURL(res.data);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `attestation_fiscale_${data.employee.matricule}_${year}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success('Attestation fiscale téléchargée');
-    } catch {
-      toast.error('Aucun bulletin trouvé pour cet exercice');
-    } finally {
-      setDownloading(false);
-    }
-  };
-
-  return (
-    <div className="space-y-5">
-      <div className="flex items-center gap-3 flex-wrap">
-        <select
-          className="input flex-1 min-w-[200px] max-w-xs"
-          value={selectedId}
-          onChange={e => setSelectedId(e.target.value)}
-          aria-label="Sélectionner un collaborateur"
-        >
-          <option value="">— Sélectionner un collaborateur —</option>
-          {employees.map(e => (
-            <option key={e.id} value={e.id}>{e.last_name} {e.first_name} ({e.matricule})</option>
-          ))}
-        </select>
-        {data && (
-          <button
-            onClick={handleDownloadAttestation}
-            disabled={downloading}
-            className="btn-secondary gap-2"
-            title="Télécharger attestation fiscale 9421"
-          >
-            <ArrowDownTrayIcon className="w-4 h-4" />
-            {downloading ? 'Génération...' : `Attestation fiscale ${year}`}
-          </button>
-        )}
-      </div>
-
-      {!selectedId && (
-        <EmptyState
-          icon={UserGroupIcon}
-          title="Sélectionnez un collaborateur"
-          description="Choisissez un collaborateur pour voir son cumul annuel et télécharger l'attestation fiscale (modèle 9421)"
-        />
-      )}
-
-      {selectedId && loading && (
-        <div className="card animate-pulse space-y-3 p-6">
-          <div className="h-4 bg-gray-200 rounded w-1/3" />
-          <div className="h-40 bg-gray-100 rounded" />
-        </div>
-      )}
-
-      {data && !loading && data.slips.length === 0 && (
-        <EmptyState
-          icon={DocumentTextIcon}
-          title="Aucun bulletin en {year}"
-          description="Aucun bulletin de paie trouvé pour cet exercice"
-        />
-      )}
-
-      {data && !loading && data.slips.length > 0 && (
-        <>
-          {/* Cumul KPI */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            {[
-              { label: 'Brut cumulé', value: data.cumul.grossSalary, color: 'text-brand-700' },
-              { label: 'Net cumulé', value: data.cumul.netSalary, color: 'text-green-700' },
-              { label: 'IGR annuel', value: data.cumul.igr, color: 'text-red-600' },
-              { label: 'CNSS annuel', value: data.cumul.cnss, color: 'text-amber-700' },
-              { label: 'AMO annuel', value: data.cumul.amo, color: 'text-purple-700' },
-              { label: 'CIMR annuel', value: data.cumul.cimr, color: 'text-gray-700' },
-            ].map(kpi => (
-              <div key={kpi.label} className="card p-3">
-                <p className="text-xs text-gray-500 mb-1">{kpi.label}</p>
-                <p className={`text-base font-bold font-mono ${kpi.color}`}>{fmt(kpi.value)}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Table mensuelle */}
-          <div className="card overflow-x-auto p-0">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Mois</th>
-                  <th className="text-right">Brut</th>
-                  <th className="text-right">Net</th>
-                  <th className="text-right">IGR</th>
-                  <th className="text-right">CNSS</th>
-                  <th className="text-right">AMO</th>
-                  <th className="text-right">CIMR</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.slips.map(s => (
-                  <tr key={s.month}>
-                    <td className="font-medium">{s.monthLabel}</td>
-                    <td className="text-right font-mono text-sm">{fmt(s.grossSalary)}</td>
-                    <td className="text-right font-mono text-sm font-semibold text-brand-700">{fmt(s.netSalary)}</td>
-                    <td className="text-right font-mono text-sm text-red-600">{fmt(s.igr)}</td>
-                    <td className="text-right font-mono text-sm">{fmt(s.cnss)}</td>
-                    <td className="text-right font-mono text-sm">{fmt(s.amo)}</td>
-                    <td className="text-right font-mono text-sm">{fmt(s.cimr)}</td>
-                  </tr>
-                ))}
-                <tr className="bg-gray-50 font-semibold border-t-2 border-gray-200 text-sm">
-                  <td>Cumul {year}</td>
-                  <td className="text-right font-mono text-brand-700">{fmt(data.cumul.grossSalary)}</td>
-                  <td className="text-right font-mono text-green-700">{fmt(data.cumul.netSalary)}</td>
-                  <td className="text-right font-mono text-red-600">{fmt(data.cumul.igr)}</td>
-                  <td className="text-right font-mono">{fmt(data.cumul.cnss)}</td>
-                  <td className="text-right font-mono">{fmt(data.cumul.amo)}</td>
-                  <td className="text-right font-mono">{fmt(data.cumul.cimr)}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
 
 // ─── Modal Formulaire — Stepper 3 étapes ─────────────────────────────────────
 
