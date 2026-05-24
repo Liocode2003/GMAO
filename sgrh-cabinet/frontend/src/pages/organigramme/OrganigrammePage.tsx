@@ -12,22 +12,38 @@ interface Employee {
   photo_url: string | null;
 }
 
+// ── Niveaux hiérarchiques ────────────────────────────────────────────────────
+
+const TIERS: { id: string; label: string; grades: string[] }[] = [
+  {
+    id: 'direction',
+    label: 'Direction',
+    grades: ['ASSOCIE', 'DIRECTEUR'],
+  },
+  {
+    id: 'management',
+    label: 'Management',
+    grades: ['SENIOR_MANAGER_3', 'SENIOR_MANAGER_2', 'SENIOR_MANAGER_1', 'ASSISTANT_MANAGER_3', 'ASSISTANT_MANAGER_2', 'ASSISTANT_MANAGER_1', 'CONSULTANT'],
+  },
+  {
+    id: 'seniors',
+    label: 'Séniors',
+    grades: ['SENIOR_3', 'SENIOR_2', 'SENIOR_1'],
+  },
+  {
+    id: 'assistants',
+    label: 'Assistants',
+    grades: ['ASSISTANT_CONFIRME', 'ASSISTANT_DEBUTANT', 'JUNIOR'],
+  },
+];
+
 const GRADE_ORDER: Record<string, number> = {
-  ASSOCIE: 0,
-  DIRECTEUR: 1,
-  SENIOR_MANAGER_3: 2,
-  SENIOR_MANAGER_2: 3,
-  SENIOR_MANAGER_1: 4,
-  ASSISTANT_MANAGER_3: 5,
-  ASSISTANT_MANAGER_2: 6,
-  ASSISTANT_MANAGER_1: 7,
+  ASSOCIE: 0, DIRECTEUR: 1,
+  SENIOR_MANAGER_3: 2, SENIOR_MANAGER_2: 3, SENIOR_MANAGER_1: 4,
+  ASSISTANT_MANAGER_3: 5, ASSISTANT_MANAGER_2: 6, ASSISTANT_MANAGER_1: 7,
   CONSULTANT: 8,
-  SENIOR_3: 9,
-  SENIOR_2: 10,
-  SENIOR_1: 11,
-  ASSISTANT_CONFIRME: 12,
-  ASSISTANT_DEBUTANT: 13,
-  JUNIOR: 14,
+  SENIOR_3: 9, SENIOR_2: 10, SENIOR_1: 11,
+  ASSISTANT_CONFIRME: 12, ASSISTANT_DEBUTANT: 13, JUNIOR: 14,
 };
 
 const GRADE_LABELS: Record<string, string> = {
@@ -48,104 +64,131 @@ const GRADE_LABELS: Record<string, string> = {
   JUNIOR: 'Junior',
 };
 
-const GRADE_TIER: Record<string, { bg: string; text: string; border: string }> = {
-  ASSOCIE:             { bg: 'bg-brand-600', text: 'text-white',        border: 'border-brand-700' },
-  DIRECTEUR:           { bg: 'bg-brand-500', text: 'text-white',        border: 'border-brand-600' },
-  SENIOR_MANAGER_3:    { bg: 'bg-brand-100', text: 'text-brand-800',    border: 'border-brand-300' },
-  SENIOR_MANAGER_2:    { bg: 'bg-brand-100', text: 'text-brand-800',    border: 'border-brand-300' },
-  SENIOR_MANAGER_1:    { bg: 'bg-brand-100', text: 'text-brand-800',    border: 'border-brand-300' },
-  ASSISTANT_MANAGER_3: { bg: 'bg-blue-50',   text: 'text-blue-800',     border: 'border-blue-200'  },
-  ASSISTANT_MANAGER_2: { bg: 'bg-blue-50',   text: 'text-blue-800',     border: 'border-blue-200'  },
-  ASSISTANT_MANAGER_1: { bg: 'bg-blue-50',   text: 'text-blue-800',     border: 'border-blue-200'  },
-  CONSULTANT:          { bg: 'bg-violet-50', text: 'text-violet-800',   border: 'border-violet-200'},
-  SENIOR_3:            { bg: 'bg-gray-50',   text: 'text-gray-700',     border: 'border-gray-200'  },
-  SENIOR_2:            { bg: 'bg-gray-50',   text: 'text-gray-700',     border: 'border-gray-200'  },
-  SENIOR_1:            { bg: 'bg-gray-50',   text: 'text-gray-700',     border: 'border-gray-200'  },
-  ASSISTANT_CONFIRME:  { bg: 'bg-gray-50',   text: 'text-gray-600',     border: 'border-gray-200'  },
-  ASSISTANT_DEBUTANT:  { bg: 'bg-gray-50',   text: 'text-gray-600',     border: 'border-gray-200'  },
-  JUNIOR:              { bg: 'bg-gray-50',   text: 'text-gray-600',     border: 'border-gray-200'  },
+// ── Couleurs par département ─────────────────────────────────────────────────
+
+const DEPT_COLORS: Record<string, { card: string; badge: string; dot: string }> = {
+  AUDIT_ASSURANCE:     { card: 'border-blue-300 hover:border-blue-400',   badge: 'bg-blue-100 text-blue-700',   dot: 'bg-blue-500'   },
+  CONSULTING_FA:       { card: 'border-purple-300 hover:border-purple-400', badge: 'bg-purple-100 text-purple-700', dot: 'bg-purple-500' },
+  OUTSOURCING:         { card: 'border-green-300 hover:border-green-400',  badge: 'bg-green-100 text-green-700',  dot: 'bg-green-500'  },
+  JURIDIQUE_FISCALITE: { card: 'border-amber-300 hover:border-amber-400',  badge: 'bg-amber-100 text-amber-700',  dot: 'bg-amber-500'  },
+  ADMINISTRATION:      { card: 'border-gray-300 hover:border-gray-400',    badge: 'bg-gray-100 text-gray-600',    dot: 'bg-gray-400'   },
 };
 
-const DEPARTMENTS = [
-  { key: 'AUDIT_ASSURANCE',    label: 'Audit & Assurance',   accent: 'border-t-blue-500',   badge: 'bg-blue-500'   },
-  { key: 'CONSULTING_FA',      label: 'Consulting & FA',     accent: 'border-t-purple-500', badge: 'bg-purple-500' },
-  { key: 'OUTSOURCING',        label: 'Outsourcing',         accent: 'border-t-green-500',  badge: 'bg-green-500'  },
-  { key: 'JURIDIQUE_FISCALITE',label: 'Tax & Legal',         accent: 'border-t-amber-500',  badge: 'bg-amber-500'  },
-  { key: 'ADMINISTRATION',     label: 'Administration',      accent: 'border-t-gray-400',   badge: 'bg-gray-400'   },
-];
+const DEPT_LABELS: Record<string, string> = {
+  AUDIT_ASSURANCE: 'Audit',
+  CONSULTING_FA: 'Consulting',
+  OUTSOURCING: 'Outsourcing',
+  JURIDIQUE_FISCALITE: 'Tax & Legal',
+  ADMINISTRATION: 'Admin',
+};
 
-function EmployeeCard({ emp }: { emp: Employee }) {
-  const tier = GRADE_TIER[emp.grade] || GRADE_TIER.JUNIOR;
-  const isLeader = emp.grade === 'ASSOCIE' || emp.grade === 'DIRECTEUR';
+// ── Carte employé ────────────────────────────────────────────────────────────
+
+function EmployeeCard({ emp, large = false }: { emp: Employee; large?: boolean }) {
+  const dc = DEPT_COLORS[emp.service_line] || DEPT_COLORS.ADMINISTRATION;
+  const isDirection = emp.grade === 'ASSOCIE' || emp.grade === 'DIRECTEUR';
 
   return (
     <Link
       to={`/personnel/${emp.id}`}
-      className={`flex items-center gap-3 p-3 rounded-lg border transition-all hover:shadow-md group ${
-        isLeader
-          ? 'bg-brand-50 border-brand-200 hover:border-brand-400'
-          : 'bg-white border-gray-100 hover:border-gray-300'
-      }`}
+      className={`group flex flex-col items-center text-center bg-white rounded-xl border-2 shadow-sm hover:shadow-md transition-all ${dc.card} ${
+        large ? 'w-44 p-4' : 'w-36 p-3'
+      } ${isDirection ? 'shadow-md' : ''}`}
     >
       {/* Avatar */}
-      <div className={`w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold border-2 overflow-hidden ${
-        isLeader ? 'border-brand-400 bg-brand-600 text-white' : 'border-gray-200 bg-gray-100 text-gray-600'
-      }`}>
-        {emp.photo_url ? (
-          <img src={emp.photo_url} alt="" className="w-full h-full object-cover" />
-        ) : (
-          `${emp.first_name[0]}${emp.last_name[0]}`
-        )}
+      <div className={`rounded-full flex items-center justify-center font-bold overflow-hidden flex-shrink-0 ${
+        large ? 'w-14 h-14 text-base mb-2' : 'w-10 h-10 text-xs mb-1.5'
+      } ${isDirection ? 'bg-brand-600 text-white border-2 border-brand-700' : 'bg-gray-100 text-gray-600 border-2 border-gray-200'}`}>
+        {emp.photo_url
+          ? <img src={emp.photo_url} alt="" className="w-full h-full object-cover" />
+          : `${emp.first_name[0]}${emp.last_name[0]}`}
       </div>
 
-      {/* Infos */}
-      <div className="min-w-0 flex-1">
-        <p className={`text-sm font-semibold leading-tight truncate group-hover:text-brand-700 ${
-          isLeader ? 'text-brand-800' : 'text-gray-800'
-        }`}>
-          {emp.last_name} {emp.first_name}
-        </p>
-        <span className={`inline-block mt-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded border ${tier.bg} ${tier.text} ${tier.border}`}>
-          {GRADE_LABELS[emp.grade] ?? emp.grade}
-        </span>
-      </div>
+      {/* Nom */}
+      <p className={`font-semibold text-gray-800 group-hover:text-brand-700 leading-tight ${large ? 'text-sm' : 'text-xs'}`}>
+        {emp.last_name}
+      </p>
+      <p className={`text-gray-500 leading-tight ${large ? 'text-xs' : 'text-[10px]'}`}>
+        {emp.first_name}
+      </p>
+
+      {/* Grade */}
+      <span className={`mt-1.5 px-2 py-0.5 rounded-full font-medium ${dc.badge} ${large ? 'text-xs' : 'text-[10px]'}`}>
+        {GRADE_LABELS[emp.grade] ?? emp.grade}
+      </span>
+
+      {/* Département */}
+      <span className={`flex items-center gap-1 mt-1 text-gray-400 ${large ? 'text-xs' : 'text-[10px]'}`}>
+        <span className={`w-1.5 h-1.5 rounded-full ${dc.dot}`} />
+        {DEPT_LABELS[emp.service_line] ?? emp.service_line}
+      </span>
     </Link>
   );
 }
 
-function DepartmentColumn({
-  dept,
+// ── Niveau hiérarchique ──────────────────────────────────────────────────────
+
+function TierRow({
+  tier,
   employees,
+  isFirst,
+  filterDept,
 }: {
-  dept: typeof DEPARTMENTS[number];
+  tier: typeof TIERS[number];
   employees: Employee[];
+  isFirst: boolean;
+  filterDept: string;
 }) {
-  const sorted = [...employees].sort(
+  const filtered = filterDept ? employees.filter(e => e.service_line === filterDept) : employees;
+  const sorted = [...filtered].sort(
     (a, b) => (GRADE_ORDER[a.grade] ?? 99) - (GRADE_ORDER[b.grade] ?? 99)
   );
 
+  if (sorted.length === 0) return null;
+
+  const isDirection = tier.id === 'direction';
+
   return (
-    <div className={`flex flex-col rounded-xl border-2 border-t-4 border-gray-100 bg-gray-50 min-w-[240px] flex-1 ${dept.accent}`}>
-      {/* En-tête colonne */}
-      <div className="px-4 py-3 border-b border-gray-200">
-        <div className="flex items-center gap-2">
-          <span className={`w-2.5 h-2.5 rounded-full ${dept.badge}`} />
-          <h3 className="font-semibold text-gray-800 text-sm">{dept.label}</h3>
-        </div>
-        <p className="text-xs text-gray-400 mt-0.5 pl-4">{sorted.length} collaborateur{sorted.length > 1 ? 's' : ''}</p>
+    <div className="flex flex-col items-center w-full">
+      {/* Connecteur vertical entrant (sauf premier) */}
+      {!isFirst && (
+        <div className="w-px h-8 bg-gray-300" />
+      )}
+
+      {/* Label du niveau */}
+      <div className="flex items-center gap-3 mb-4 w-full max-w-4xl">
+        <div className="flex-1 h-px bg-gray-200" />
+        <span className={`text-xs font-semibold uppercase tracking-widest px-3 py-1 rounded-full ${
+          isDirection ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-500'
+        }`}>
+          {tier.label} · {sorted.length}
+        </span>
+        <div className="flex-1 h-px bg-gray-200" />
       </div>
 
       {/* Cartes */}
-      <div className="p-3 space-y-2 flex-1">
-        {sorted.length === 0 ? (
-          <p className="text-xs text-gray-400 text-center py-4">—</p>
-        ) : (
-          sorted.map(emp => <EmployeeCard key={emp.id} emp={emp} />)
-        )}
+      <div className="flex flex-wrap justify-center gap-4">
+        {sorted.map(emp => (
+          <EmployeeCard key={emp.id} emp={emp} large={isDirection} />
+        ))}
       </div>
+
+      {/* Connecteur vertical sortant */}
+      <div className="w-px h-8 bg-gray-300 mt-4" />
     </div>
   );
 }
+
+// ── Page principale ──────────────────────────────────────────────────────────
+
+const DEPT_FILTER_OPTIONS = [
+  { value: '', label: 'Tous les départements' },
+  { value: 'AUDIT_ASSURANCE',    label: 'Audit & Assurance' },
+  { value: 'CONSULTING_FA',      label: 'Consulting & FA' },
+  { value: 'OUTSOURCING',        label: 'Outsourcing' },
+  { value: 'JURIDIQUE_FISCALITE',label: 'Tax & Legal' },
+  { value: 'ADMINISTRATION',     label: 'Administration' },
+];
 
 export default function OrganigrammePage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -158,16 +201,10 @@ export default function OrganigrammePage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const visibleDepts = filterDept
-    ? DEPARTMENTS.filter(d => d.key === filterDept)
-    : DEPARTMENTS;
+  const visible = filterDept ? employees.filter(e => e.service_line === filterDept) : employees;
 
-  const byDept = (key: string) =>
-    employees.filter(e => e.service_line === key);
-
-  const total = filterDept
-    ? byDept(filterDept).length
-    : employees.length;
+  const getForTier = (tier: typeof TIERS[number]) =>
+    visible.filter(e => tier.grades.includes(e.grade));
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -175,33 +212,43 @@ export default function OrganigrammePage() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Organigramme</h2>
-          <p className="text-gray-500 text-sm mt-1">{total} collaborateur{total > 1 ? 's' : ''} actif{total > 1 ? 's' : ''}</p>
+          <p className="text-gray-500 text-sm mt-1">{visible.length} collaborateur{visible.length > 1 ? 's' : ''} actif{visible.length > 1 ? 's' : ''}</p>
         </div>
-        <select
-          value={filterDept}
-          onChange={e => setFilterDept(e.target.value)}
-          className="input w-52"
-        >
-          <option value="">Tous les départements</option>
-          {DEPARTMENTS.map(d => (
-            <option key={d.key} value={d.key}>{d.label}</option>
-          ))}
+        <select value={filterDept} onChange={e => setFilterDept(e.target.value)} className="input w-52">
+          {DEPT_FILTER_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
       </div>
 
+      {/* Légende */}
+      <div className="flex flex-wrap gap-2">
+        {Object.entries(DEPT_LABELS).map(([key, label]) => (
+          <span key={key} className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full ${DEPT_COLORS[key]?.badge}`}>
+            <span className={`w-2 h-2 rounded-full ${DEPT_COLORS[key]?.dot}`} />
+            {label}
+          </span>
+        ))}
+      </div>
+
+      {/* Organigramme */}
       {loading ? (
         <div className="flex justify-center py-20">
           <div className="animate-spin w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full" />
         </div>
       ) : (
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {visibleDepts.map(dept => (
-            <DepartmentColumn
-              key={dept.key}
-              dept={dept}
-              employees={byDept(dept.key)}
-            />
-          ))}
+        <div className="flex flex-col items-center py-6 overflow-x-auto">
+          {TIERS.map((tier, i) => {
+            const emps = getForTier(tier);
+            if (emps.length === 0) return null;
+            return (
+              <TierRow
+                key={tier.id}
+                tier={tier}
+                employees={emps}
+                isFirst={i === 0 || TIERS.slice(0, i).every(t => getForTier(t).length === 0)}
+                filterDept={filterDept}
+              />
+            );
+          })}
         </div>
       )}
     </div>
