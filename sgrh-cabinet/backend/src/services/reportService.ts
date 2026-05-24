@@ -63,10 +63,11 @@ const C = {
 };
 
 const borders = (color = 'FFD1D5DB'): ExcelJS.Borders => ({
-  top: { style: 'thin', color: { argb: color } },
-  bottom: { style: 'thin', color: { argb: color } },
-  left: { style: 'thin', color: { argb: color } },
-  right: { style: 'thin', color: { argb: color } },
+  top:      { style: 'thin', color: { argb: color } },
+  bottom:   { style: 'thin', color: { argb: color } },
+  left:     { style: 'thin', color: { argb: color } },
+  right:    { style: 'thin', color: { argb: color } },
+  diagonal: { style: 'thin', color: { argb: color } },
 });
 
 const styleHeader = (cell: ExcelJS.Cell) => {
