@@ -680,7 +680,7 @@ export const getAnnualSummary = async (req: Request, res: Response) => {
 
 async function generateAttestation9421(employeeId: string, year: number): Promise<Buffer> {
   const empResult = await query(`
-    SELECT id, matricule, first_name, last_name, grade, function, service_line, entry_date, cin
+    SELECT id, matricule, first_name, last_name, grade, function, service_line, entry_date
     FROM employees WHERE id = $1
   `, [employeeId]);
   if (!empResult.rows[0]) throw new Error('Employé introuvable');
@@ -755,7 +755,7 @@ async function generateAttestation9421(employeeId: string, year: number): Promis
 
     row('Nom & Prénom :', `${emp.last_name} ${emp.first_name}`, y); y += 14;
     row('Matricule :', emp.matricule || '—', y); y += 14;
-    row('CIN :', emp.cin || '—', y); y += 14;
+    row('N° Employé :', emp.matricule || '—', y); y += 14;
     row('Fonction :', emp.function || '—', y); y += 20;
 
     // ── Tableau récapitulatif ──
