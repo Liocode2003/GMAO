@@ -132,8 +132,12 @@ function computePayslip(inp: PayslipInput): PayslipCalc {
 
 const PAYSLIPS_DIR = path.join(process.cwd(), 'uploads', 'payslips');
 
-function fmt(n: number | string) {
-  return Number(n).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function fmt(n: number | string): string {
+  const num = Number(n);
+  if (isNaN(num)) return '0,00';
+  const [intPart, decPart] = num.toFixed(2).split('.');
+  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  return `${grouped},${decPart}`;
 }
 
 const MONTHS_FR = [
