@@ -823,8 +823,9 @@ export const downloadAttestation = async (req: Request, res: Response) => {
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     return res.send(pdfBuffer);
   } catch (err) {
-    logger.error('downloadAttestation error', err);
-    return res.status(500).json({ error: 'Erreur serveur' });
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.error('downloadAttestation error — ' + msg, err);
+    return res.status(500).json({ error: `Erreur génération attestation: ${msg}` });
   }
 };
 
