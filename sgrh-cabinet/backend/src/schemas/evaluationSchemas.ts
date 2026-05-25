@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 const PERIODS  = ['ANNUEL', 'MI_ANNUEL'] as const;
-const STATUSES = ['BROUILLON', 'EN_COURS', 'TERMINE'] as const;
+const STATUSES = ['EN_COURS', 'TERMINE'] as const;
 const score    = z.number().min(0, 'Note minimale : 0').max(20, 'Note maximale : 20');
 
 export const createEvaluationSchema = z.object({

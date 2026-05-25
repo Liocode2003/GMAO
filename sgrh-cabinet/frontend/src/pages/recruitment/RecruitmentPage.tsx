@@ -27,18 +27,17 @@ interface Candidate {
   created_at: string;
 }
 
-type CandidateStatus = 'NOUVEAU' | 'EN_COURS' | 'ENTRETIEN' | 'OFFRE' | 'EMBAUCHE' | 'REFUSE';
+type CandidateStatus = 'NOUVEAU' | 'ENTRETIEN' | 'OFFRE' | 'EMBAUCHE' | 'REFUSE';
 
 const STATUS_CONFIG: Record<CandidateStatus, { label: string; color: string; bg: string; border: string; badge: string }> = {
   NOUVEAU:   { label: 'Nouveau',   color: 'text-gray-700',   bg: 'bg-gray-50',    border: 'border-gray-200',   badge: 'badge-gray' },
-  EN_COURS:  { label: 'En cours',  color: 'text-blue-700',   bg: 'bg-blue-50',    border: 'border-blue-200',   badge: 'badge-blue' },
   ENTRETIEN: { label: 'Entretien', color: 'text-yellow-700', bg: 'bg-yellow-50',  border: 'border-yellow-200', badge: 'badge-yellow' },
   OFFRE:     { label: 'Offre',     color: 'text-purple-700', bg: 'bg-purple-50',  border: 'border-purple-200', badge: 'badge-purple' },
   EMBAUCHE:  { label: 'Embauché',  color: 'text-green-700',  bg: 'bg-green-50',   border: 'border-green-200',  badge: 'badge-green' },
   REFUSE:    { label: 'Refusé',    color: 'text-red-700',    bg: 'bg-red-50',     border: 'border-red-200',    badge: 'badge-red' },
 };
 
-const PIPELINE_STAGES: CandidateStatus[] = ['NOUVEAU', 'EN_COURS', 'ENTRETIEN', 'OFFRE', 'EMBAUCHE'];
+const PIPELINE_STAGES: CandidateStatus[] = ['NOUVEAU', 'ENTRETIEN', 'OFFRE', 'EMBAUCHE'];
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 

@@ -44,15 +44,13 @@ const PERIOD_LABELS: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  BROUILLON: 'badge-gray',
-  EN_COURS:  'badge-yellow',
-  TERMINE:   'badge-green',
+  EN_COURS: 'badge-yellow',
+  TERMINE:  'badge-green',
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  BROUILLON: 'Brouillon',
-  EN_COURS:  'En cours',
-  TERMINE:   'Terminé',
+  EN_COURS: 'En cours',
+  TERMINE:  'Terminé',
 };
 
 const LIMIT = 20;
@@ -152,7 +150,7 @@ export default function EvaluationsPage() {
 
       {/* Stats cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {['BROUILLON', 'EN_COURS', 'TERMINE'].map(s => {
+        {['EN_COURS', 'TERMINE'].map(s => {
           const count = allEvaluations.filter(e => e.status === s).length;
           return (
             <div key={s} className="card text-center p-4">
@@ -315,7 +313,7 @@ function EvaluationModal({ evaluation, year, onClose, onSaved }: {
     employee_id:      evaluation?.employee_id || '',
     year:             evaluation?.year || year,
     period:           evaluation?.period || 'ANNUEL',
-    status:           evaluation?.status || 'BROUILLON',
+    status:           evaluation?.status || 'EN_COURS',
     objectives_score: evaluation?.objectives_score ?? '',
     skills_score:     evaluation?.skills_score ?? '',
     behavior_score:   evaluation?.behavior_score ?? '',
@@ -407,7 +405,6 @@ function EvaluationModal({ evaluation, year, onClose, onSaved }: {
               <label className="label">Statut</label>
               <select className="input" value={form.status}
                 onChange={e => setForm(p => ({ ...p, status: e.target.value }))}>
-                <option value="BROUILLON">Brouillon</option>
                 <option value="EN_COURS">En cours</option>
                 <option value="TERMINE">Terminé</option>
               </select>

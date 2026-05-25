@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const STATUSES = ['NOUVEAU', 'EN_COURS', 'ENTRETIEN', 'OFFRE', 'EMBAUCHE', 'REFUSE'] as const;
+const STATUSES = ['NOUVEAU', 'ENTRETIEN', 'OFFRE', 'EMBAUCHE', 'REFUSE'] as const;
 
 export const createCandidateSchema = z.object({
   first_name:       z.string().min(1, 'Prénom requis').max(100),
