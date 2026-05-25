@@ -425,7 +425,7 @@ function CumulAnnuelTab({ year }: { year: number }) {
   useEffect(() => {
     api.get('/employees', { params: { limit: 500 } })
       .then(r => {
-        const list = r.data?.employees ?? r.data;
+        const list = r.data?.data ?? r.data?.employees ?? r.data;
         setEmployees(Array.isArray(list) ? list : []);
       })
       .catch(() => setEmployees([]));
@@ -613,7 +613,7 @@ function PayslipModal({ editing, onClose, onSaved }: { editing: Payslip | null; 
   useEffect(() => {
     api.get('/employees', { params: { limit: 500, status: 'ACTIF' } })
       .then(r => {
-        const list = r.data?.employees ?? r.data;
+        const list = r.data?.data ?? r.data?.employees ?? r.data;
         setEmployees(Array.isArray(list) ? list : []);
       })
       .catch(() => setEmployees([]));
