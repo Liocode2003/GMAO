@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { authenticate } from '../middleware/auth';
 import { query } from '../config/database';
+import { logger } from '../utils/logger';
 
 const router = Router();
 router.use(authenticate);
@@ -142,7 +143,10 @@ router.get('/', async (req: Request, res: Response) => {
       notifications,
     });
   } catch (err) {
-    return res.status(500).json({ error: 'Erreur serveur' });
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.error('notifications error — ' + msg);
+    // Retourner vide plutôt qu'une erreur : les notifications ne sont pas critiques
+    return res.json({ count: 0, notifications: [] });
   }
 });
 

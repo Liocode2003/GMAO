@@ -146,8 +146,9 @@ export const getDashboard = async (req: Request, res: Response) => {
       commercial: commercialWidget,
     });
   } catch (err) {
-    logger.error('getDashboard error', err);
-    return res.status(500).json({ error: 'Erreur serveur' });
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.error('getDashboard error — ' + msg, err);
+    return res.status(500).json({ error: `Erreur tableau de bord: ${msg}` });
   }
 };
 

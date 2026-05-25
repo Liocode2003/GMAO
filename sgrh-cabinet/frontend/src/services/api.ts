@@ -44,7 +44,11 @@ api.interceptors.response.use(
       }
     }
 
-    if (!isRedirecting && status !== 401) {
+    // Ces endpoints gèrent leurs erreurs en interne (inline ou silencieusement)
+    const SILENT_URLS = ['/kpis/dashboard', '/notifications', '/kpis', '/masse-salariale'];
+    const isSilent = SILENT_URLS.some(u => originalRequest.url?.includes(u));
+
+    if (!isRedirecting && status !== 401 && !isSilent) {
       const message = error.response?.data?.error || error.response?.data?.message || 'Erreur serveur';
       toast.error(message);
     }
