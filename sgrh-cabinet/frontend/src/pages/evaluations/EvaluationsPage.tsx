@@ -39,9 +39,8 @@ interface Employee {
 }
 
 const PERIOD_LABELS: Record<string, string> = {
-  ANNUEL: 'Annuel',
+  ANNUEL:    'Annuel',
   MI_ANNUEL: 'Mi-annuel',
-  PROBATOIRE: 'Probatoire',
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -137,7 +136,6 @@ export default function EvaluationsPage() {
             <option value="">Toutes périodes</option>
             <option value="ANNUEL">Annuel</option>
             <option value="MI_ANNUEL">Mi-annuel</option>
-            <option value="PROBATOIRE">Probatoire</option>
           </select>
           <select value={year} onChange={e => handleFilterChange(parseInt(e.target.value), period)} className="input w-24">
             {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(y => (
@@ -403,7 +401,6 @@ function EvaluationModal({ evaluation, year, onClose, onSaved }: {
                 onChange={e => setForm(p => ({ ...p, period: e.target.value }))}>
                 <option value="ANNUEL">Annuel</option>
                 <option value="MI_ANNUEL">Mi-annuel</option>
-                <option value="PROBATOIRE">Probatoire</option>
               </select>
             </div>
             <div>
