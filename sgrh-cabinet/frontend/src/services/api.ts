@@ -38,6 +38,8 @@ api.interceptors.response.use(
       } catch {
         if (!isRedirecting) {
           isRedirecting = true;
+          // Vider la session persistée pour éviter le flash de contenu au prochain chargement
+          try { localStorage.removeItem('sgrh-auth'); } catch {}
           window.location.href = '/login';
         }
         return Promise.reject(error);
