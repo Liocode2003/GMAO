@@ -5,6 +5,7 @@ import PDFDocument from 'pdfkit';
 import ExcelJS from 'exceljs';
 import fs from 'fs';
 import path from 'path';
+import { PassThrough } from 'stream';
 
 // ============================================================
 // MOTEUR DE PAIE MAROCAIN 2024
@@ -704,10 +705,13 @@ async function generateAttestation9421(employeeId: string, year: number): Promis
 
   return new Promise<Buffer>((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 50 });
+    const pass = new PassThrough();
     const chunks: Buffer[] = [];
-    doc.on('data', (c: Buffer) => chunks.push(c));
-    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    pass.on('data', (c: Buffer) => chunks.push(c));
+    pass.on('end', () => resolve(Buffer.concat(chunks)));
+    pass.on('error', reject);
     doc.on('error', reject);
+    doc.pipe(pass);
 
     const navy = '#1e3a5f';
     const W = doc.page.width - 100;

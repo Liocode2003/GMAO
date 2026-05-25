@@ -459,8 +459,18 @@ function CumulAnnuelTab({ year }: { year: number }) {
       a.click();
       URL.revokeObjectURL(url);
       toast.success('Attestation fiscale téléchargée');
-    } catch {
-      toast.error('Aucun bulletin trouvé pour cet exercice');
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: Blob } };
+      if (axiosErr.response?.data instanceof Blob) {
+        const text = await axiosErr.response.data.text().catch(() => '');
+        try {
+          const json = JSON.parse(text);
+          toast.error(json.error || "Erreur lors de la génération de l'attestation");
+        } catch {
+          toast.error("Erreur lors de la génération de l'attestation");
+        }
+      }
+      // else: non-blob errors already toasted by the API interceptor
     } finally {
       setDownloading(false);
     }
