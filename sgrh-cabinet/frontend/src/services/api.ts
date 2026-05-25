@@ -7,22 +7,26 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// Pas d'injection manuelle de token — les cookies httpOnly sont envoyés automatiquement
-
 // Single-flight refresh : toutes les 401 simultanées attendent le même appel refresh
 let refreshPromise: Promise<void> | null = null;
+// Empêche toute nouvelle tentative de refresh ou toast après une première redirection
+let isRedirecting = false;
 
-// Response interceptor: handle 401 → refresh via cookie httpOnly
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    const status = error.response?.status;
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (
+      status === 401 &&
+      !originalRequest._retry &&
+      !isRedirecting &&
+      !originalRequest.url?.includes('/auth/refresh')
+    ) {
       originalRequest._retry = true;
 
       try {
-        // Un seul appel refresh à la fois, même si plusieurs 401 arrivent simultanément
         if (!refreshPromise) {
           refreshPromise = axios
             .post('/api/auth/refresh', {}, { withCredentials: true })
@@ -32,13 +36,16 @@ api.interceptors.response.use(
         await refreshPromise;
         return api(originalRequest);
       } catch {
-        window.location.href = '/login';
+        if (!isRedirecting) {
+          isRedirecting = true;
+          window.location.href = '/login';
+        }
         return Promise.reject(error);
       }
     }
 
-    const message = error.response?.data?.error || error.response?.data?.message || 'Erreur serveur';
-    if (error.response?.status !== 401) {
+    if (!isRedirecting && status !== 401) {
+      const message = error.response?.data?.error || error.response?.data?.message || 'Erreur serveur';
       toast.error(message);
     }
 
