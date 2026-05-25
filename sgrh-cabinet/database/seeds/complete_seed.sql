@@ -196,6 +196,13 @@ VALUES
 -- ============================================================
 -- 7. FORMATIONS 2024-2026
 -- ============================================================
+-- Nettoyage pour réexécution idempotente
+DELETE FROM training_participants;
+DELETE FROM trainings;
+DELETE FROM commercial_submissions;
+DELETE FROM evaluations;
+DELETE FROM candidates;
+
 INSERT INTO trainings (id, type, title, date, location, duration_hours, trainer, budget, created_by) VALUES
   ('c0000001-0000-0000-0000-000000000001','GROUPE',   'IFRS 16 — Normes de location',                    '2024-02-14','Ouagadougou', 8,  'Formateur Groupe Forvis Mazars',  500000,  'a0000001-0000-0000-0000-000000000001'),
   ('c0000002-0000-0000-0000-000000000002','AOC',      'Audit des états financiers — techniques avancées','2024-04-22','Abidjan',    16,  'Cabinet KPMG CI',                1200000, 'a0000001-0000-0000-0000-000000000001'),
