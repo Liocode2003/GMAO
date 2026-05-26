@@ -118,7 +118,7 @@ export const createEvaluation = async (req: Request, res: Response) => {
        RETURNING *`,
       [
         employee_id, req.user?.userId, year,
-        period || 'ANNUEL', status || 'BROUILLON', overall_score,
+        period || 'ANNUEL', status || 'EN_COURS', overall_score,
         objectives_score || null, skills_score || null, behavior_score || null,
         comments || null, objectives || null, strengths || null, improvements || null,
       ]

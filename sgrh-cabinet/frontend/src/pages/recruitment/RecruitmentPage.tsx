@@ -284,7 +284,7 @@ export default function RecruitmentPage() {
                 action={canManage ? { label: '+ Ajouter candidat', onClick: () => setShowModal(true) } : undefined}
               />
             ) : candidates.map(c => {
-              const cfg = STATUS_CONFIG[c.status];
+              const cfg = STATUS_CONFIG[c.status as CandidateStatus] ?? STATUS_CONFIG['NOUVEAU'];
               return (
                 <div key={c.id} className="p-4 flex items-start gap-3">
                   <div className={`w-9 h-9 rounded-full ${cfg.bg} flex items-center justify-center flex-shrink-0 border ${cfg.border}`}>

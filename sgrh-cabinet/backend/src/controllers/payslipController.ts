@@ -759,7 +759,7 @@ async function generateAttestation9421(employeeId: string, year: number): Promis
 
     row('Nom & Prénom :', `${emp.last_name} ${emp.first_name}`, y); y += 14;
     row('Matricule :', emp.matricule || '—', y); y += 14;
-    row('N° Employé :', emp.matricule || '—', y); y += 14;
+    row('CIN :', '—', y); y += 14;
     row('Fonction :', emp.function || '—', y); y += 20;
 
     // ── Tableau récapitulatif ──
