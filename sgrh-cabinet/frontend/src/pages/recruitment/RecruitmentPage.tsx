@@ -362,7 +362,7 @@ export default function RecruitmentPage() {
                     </td>
                     <td className="text-sm text-gray-500">{c.source || '—'}</td>
                     <td className="text-sm">{c.interview_date ? new Date(c.interview_date).toLocaleDateString('fr-FR') : '—'}</td>
-                    <td className="text-sm">{c.salary_expected ? `${c.salary_expected.toLocaleString('fr-MA')} MAD` : '—'}</td>
+                    <td className="text-sm">{c.salary_expected ? `${c.salary_expected.toLocaleString('fr-FR')} FCFA` : '—'}</td>
                     {canManage && (
                       <td>
                         <div className="flex gap-1">
@@ -512,7 +512,7 @@ function CandidateModal({ candidate, onClose, onSaved }: {
             </div>
           </div>
           <div>
-            <label className="label" htmlFor="c-salary">Salaire souhaité (MAD)</label>
+            <label className="label" htmlFor="c-salary">Salaire souhaité (FCFA)</label>
             <input id="c-salary" type="number" className="input" value={form.salary_expected} onChange={f('salary_expected')} min={0} />
           </div>
           <div>

@@ -713,7 +713,7 @@ export default function ReportingCommercialPage() {
                         GAGNE:    checked ? 'border-green-500 bg-green-50 text-green-800' : 'border-gray-200 text-gray-600 hover:border-green-300',
                         PERDU:    checked ? 'border-red-400 bg-red-50 text-red-800' : 'border-gray-200 text-gray-600 hover:border-red-300',
                       };
-                      const labels = { EN_COURS: 'En cours', GAGNE: 'Gagné (Win)', PERDU: 'Perdu (Loss)' };
+                      const labels = { EN_COURS: 'En cours', GAGNE: 'Gagné', PERDU: 'Perdu' };
                       const icons = {
                         EN_COURS: <ClockIcon className="w-4 h-4" />,
                         GAGNE: <TrophyIcon className="w-4 h-4" />,
