@@ -143,10 +143,11 @@ const departureType = (reason: string | null): string => {
 // ─── Point d'entrée ───────────────────────────────────────────────────────────
 
 export const generateMonthlyReport = async (year: number, month: number): Promise<string> => {
-  const monthName   = MONTH_NAMES[month - 1];
-  const endDate     = new Date(year, month, 0).toISOString().split('T')[0];   // dernier jour du mois
-  const prevEndDate = new Date(year - 1, month, 0).toISOString().split('T')[0];
-  const startYear   = `${year}-01-01`;
+  const monthName     = MONTH_NAMES[month - 1];
+  const endDate       = new Date(year, month, 0).toISOString().split('T')[0];  // dernier jour du mois
+  const prevEndDate   = new Date(year - 1, month, 0).toISOString().split('T')[0];
+  const prevEndFull   = `${year - 1}-12-31`;   // fin d'année complète N-1 (pour turn-over)
+  const startYear     = `${year}-01-01`;
   const prevStartYear = `${year - 1}-01-01`;
 
   const wb = new ExcelJS.Workbook();
@@ -158,8 +159,8 @@ export const generateMonthlyReport = async (year: number, month: number): Promis
   await buildMouvements(wb, year, startYear, endDate, prevStartYear, prevEndDate);
   await buildParDepartement(wb, monthName, year, endDate, prevEndDate);
   await buildTranchesAge(wb, monthName, year, endDate);
-  await buildTurnOver(wb, monthName, year, endDate, prevEndDate, startYear, prevStartYear);
-  await buildMotifsDeparture(wb, monthName, year, startYear, endDate, prevStartYear, prevEndDate);
+  await buildTurnOver(wb, monthName, year, endDate, prevEndFull, startYear, prevStartYear);
+  await buildMotifsDeparture(wb, monthName, year, startYear, endDate, prevStartYear, prevEndFull);
 
   const reportsDir = path.join(process.cwd(), 'reports');
   if (!fs.existsSync(reportsDir)) fs.mkdirSync(reportsDir, { recursive: true });
@@ -586,8 +587,8 @@ async function buildTurnOver(
 ) {
   const ws = wb.addWorksheet('Turn-Over');
 
-  const colCur = `Fin ${monthName} ${year}`;
-  const colPrv = `Fin ${monthName} ${year - 1}`;
+  const colCur = `YTD Janv.–${monthName} ${year}`;
+  const colPrv = `Année ${year - 1} (complète)`;
 
   ws.getColumn(1).width = 40;
   ws.getColumn(2).width = 18;
@@ -652,8 +653,8 @@ async function buildTurnOver(
   const entriesPrv = await entriesCount(startPrv, endPrv);
 
   const calcLines: [string, number | string, number | string][] = [
-    [`Effectif début de période (01/${String(new Date(startCur).getMonth() + 1).padStart(2,'0')})`, headStartCur, headStartPrv],
-    [`Effectif fin de période (${endCur.slice(8)}/${String(month0(endCur))})`, headEndCur, headEndPrv],
+    [`Effectif au 01/01/${year}`, headStartCur, headStartPrv],
+    [`Effectif fin de période`, headEndCur, headEndPrv],
     ['Effectif moyen',                headEndCur > 0 ? avgCur : '—', headEndPrv > 0 ? avgPrv : '—'],
     ['Départs totaux',                depTotCur, depTotPrv],
     ['Dont : départs volontaires',    depVolCur, depVolPrv],

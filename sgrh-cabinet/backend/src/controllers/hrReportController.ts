@@ -43,12 +43,11 @@ export const getHRReport = async (req: Request, res: Response) => {
   const year = parseInt((req.query.year as string) || String(new Date().getFullYear()));
   const month = parseInt((req.query.month as string) || String(new Date().getMonth() + 1));
 
-  const endDate   = `${year}-${String(month).padStart(2, '0')}-31`;       // fin de période
-  const startDate = `${year}-01-01`;                                        // début de l'année
-  const prevEndDate   = `${year - 1}-${String(month).padStart(2, '0')}-31`;
+  const startDate     = `${year}-01-01`;
   const prevStartDate = `${year - 1}-01-01`;
+  const prevEndFull   = `${year - 1}-12-31`;  // année N-1 complète pour le turn-over
 
-  // Correctif : utiliser le dernier jour réel du mois
+  // Dernier jour réel du mois sélectionné
   const endDateReal     = new Date(year, month, 0).toISOString().split('T')[0];
   const prevEndDateReal = new Date(year - 1, month, 0).toISOString().split('T')[0];
 
@@ -129,15 +128,15 @@ export const getHRReport = async (req: Request, res: Response) => {
         [endDateReal]
       ),
 
-      // Départs Jan→fin mois — global (hors STAGE)
+      // Départs N (YTD) et N-1 (année complète) — global (hors STAGE)
       departuresBetween(startDate, endDateReal),
-      departuresBetween(prevStartDate, prevEndDateReal),
+      departuresBetween(prevStartDate, prevEndFull),
 
-      // Départs Jan→fin mois — fonctionnel (CDI/CDD)
+      // Départs N (YTD) et N-1 (année complète) — fonctionnel (CDI/CDD)
       departuresBetween(startDate, endDateReal, true),
-      departuresBetween(prevStartDate, prevEndDateReal, true),
+      departuresBetween(prevStartDate, prevEndFull, true),
 
-      // Effectifs début de période (01/01) — global
+      // Effectifs début de période (01/01)
       headcountAt(startDate),
       headcountAt(prevStartDate),
 
@@ -145,11 +144,11 @@ export const getHRReport = async (req: Request, res: Response) => {
       headcountAt(startDate, true),
       headcountAt(prevStartDate, true),
 
-      // Effectifs fin de période — fonctionnel
+      // Effectifs fin de période — fonctionnel (N: fin mois, N-1: 31/12)
       headcountAt(endDateReal, true),
-      headcountAt(prevEndDateReal, true),
+      headcountAt(prevEndFull, true),
 
-      // Motifs de départ — période courante
+      // Motifs de départ — N (YTD) et N-1 (année complète)
       query(
         `SELECT
            COALESCE(departure_reason, 'AUTRES') as reason,
@@ -160,7 +159,6 @@ export const getHRReport = async (req: Request, res: Response) => {
          GROUP BY reason ORDER BY n DESC`,
         [startDate, endDateReal]
       ),
-      // Motifs de départ — période précédente
       query(
         `SELECT
            COALESCE(departure_reason, 'AUTRES') as reason,
@@ -169,7 +167,7 @@ export const getHRReport = async (req: Request, res: Response) => {
          WHERE exit_date BETWEEN $1 AND $2
            AND contract_type NOT IN ('STAGE')
          GROUP BY reason ORDER BY n DESC`,
-        [prevStartDate, prevEndDateReal]
+        [prevStartDate, prevEndFull]
       ),
     ]);
 
