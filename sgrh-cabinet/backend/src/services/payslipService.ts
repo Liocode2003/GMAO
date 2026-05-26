@@ -5,18 +5,24 @@ import path from 'path';
 import { query } from '../config/database';
 
 // ============================================================
-// CONSTANTES — BARÈME BURKINA FASO / OHADA 2024
+// CONSTANTES — BARÈME BURKINA FASO / CNSS + IUTS 2024
 // ============================================================
+// Sources : Code du Travail BF, Décret CNSS, Barème IUTS DGID
+// CNSS salarié   : 5,5 % du brut (pas de plafond)
+// CNSS patronal  : Prest. Familiales 5,5 % + Retraite 5,5 % + AT 3,5 % = 14,5 %
+// AMO            : n'existe pas au Burkina Faso → 0
+// IUTS (IGR)     : progressif après déduction forfaitaire 20 % (plaf. 500 000/an)
 
-const CNSS_RATE_EMPLOYEE = 0.0448;
-const CNSS_CEILING = 6000;
-const CNSS_RATE_EMPLOYER_SOCIAL = 0.0898;
-const CNSS_RATE_EMPLOYER_FAMILY = 0.0640;
-const AMO_RATE_EMPLOYEE = 0.0226;
-const AMO_RATE_EMPLOYER = 0.0365;
+const CNSS_RATE_EMPLOYEE = 0.055;
+const CNSS_CEILING = 99_999_999;           // pas de plafond au BF
+const CNSS_RATE_EMPLOYER_SOCIAL = 0.055;   // retraite
+const CNSS_RATE_EMPLOYER_FAMILY = 0.055;   // prestations familiales
+const CNSS_RATE_EMPLOYER_AT    = 0.035;    // accidents du travail
+const AMO_RATE_EMPLOYEE = 0;               // n'existe pas au BF
+const AMO_RATE_EMPLOYER = 0;               // n'existe pas au BF
 const PROF_DEDUCTION_RATE = 0.20;
-const PROF_DEDUCTION_MAX = 2500;
-const FAMILY_DEDUCTION_PER_CHARGE = 30;
+const PROF_DEDUCTION_MAX = 41_667;         // 500 000 FCFA / an ÷ 12
+const FAMILY_DEDUCTION_PER_CHARGE = 2_500; // par part familiale / mois
 
 export const MONTHS_FR = [
   '', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
@@ -96,10 +102,11 @@ export function computePayslip(inp: PayslipInput): PayslipCalc {
   const igr = r2(Math.max(0, igrRaw - family_charge_deduction));
 
   const cnss_employer = r2(
-    Math.min(gross, CNSS_CEILING) * CNSS_RATE_EMPLOYER_SOCIAL +
-    gross * CNSS_RATE_EMPLOYER_FAMILY
+    gross * CNSS_RATE_EMPLOYER_SOCIAL +
+    gross * CNSS_RATE_EMPLOYER_FAMILY +
+    gross * CNSS_RATE_EMPLOYER_AT
   );
-  const amo_employer = r2(gross * AMO_RATE_EMPLOYER);
+  const amo_employer = r2(gross * AMO_RATE_EMPLOYER); // 0 au BF
   const cimr_employer = cimr_employee;
 
   const total_deductions = r2(
@@ -210,11 +217,10 @@ export async function generatePayslipPDF(payslipId: string): Promise<string> {
     if (parseFloat(ps.other_earnings_amount) > 0) leftLines.push([ps.other_earnings_label || 'Autres gains', parseFloat(ps.other_earnings_amount)]);
 
     const rightLines: [string, number][] = [
-      ['CNSS salarié (4,48% — plaf.)', parseFloat(ps.cnss_employee)],
-      ['AMO salarié (2,26%)', parseFloat(ps.amo_employee)],
+      ['CNSS salarié (5,5%)', parseFloat(ps.cnss_employee)],
     ];
-    if (parseFloat(ps.cimr_employee) > 0) rightLines.push([`CIMR salarié (${parseFloat(ps.cimr_rate)}%)`, parseFloat(ps.cimr_employee)]);
-    rightLines.push(['IGR', parseFloat(ps.igr)]);
+    if (parseFloat(ps.cimr_employee) > 0) rightLines.push([`Cotisation complémentaire (${parseFloat(ps.cimr_rate)}%)`, parseFloat(ps.cimr_employee)]);
+    rightLines.push(['IUTS', parseFloat(ps.igr)]);
     if (parseFloat(ps.advance_amount) > 0) rightLines.push(['Avance sur salaire', parseFloat(ps.advance_amount)]);
     if (parseFloat(ps.other_deduction_amount) > 0) rightLines.push([ps.other_deduction_label || 'Autres retenues', parseFloat(ps.other_deduction_amount)]);
 
@@ -262,12 +268,12 @@ export async function generatePayslipPDF(payslipId: string): Promise<string> {
     const amoEmpl = parseFloat(ps.amo_employer);
     const cimrEmpl = parseFloat(ps.cimr_employer);
     doc.fillColor('#15803d').fontSize(7.5).font('Helvetica')
-      .text(`Cotisations patronales (informatif) — CNSS : ${fmt(cnssEmpl)} FCFA  |  AMO : ${fmt(amoEmpl)} FCFA  |  CIMR : ${fmt(cimrEmpl)} FCFA  |  Coût total employeur : ${fmt(parseFloat(ps.gross_salary) + cnssEmpl + amoEmpl + cimrEmpl)} FCFA`, 44, y + 3);
+      .text(`Cotisations patronales CNSS (14,5%) — Informatif : ${fmt(cnssEmpl)} FCFA  |  Coût total employeur : ${fmt(parseFloat(ps.gross_salary) + cnssEmpl)} FCFA`, 44, y + 3);
     y += 18;
 
     doc.rect(40, y, W, 12).fill(light);
     doc.fillColor('#374151').fontSize(7.5).font('Helvetica')
-      .text(`Cumuls ${ps.period_year} — Brut : ${fmt(ps.annual_gross_ytd)} FCFA  |  Net : ${fmt(ps.annual_net_ytd)} FCFA  |  IGR : ${fmt(ps.annual_igr_ytd)} FCFA`, 44, y + 3);
+      .text(`Cumuls ${ps.period_year} — Brut : ${fmt(ps.annual_gross_ytd)} FCFA  |  Net : ${fmt(ps.annual_net_ytd)} FCFA  |  IUTS : ${fmt(ps.annual_igr_ytd)} FCFA`, 44, y + 3);
     y += 24;
 
     doc.rect(40, y, halfW - 4, 50).dash(3, {}).rect(44 + halfW, y, halfW - 4, 50).stroke('#d1d5db').undash();
