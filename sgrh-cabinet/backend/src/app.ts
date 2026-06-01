@@ -32,23 +32,9 @@ app.use(cors({
   credentials: true,
 }));
 
-// Login/logout : strict (anti brute-force)
-app.use('/api/auth/login', rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === 'test' ? 10000 : 20,
-  message: { error: 'Trop de tentatives de connexion. Réessayez dans 15 minutes.' },
-}));
-
-// Refresh token : souple (plusieurs onglets, tokens courts)
-app.use('/api/auth/refresh', rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === 'test' ? 10000 : 120,
-  message: { error: 'Trop de tentatives. Réessayez dans 15 minutes.' },
-}));
-
 app.use(rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === 'test' ? 100000 : 200,
+  max: process.env.NODE_ENV === 'test' ? 100000 : 1000,
 }));
 
 app.use(compression());
