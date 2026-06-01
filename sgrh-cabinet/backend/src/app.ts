@@ -7,7 +7,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
-import rateLimit from 'express-rate-limit';
+
 import cookieParser from 'cookie-parser';
 import swaggerUi from 'swagger-ui-express';
 import routes from './routes';
@@ -32,10 +32,6 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === 'test' ? 100000 : 1000,
-}));
 
 app.use(compression());
 app.use(cookieParser());
