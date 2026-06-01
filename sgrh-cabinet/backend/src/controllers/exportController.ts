@@ -149,6 +149,10 @@ export const exportEmployeesPDF = async (req: Request, res: Response) => {
     const doc = new PDFDocument({ margin: 40, size: 'A4', layout: 'landscape' });
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="collaborateurs_${new Date().toISOString().split('T')[0]}.pdf"`);
+    doc.on('error', (err) => {
+      logger.error('Erreur génération PDF collaborateurs:', err);
+      if (!res.headersSent) res.status(500).json({ error: 'Erreur génération PDF' });
+    });
     doc.pipe(res);
 
     doc.rect(0, 0, doc.page.width, 60).fill('#1C2B4A');

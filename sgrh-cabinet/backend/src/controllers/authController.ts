@@ -104,6 +104,7 @@ export const getProfile = async (req: Request, res: Response) => {
       'SELECT id, email, first_name, last_name, role, last_login, created_at FROM users WHERE id = $1',
       [req.user.userId]
     );
+    if (!result.rows[0]) return res.status(404).json({ error: 'Utilisateur introuvable' });
     return res.json(result.rows[0]);
   } catch {
     return res.status(500).json({ error: 'Erreur serveur' });
@@ -154,6 +155,7 @@ export const changePassword = async (req: Request, res: Response) => {
 
   try {
     const result = await query('SELECT password_hash FROM users WHERE id = $1', [req.user.userId]);
+    if (!result.rows[0]) return res.status(404).json({ error: 'Utilisateur introuvable' });
     const valid = await authService.verifyPassword(currentPassword, result.rows[0].password_hash);
     if (!valid) return res.status(400).json({ error: 'Mot de passe actuel incorrect' });
 

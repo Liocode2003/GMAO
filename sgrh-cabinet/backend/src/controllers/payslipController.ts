@@ -549,7 +549,12 @@ export const downloadPayslipPDF = async (req: Request, res: Response) => {
     const filepath = path.join(PAYSLIPS_DIR, ps.pdf_path);
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${ps.pdf_path}"`);
-    fs.createReadStream(filepath).pipe(res);
+    const stream = fs.createReadStream(filepath);
+    stream.on('error', (err) => {
+      logger.error('Erreur lecture PDF bulletin:', err);
+      if (!res.headersSent) res.status(500).json({ error: 'Erreur lecture du fichier PDF' });
+    });
+    stream.pipe(res);
   } catch (err) {
     logger.error('downloadPayslipPDF error', err);
     return res.status(500).json({ error: 'Erreur serveur' });

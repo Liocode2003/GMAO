@@ -34,14 +34,17 @@ export const scheduleBirthdayAlerts = () => {
       for (const emp of tomorrow.rows) {
         const name = `${emp.first_name} ${emp.last_name}`;
         for (const email of hrEmails) {
-          await sendBirthdayAlert(name, email, false);
+          try { await sendBirthdayAlert(name, email, false); }
+          catch (e) { logger.warn(`[CRON] Échec email anniversaire J-1 → ${email}:`, e); }
         }
-        await query(
-          `INSERT INTO alerts(type, employee_id, scheduled_date, status, message)
-           SELECT 'BIRTHDAY', id, CURRENT_DATE + 1, 'SENT', 'Alerte anniversaire J-1 envoyée'
-           FROM employees WHERE first_name = $1 AND last_name = $2 AND (exit_date IS NULL OR exit_date > CURRENT_DATE)`,
-          [emp.first_name, emp.last_name]
-        );
+        try {
+          await query(
+            `INSERT INTO alerts(type, employee_id, scheduled_date, status, message)
+             SELECT 'BIRTHDAY', id, CURRENT_DATE + 1, 'SENT', 'Alerte anniversaire J-1 envoyée'
+             FROM employees WHERE first_name = $1 AND last_name = $2 AND (exit_date IS NULL OR exit_date > CURRENT_DATE)`,
+            [emp.first_name, emp.last_name]
+          );
+        } catch (e) { logger.warn('[CRON] Échec INSERT alert anniversaire:', e); }
       }
 
       // Anniversaires aujourd'hui
@@ -55,7 +58,8 @@ export const scheduleBirthdayAlerts = () => {
       for (const emp of today.rows) {
         const name = `${emp.first_name} ${emp.last_name}`;
         for (const email of hrEmails) {
-          await sendBirthdayAlert(name, email, true);
+          try { await sendBirthdayAlert(name, email, true); }
+          catch (e) { logger.warn(`[CRON] Échec email anniversaire → ${email}:`, e); }
         }
       }
 
@@ -103,19 +107,23 @@ export const scheduleContractAlerts = () => {
       for (const emp of allAlerts) {
         const name = `${emp.first_name} ${emp.last_name}`;
         const expiryDate = new Date(emp.exit_date).toLocaleDateString('fr-FR');
-        await sendContractExpiryAlert(
-          name,
-          emp.contract_type,
-          expiryDate,
-          parseInt(emp.days_remaining),
-          hrEmails
-        );
+        try {
+          await sendContractExpiryAlert(
+            name,
+            emp.contract_type,
+            expiryDate,
+            parseInt(emp.days_remaining),
+            hrEmails
+          );
+        } catch (e) { logger.warn(`[CRON] Échec email contrat → ${name}:`, e); }
 
-        await query(
-          `INSERT INTO alerts(type, employee_id, scheduled_date, status, message)
-           VALUES('CONTRACT_END', $1, CURRENT_DATE, 'SENT', $2)`,
-          [emp.id, `Alerte ${emp.days_remaining} jours avant fin de contrat`]
-        );
+        try {
+          await query(
+            `INSERT INTO alerts(type, employee_id, scheduled_date, status, message)
+             VALUES('CONTRACT_END', $1, CURRENT_DATE, 'SENT', $2)`,
+            [emp.id, `Alerte ${emp.days_remaining} jours avant fin de contrat`]
+          );
+        } catch (e) { logger.warn('[CRON] Échec INSERT alert contrat:', e); }
       }
 
       logger.info(`[CRON] Contrats: ${allAlerts.length} alertes envoyées`);
@@ -198,15 +206,15 @@ export const scheduleLeaveEndAlerts = () => {
       for (const leave of in3days.rows) {
         const name = `${leave.first_name} ${leave.last_name}`;
         const endDateFr = new Date(leave.end_date).toLocaleDateString('fr-FR');
-
-        await sendLeaveEndAlert(
-          name,
-          endDateFr,
-          leave.manager_email || null,
-          leave.employee_email || null
-        );
-
-        logger.info(`[ALERTE] Fin de congé dans 3 jours: ${name} le ${leave.end_date}`);
+        try {
+          await sendLeaveEndAlert(
+            name,
+            endDateFr,
+            leave.manager_email || null,
+            leave.employee_email || null
+          );
+          logger.info(`[ALERTE] Fin de congé dans 3 jours: ${name} le ${leave.end_date}`);
+        } catch (e) { logger.warn(`[CRON] Échec email fin de congé → ${name}:`, e); }
       }
 
       logger.info(`[CRON] Alertes fins de congés: ${in3days.rows.length} envoyées`);
