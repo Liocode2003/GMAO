@@ -247,11 +247,22 @@ function sheetParametres(wb: ExcelJS.Workbook, year: number) {
     [11, 'Libellé période N-1',              '"Mai "&(B4-1)',    false],
   ];
 
+  // Pre-compute cached results for date/label formulas so static viewers show values
+  const cachedResults: Record<number, ExcelJS.CellValue> = {
+    5:  new Date(year,     4, 31),  // DATE(B4,5,31)
+    6:  new Date(year - 1, 4, 31),  // DATE(B4-1,5,31)
+    7:  new Date(year - 1, 5,  1),  // DATE(B4-1,6,1)
+    8:  new Date(year - 2, 5,  1),  // DATE(B4-2,6,1)
+    9:  new Date(year - 2, 4, 31),  // DATE(B4-2,5,31)
+    10: `Mai ${year}`,              // "Mai "&B4
+    11: `Mai ${year - 1}`,          // "Mai "&(B4-1)
+  };
+
   items.forEach(([rn, label, formula, isDate], i) => {
     const alt = i % 2 === 0;
     sh.getCell(`A${rn}`).value = label;
     ap(sh.getCell(`A${rn}`), S.param(alt));
-    f(sh.getCell(`B${rn}`), formula);
+    f(sh.getCell(`B${rn}`), formula, cachedResults[rn]);
     const vs = { ...S.paramVal(alt) } as ExcelJS.Style;
     if (isDate) (vs as any).numFmt = fmtDate;
     ap(sh.getCell(`B${rn}`), vs);
@@ -321,11 +332,9 @@ function sheetListePersonnel(wb: ExcelJS.Workbook, rows: any[], endN: Date) {
     [3, 4, 9].forEach(ci => {
       row.getCell(ci).style = { ...base, alignment: { horizontal: 'center', vertical: 'middle' }, numFmt: 'DD/MM/YYYY' } as ExcelJS.Style;
     });
-    // Colonne K : formule âge (DATEDIF)
+    // Colonne K : formule âge (DATEDIF) — IFERROR gère les dates vides ou invalides
     const kCell = sh.getRow(rn).getCell(11);
-    if (birth) {
-      f(kCell, `IF(D${rn}="","",DATEDIF(D${rn},Paramètres!$B$5,"Y"))`, age ?? 0);
-    }
+    f(kCell, `IFERROR(DATEDIF(D${rn},Paramètres!$B$5,"Y"),"")`, age !== null ? age : '');
     kCell.style = { ...base, alignment: { horizontal: 'center', vertical: 'middle' } } as ExcelJS.Style;
 
     sh.getRow(rn).height = 16;
