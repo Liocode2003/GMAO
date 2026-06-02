@@ -380,6 +380,27 @@ export const createLeave = async (req: Request, res: Response) => {
 
     await client.query('COMMIT');
     logger.info(`Congé créé: ${leave.id} pour employé ${id} par ${req.user?.email}`);
+
+    // SSE: notifier les DRH/Direction qu'une demande est en attente
+    if (type === 'PLANIFIE') {
+      Promise.resolve().then(async () => {
+        try {
+          const { pushToUsers } = await import('../services/sseService');
+          const hrRes = await query(
+            `SELECT id FROM users WHERE role IN ('DRH', 'DIRECTION_GENERALE') AND is_active = true`
+          );
+          const hrIds = hrRes.rows.map((r: { id: string }) => r.id);
+          if (hrIds.length) {
+            pushToUsers(hrIds, 'notification', {
+              type: 'LEAVE_SUBMITTED',
+              title: 'Nouvelle demande de congé',
+              body: `${empName} demande ${days} jour(s) de congé.`,
+            });
+          }
+        } catch { /* non critique */ }
+      });
+    }
+
     return res.status(201).json(leave);
   } catch (err) {
     await client.query('ROLLBACK');
@@ -444,6 +465,28 @@ export const approveLeave = async (req: Request, res: Response) => {
     } catch { /* silencieux */ }
 
     logger.info(`Congé ${leaveId} ${status} par ${req.user?.email}`);
+
+    // SSE: notifier l'employé concerné
+    Promise.resolve().then(async () => {
+      try {
+        const { pushToUser } = await import('../services/sseService');
+        const userRes = await query(
+          `SELECT u.id FROM users u JOIN employees e ON u.email = e.email WHERE e.id = $1`,
+          [leave.employee_id]
+        );
+        const uid = userRes.rows[0]?.id;
+        if (uid) {
+          const startFr = new Date(leave.start_date).toLocaleDateString('fr-FR');
+          const endFr   = new Date(leave.end_date).toLocaleDateString('fr-FR');
+          pushToUser(uid, 'notification', {
+            type: status === 'APPROUVE' ? 'LEAVE_APPROVED' : 'LEAVE_REJECTED',
+            title: status === 'APPROUVE' ? 'Congé approuvé ✓' : 'Congé refusé',
+            body: `Votre demande du ${startFr} au ${endFr} a été ${status === 'APPROUVE' ? 'approuvée' : 'refusée'}.`,
+          });
+        }
+      } catch { /* non critique */ }
+    });
+
     return res.json({ message: `Congé ${status === 'APPROUVE' ? 'approuvé' : 'refusé'}` });
   } catch (err) {
     logger.error('approveLeave error', err);

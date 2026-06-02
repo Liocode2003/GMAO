@@ -5,11 +5,13 @@ import {
   InformationCircleIcon,
   CalendarDaysIcon,
 } from '@heroicons/react/24/solid';
+import toast from 'react-hot-toast';
 import api from '../../services/api';
+import { useSSE } from '../../hooks/useSSE';
 
 interface Notification {
   id: string;
-  type: 'BIRTHDAY' | 'CONTRACT_END';
+  type: 'BIRTHDAY' | 'CONTRACT_END' | 'LEAVE_PENDING';
   title: string;
   body: string;
   employeeId: string;
@@ -50,6 +52,21 @@ export default function NotificationBell() {
     return () => clearInterval(interval);
   }, []);
 
+  // SSE — mise à jour en temps réel
+  useSSE('/api/notifications/stream', (_eventName, data) => {
+    const d = data as { type: string; title: string; body: string };
+    // Re-fetch la liste des notifications
+    fetchNotifications();
+    // Toast selon le type
+    if (d.type === 'LEAVE_APPROVED') {
+      toast.success(d.title, { duration: 6000 });
+    } else if (d.type === 'LEAVE_REJECTED') {
+      toast.error(d.title, { duration: 6000 });
+    } else {
+      toast(d.title, { icon: '🔔', duration: 5000 });
+    }
+  });
+
   // Fermer en cliquant en dehors
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -86,6 +103,7 @@ export default function NotificationBell() {
 
   const typeIcon = (type: Notification['type']) => {
     if (type === 'BIRTHDAY') return <CalendarDaysIcon className="w-4 h-4 text-pink-500 flex-shrink-0" />;
+    if (type === 'LEAVE_PENDING') return <CalendarDaysIcon className="w-4 h-4 text-blue-500 flex-shrink-0" />;
     return <ExclamationTriangleIcon className="w-4 h-4 text-orange-500 flex-shrink-0" />;
   };
 
@@ -180,7 +198,7 @@ export default function NotificationBell() {
           {visible.length > 0 && (
             <div className="px-4 py-2.5 border-t border-gray-100 bg-gray-50">
               <p className="text-xs text-gray-400 text-center">
-                Mis à jour automatiquement toutes les 5 minutes
+                Mis à jour en temps réel
               </p>
             </div>
           )}

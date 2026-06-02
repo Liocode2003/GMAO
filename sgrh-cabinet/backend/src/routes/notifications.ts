@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { authenticate } from '../middleware/auth';
 import { query } from '../config/database';
 import { logger } from '../utils/logger';
+import { addClient, removeClient } from '../services/sseService';
 
 const router = Router();
 router.use(authenticate);
@@ -148,6 +149,31 @@ router.get('/', async (req: Request, res: Response) => {
     // Retourner vide plutôt qu'une erreur : les notifications ne sont pas critiques
     return res.json({ count: 0, notifications: [] });
   }
+});
+
+router.get('/stream', (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // disable nginx buffering
+  res.flushHeaders();
+
+  res.write(`event: connected\ndata: ${JSON.stringify({ userId })}\n\n`);
+
+  addClient(userId, res);
+
+  // Heartbeat every 25s to prevent proxy timeout
+  const heartbeat = setInterval(() => {
+    try { res.write(':ping\n\n'); }
+    catch { clearInterval(heartbeat); }
+  }, 25000);
+
+  req.on('close', () => {
+    clearInterval(heartbeat);
+    removeClient(userId, res);
+  });
 });
 
 export default router;
