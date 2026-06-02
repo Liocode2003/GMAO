@@ -277,15 +277,24 @@ export default function PayslipsPage() {
 function MasseSalarialeTab({ year }: { year: number }) {
   const [data, setData] = useState<{ months: MasseSalarialeMonth[]; totals: { totalBrut: number; totalNet: number; totalIgr: number; totalCnss: number } } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [exporting, setExporting] = useState(false);
 
-  useEffect(() => {
+  const loadData = useCallback(() => {
     setLoading(true);
+    setFetchError(false);
     api.get('/payslips/masse-salariale', { params: { year } })
-      .then(r => setData(r.data && Array.isArray(r.data.months) ? r.data : null))
-      .catch(() => setData(null))
+      .then(r => {
+        setData(r.data && Array.isArray(r.data.months) ? r.data : null);
+      })
+      .catch(() => {
+        setData(null);
+        setFetchError(true);
+      })
       .finally(() => setLoading(false));
   }, [year]);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   const handleExportExcel = async () => {
     setExporting(true);
@@ -308,11 +317,20 @@ function MasseSalarialeTab({ year }: { year: number }) {
     </div>
   );
 
+  if (fetchError) return (
+    <EmptyState
+      icon={ChartBarIcon}
+      title="Erreur de chargement"
+      description="Impossible de récupérer la masse salariale. Vérifiez la connexion au serveur."
+      action={{ label: 'Réessayer', onClick: loadData }}
+    />
+  );
+
   if (!data || data.months.length === 0) return (
     <EmptyState
       icon={ChartBarIcon}
       title="Aucune donnée pour cette année"
-      description="Créez et publiez des bulletins pour voir la masse salariale agrégée"
+      description="Créez des bulletins de paie pour voir la masse salariale agrégée"
     />
   );
 

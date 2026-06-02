@@ -47,7 +47,7 @@ api.interceptors.response.use(
     }
 
     // Ces endpoints gèrent leurs erreurs en interne (inline ou silencieusement)
-    const SILENT_URLS = ['/kpis/dashboard', '/kpis/monthly', '/kpis/hr-report', '/notifications', '/masse-salariale'];
+    const SILENT_URLS = ['/kpis/dashboard', '/kpis/monthly', '/kpis/hr-report', '/notifications'];
     const isSilent = SILENT_URLS.some(u => originalRequest.url?.includes(u));
 
     if (!isRedirecting && status !== 401 && !isSilent) {
