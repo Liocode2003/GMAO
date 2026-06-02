@@ -2,8 +2,6 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   MagnifyingGlassIcon,
-  MinusIcon,
-  PlusIcon,
   ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 import api from '../../services/api';
@@ -213,13 +211,11 @@ export default function OrganigrammePage() {
             <option value="">Tous les départements</option>
             {Object.entries(SL).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
           </select>
-          <div className="flex items-center gap-0.5 bg-white border border-gray-200 rounded-xl px-1 h-9 shadow-sm">
-            <button onClick={() => setZoom(z => Math.max(+(z - 0.1).toFixed(2), 0.15))} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"><MinusIcon className="w-3.5 h-3.5" /></button>
-            <button onClick={autoFit} className="text-xs font-mono text-gray-500 w-11 text-center hover:text-brand-600 transition-colors" title="Ajuster à l'écran">
+          <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-xl px-2 h-9 shadow-sm">
+            <span className="text-xs font-mono text-gray-400 w-11 text-center select-none">
               {Math.round(zoom * 100)}%
-            </button>
-            <button onClick={() => setZoom(z => Math.min(+(z + 0.1).toFixed(2), 2))} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"><PlusIcon className="w-3.5 h-3.5" /></button>
-            <div className="w-px h-4 bg-gray-200 mx-0.5" />
+            </span>
+            <div className="w-px h-4 bg-gray-200" />
             <button onClick={reset} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors" title="Réinitialiser"><ArrowPathIcon className="w-3.5 h-3.5" /></button>
           </div>
         </div>
