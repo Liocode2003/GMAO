@@ -1,7 +1,13 @@
-import { useState, useEffect } from 'react';
-import api from '../../services/api';
-import { UserIcon } from '@heroicons/react/24/outline';
+import { useState, useEffect, useRef } from 'react';
+import { Tree, TreeNode } from 'react-organizational-chart';
 import { Link } from 'react-router-dom';
+import {
+  MagnifyingGlassIcon,
+  MinusIcon,
+  PlusIcon,
+  ArrowPathIcon,
+} from '@heroicons/react/24/outline';
+import api from '../../services/api';
 
 interface EmployeeNode {
   id: string;
@@ -15,22 +21,31 @@ interface EmployeeNode {
   children?: EmployeeNode[];
 }
 
-const SERVICE_LINE_COLORS: Record<string, string> = {
-  AUDIT_ASSURANCE:    'bg-blue-100 text-blue-700 border-blue-200',
-  CONSULTING_FA:      'bg-purple-100 text-purple-700 border-purple-200',
-  OUTSOURCING:        'bg-green-100 text-green-700 border-green-200',
-  ADMINISTRATION:     'bg-gray-100 text-gray-700 border-gray-200',
-  JURIDIQUE_FISCALITE:'bg-amber-100 text-amber-700 border-amber-200',
+// ── Couleurs par département ──────────────────────────────────────────────────
+const SL: Record<string, { bar: string; bg: string; text: string; badge: string; label: string }> = {
+  AUDIT_ASSURANCE:     { bar: 'bg-blue-700',   bg: 'bg-blue-50',   text: 'text-blue-800',   badge: 'bg-blue-100 text-blue-700 border-blue-200',   label: 'Audit & Assurance' },
+  CONSULTING_FA:       { bar: 'bg-violet-600',  bg: 'bg-violet-50',  text: 'text-violet-800',  badge: 'bg-violet-100 text-violet-700 border-violet-200',  label: 'Consulting & FA' },
+  OUTSOURCING:         { bar: 'bg-emerald-600', bg: 'bg-emerald-50', text: 'text-emerald-800', badge: 'bg-emerald-100 text-emerald-700 border-emerald-200', label: 'Outsourcing' },
+  ADMINISTRATION:      { bar: 'bg-slate-500',   bg: 'bg-slate-50',   text: 'text-slate-700',   badge: 'bg-slate-100 text-slate-600 border-slate-200',   label: 'Administration' },
+  JURIDIQUE_FISCALITE: { bar: 'bg-amber-500',   bg: 'bg-amber-50',   text: 'text-amber-800',   badge: 'bg-amber-100 text-amber-700 border-amber-200',   label: 'Tax & Legal' },
 };
 
-const SERVICE_LABELS: Record<string, string> = {
-  AUDIT_ASSURANCE:    'Audit',
-  CONSULTING_FA:      'Consulting',
-  OUTSOURCING:        'Outsourcing',
-  ADMINISTRATION:     'Admin',
-  JURIDIQUE_FISCALITE:'Tax & Legal',
+const GRADE: Record<string, string> = {
+  ASSISTANT_DEBUTANT: 'Assistant débutant', ASSISTANT_CONFIRME: 'Assistant confirmé',
+  JUNIOR: 'Junior', SENIOR_1: 'Sénior 1', SENIOR_2: 'Sénior 2', SENIOR_3: 'Sénior 3',
+  CONSULTANT: 'Consultant', ASSISTANT_MANAGER_1: 'Manager 1', ASSISTANT_MANAGER_2: 'Manager 2',
+  ASSISTANT_MANAGER_3: 'Manager 3', SENIOR_MANAGER_1: 'Sén. Manager 1',
+  SENIOR_MANAGER_2: 'Sén. Manager 2', SENIOR_MANAGER_3: 'Sén. Manager 3',
+  DIRECTEUR: 'Directeur', ASSOCIE: 'Associé',
 };
 
+const FUNC: Record<string, string> = {
+  AUDITEUR: 'Auditeur', JURISTE_FISCALISTE: 'Juriste Fiscaliste', INFORMATICIEN: 'Informaticien',
+  MANAGER_PRINCIPAL: 'Manager Principal', ASSOCIE: 'Associé', DIRECTEUR: 'Directeur',
+  ASSISTANT_DIRECTION: 'Assist. Direction', SECRETAIRE: 'Secrétaire', CHAUFFEUR: 'Chauffeur',
+};
+
+// ── Construction de l'arbre ───────────────────────────────────────────────────
 function buildTree(employees: EmployeeNode[]): EmployeeNode[] {
   const map: Record<string, EmployeeNode> = {};
   employees.forEach(e => { map[e.id] = { ...e, children: [] }; });
@@ -45,145 +60,243 @@ function buildTree(employees: EmployeeNode[]): EmployeeNode[] {
   return roots;
 }
 
-function EmployeeCard({ emp, depth }: { emp: EmployeeNode; depth: number }) {
-  const [expanded, setExpanded] = useState(depth < 2);
-  const hasChildren = (emp.children?.length || 0) > 0;
-  const colorClass = SERVICE_LINE_COLORS[emp.service_line] || 'bg-gray-100 text-gray-700 border-gray-200';
+// ── Carte employé ─────────────────────────────────────────────────────────────
+function OrgCard({ emp, search }: { emp: EmployeeNode; search: string }) {
+  const cfg = SL[emp.service_line] || SL.ADMINISTRATION;
+  const q = search.trim().toLowerCase();
+  const match = q.length >= 2 && (
+    emp.first_name.toLowerCase().includes(q) || emp.last_name.toLowerCase().includes(q)
+  );
 
   return (
-    <div className="flex flex-col items-center">
-      <div className={`relative border-2 rounded-xl p-3 bg-white shadow-sm w-44 text-center transition-all hover:shadow-md ${
-        depth === 0 ? 'border-brand-400 shadow-brand-100' : 'border-gray-200'
-      }`}>
-        {/* Avatar */}
-        <div className={`w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center overflow-hidden border-2 ${
-          depth === 0 ? 'border-brand-400' : 'border-gray-200'
-        }`}>
-          {emp.photo_url ? (
-            <img src={emp.photo_url} alt="" className="w-full h-full object-cover" />
-          ) : (
-            <div className={`w-full h-full flex items-center justify-center text-lg font-bold ${
-              depth === 0 ? 'bg-brand-100 text-brand-700' : 'bg-gray-100 text-gray-500'
-            }`}>
-              {emp.first_name[0]}{emp.last_name[0]}
-            </div>
-          )}
+    <Link to={`/personnel/${emp.id}`} className="block group" onClick={e => e.stopPropagation()}>
+      <div className={`
+        relative bg-white rounded-2xl border transition-all duration-200 w-44 overflow-hidden
+        group-hover:shadow-lg group-hover:-translate-y-0.5
+        ${match
+          ? 'border-amber-400 shadow-amber-100 shadow-md ring-2 ring-amber-300 ring-offset-1'
+          : 'border-gray-100 shadow-sm'
+        }
+      `}>
+        {/* Bande couleur département */}
+        <div className={`h-2 ${cfg.bar}`} />
+
+        <div className="px-3 pt-3 pb-3 text-center">
+          {/* Avatar */}
+          <div className={`
+            w-14 h-14 rounded-full mx-auto mb-2.5 border-2 overflow-hidden
+            flex items-center justify-center text-sm font-bold select-none
+            ${cfg.bg} ${cfg.text} border-white shadow
+          `}>
+            {emp.photo_url ? (
+              <img src={emp.photo_url} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-base">{emp.first_name[0]}{emp.last_name[0]}</span>
+            )}
+          </div>
+
+          {/* Nom */}
+          <p className="text-xs font-bold text-gray-800 leading-tight truncate max-w-full">
+            {emp.last_name} {emp.first_name}
+          </p>
+
+          {/* Fonction */}
+          <p className="text-[10px] text-gray-500 mt-0.5 truncate">
+            {FUNC[emp.function] || emp.function?.replace(/_/g, ' ') || '—'}
+          </p>
+
+          {/* Grade */}
+          <p className="text-[9px] text-gray-400 mt-0.5 truncate italic">
+            {GRADE[emp.grade] || emp.grade || '—'}
+          </p>
+
+          {/* Badge département */}
+          <span className={`inline-block mt-2 text-[9px] px-2 py-0.5 rounded-full font-semibold border ${cfg.badge}`}>
+            {cfg.label}
+          </span>
         </div>
-
-        <Link to={`/personnel/${emp.id}`}
-          className="text-sm font-semibold text-gray-800 hover:text-brand-600 leading-tight block">
-          {emp.first_name} {emp.last_name}
-        </Link>
-        <p className="text-xs text-gray-500 mt-0.5 leading-tight">
-          {emp.function?.replace(/_/g, ' ')}
-        </p>
-        <span className={`inline-block mt-1.5 text-xs px-2 py-0.5 rounded-full border font-medium ${colorClass}`}>
-          {SERVICE_LABELS[emp.service_line] || emp.service_line}
-        </span>
-
-        {hasChildren && (
-          <button
-            onClick={() => setExpanded(e => !e)}
-            className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full bg-white border-2 border-gray-300 flex items-center justify-center text-gray-500 hover:border-brand-400 hover:text-brand-600 text-xs font-bold z-10"
-          >
-            {expanded ? '−' : `+${emp.children!.length}`}
-          </button>
-        )}
       </div>
-
-      {hasChildren && expanded && (
-        <div className="mt-6 flex flex-col items-center">
-          <div className="w-0.5 h-6 bg-gray-300" />
-          {(emp.children?.length || 0) > 1 ? (
-            <div className="relative flex items-start justify-center">
-              <div className="absolute top-0 left-[calc(50%-0.5px)] w-0.5 h-3 bg-gray-300" />
-              <div className="flex gap-6 mt-3">
-                {emp.children!.map(child => (
-                  <div key={child.id} className="flex flex-col items-center">
-                    <div className="w-0.5 h-3 bg-gray-300" />
-                    <EmployeeCard emp={child} depth={depth + 1} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <EmployeeCard emp={emp.children![0]} depth={depth + 1} />
-          )}
-        </div>
-      )}
-    </div>
+    </Link>
   );
 }
 
+// ── Rendu récursif des nœuds ──────────────────────────────────────────────────
+function renderNode(node: EmployeeNode, search: string): JSX.Element {
+  if (!node.children || node.children.length === 0) {
+    return (
+      <TreeNode key={node.id} label={<OrgCard emp={node} search={search} />} />
+    );
+  }
+  return (
+    <TreeNode key={node.id} label={<OrgCard emp={node} search={search} />}>
+      {node.children.map(child => renderNode(child, search))}
+    </TreeNode>
+  );
+}
+
+// ── Page principale ───────────────────────────────────────────────────────────
 export default function OrganigrammePage() {
   const [employees, setEmployees] = useState<EmployeeNode[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filterSL, setFilterSL] = useState('');
+  const [loading, setLoading]     = useState(true);
+  const [filterSL, setFilterSL]   = useState('');
+  const [search, setSearch]       = useState('');
+  const [zoom, setZoom]           = useState(0.8);
+  const containerRef              = useRef<HTMLDivElement>(null);
 
-  const fetchEmployees = async () => {
-    setLoading(true);
-    try {
-      const res = await api.get('/employees', { params: { limit: 500, status: 'ACTIF' } });
-      setEmployees((res.data.data || []).map((e: EmployeeNode) => ({
-        id: e.id, first_name: e.first_name, last_name: e.last_name,
-        function: e.function, service_line: e.service_line, grade: e.grade,
-        manager_id: e.manager_id, photo_url: e.photo_url,
-      })));
-    } finally { setLoading(false); }
+  useEffect(() => {
+    api.get('/employees', { params: { limit: 500, status: 'ACTIF' } })
+      .then(res => {
+        setEmployees((res.data.data || []).map((e: EmployeeNode) => ({
+          id: e.id, first_name: e.first_name, last_name: e.last_name,
+          function: e.function, service_line: e.service_line, grade: e.grade,
+          manager_id: e.manager_id, photo_url: e.photo_url,
+        })));
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  // Zoom à la molette
+  const onWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    setZoom(z => Math.min(Math.max(z - e.deltaY * 0.0008, 0.25), 2));
   };
 
-  useEffect(() => { fetchEmployees(); }, []);
-
   const filtered = filterSL ? employees.filter(e => e.service_line === filterSL) : employees;
-  const tree = buildTree(filtered);
+  const tree     = buildTree(filtered);
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div className="flex flex-col gap-4 animate-fade-in" style={{ height: 'calc(100vh - 100px)' }}>
+
+      {/* ── Barre d'outils ── */}
+      <div className="flex items-center justify-between flex-wrap gap-3 flex-shrink-0">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Organigramme</h2>
-          <p className="text-gray-500 text-sm mt-1">{filtered.length} collaborateurs actifs</p>
+          <p className="text-gray-500 text-sm mt-0.5">{filtered.length} collaborateurs actifs</p>
         </div>
-        <div className="flex items-center gap-2">
-          <select value={filterSL} onChange={e => setFilterSL(e.target.value)} className="input w-48">
-            <option value="">Toutes les lignes</option>
-            <option value="AUDIT_ASSURANCE">Audit & Assurance</option>
-            <option value="CONSULTING_FA">Consulting & FA</option>
-            <option value="OUTSOURCING">Outsourcing</option>
-            <option value="ADMINISTRATION">Administration</option>
-            <option value="JURIDIQUE_FISCALITE">Tax & Legal</option>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Recherche */}
+          <div className="relative">
+            <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Rechercher un nom…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="input pl-8 w-48 text-sm"
+            />
+          </div>
+
+          {/* Filtre département */}
+          <select
+            value={filterSL}
+            onChange={e => setFilterSL(e.target.value)}
+            className="input w-48 text-sm"
+          >
+            <option value="">Tous les départements</option>
+            {Object.entries(SL).map(([k, v]) => (
+              <option key={k} value={k}>{v.label}</option>
+            ))}
           </select>
+
+          {/* Contrôles zoom */}
+          <div className="flex items-center gap-0.5 bg-white border border-gray-200 rounded-xl px-1 shadow-sm">
+            <button
+              onClick={() => setZoom(z => Math.max(z - 0.1, 0.25))}
+              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors"
+              title="Réduire"
+            >
+              <MinusIcon className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setZoom(0.8)}
+              className="text-xs font-mono text-gray-600 px-2 hover:text-brand-600 min-w-[46px] text-center transition-colors"
+            >
+              {Math.round(zoom * 100)}%
+            </button>
+            <button
+              onClick={() => setZoom(z => Math.min(z + 0.1, 2))}
+              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors"
+              title="Agrandir"
+            >
+              <PlusIcon className="w-4 h-4" />
+            </button>
+            <div className="w-px h-5 bg-gray-200 mx-0.5" />
+            <button
+              onClick={() => { setZoom(0.8); setSearch(''); setFilterSL(''); }}
+              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+              title="Réinitialiser"
+            >
+              <ArrowPathIcon className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Arbre */}
-      {loading ? (
-        <div className="flex justify-center py-16">
-          <div className="animate-spin w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full" />
-        </div>
-      ) : tree.length === 0 ? (
-        <div className="flex flex-col items-center py-20 gap-3 text-gray-400">
-          <UserIcon className="w-12 h-12" />
-          <p>Aucun collaborateur trouvé</p>
-        </div>
-      ) : (
-        <div className="overflow-auto">
-          <div className="flex flex-wrap gap-12 justify-start p-8 min-w-max">
+      {/* ── Arbre ── */}
+      <div
+        ref={containerRef}
+        className="flex-1 bg-gradient-to-br from-slate-50 to-gray-100 rounded-2xl border border-gray-200 overflow-auto shadow-inner"
+        onWheel={onWheel}
+      >
+        {loading ? (
+          <div className="flex justify-center items-center h-full">
+            <div className="animate-spin w-10 h-10 border-4 border-brand-600 border-t-transparent rounded-full" />
+          </div>
+        ) : tree.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
+            <p className="text-sm">Aucun collaborateur trouvé</p>
+          </div>
+        ) : (
+          <div
+            style={{
+              transform: `scale(${zoom})`,
+              transformOrigin: 'top center',
+              padding: '48px 64px',
+              transition: 'transform 0.12s ease',
+              display: 'inline-block',
+              minWidth: '100%',
+            }}
+          >
             {tree.map(root => (
-              <EmployeeCard key={root.id} emp={root} depth={0} />
+              <div key={root.id} style={{ marginBottom: 48 }}>
+                <Tree
+                  label={<OrgCard emp={root} search={search} />}
+                  lineWidth="2px"
+                  lineColor="#CBD5E1"
+                  lineBorderRadius="10px"
+                  lineHeight="40px"
+                >
+                  {root.children?.map(child => renderNode(child, search))}
+                </Tree>
+              </div>
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Légende */}
-      <div className="flex flex-wrap gap-3 text-xs">
-        {Object.entries(SERVICE_LABELS).map(([key, label]) => (
-          <span key={key} className={`px-3 py-1 rounded-full border font-medium ${SERVICE_LINE_COLORS[key]}`}>
-            {label}
-          </span>
+      {/* ── Légende interactive ── */}
+      <div className="flex flex-wrap gap-2 flex-shrink-0">
+        {Object.entries(SL).map(([key, cfg]) => (
+          <button
+            key={key}
+            onClick={() => setFilterSL(filterSL === key ? '' : key)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-all ${cfg.badge} ${
+              filterSL === key ? 'ring-2 ring-offset-1 ring-gray-400 shadow' : 'opacity-60 hover:opacity-100'
+            }`}
+          >
+            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${cfg.bar}`} />
+            {cfg.label}
+          </button>
         ))}
+        {(filterSL || search) && (
+          <button
+            onClick={() => { setFilterSL(''); setSearch(''); }}
+            className="px-3 py-1.5 rounded-full text-[11px] font-semibold border border-gray-200 text-gray-500 hover:bg-gray-100 transition-colors"
+          >
+            × Effacer filtres
+          </button>
+        )}
       </div>
     </div>
   );
