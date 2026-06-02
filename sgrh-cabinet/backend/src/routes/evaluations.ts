@@ -23,7 +23,7 @@ router.use(authenticate);
  *         description: Filtrer par année
  *       - in: query
  *         name: period
- *         schema: { type: string, enum: [ANNUEL, MI_ANNUEL, PROBATOIRE] }
+ *         schema: { type: string, enum: [ANNUEL, MI_PERIODE, PROBATOIRE] }
  *       - in: query
  *         name: status
  *         schema: { type: string, enum: [BROUILLON, EN_COURS, TERMINE] }
@@ -61,7 +61,7 @@ router.use(authenticate);
  *                       employee_service_line: { type: string }
  *                       evaluator_name: { type: string }
  *                       year: { type: integer }
- *                       period: { type: string, enum: [ANNUEL, MI_ANNUEL, PROBATOIRE] }
+ *                       period: { type: string, enum: [ANNUEL, MI_PERIODE, PROBATOIRE] }
  *                       status: { type: string, enum: [BROUILLON, EN_COURS, TERMINE] }
  *                       overall_score: { type: number, nullable: true }
  *                       objectives_score: { type: number, nullable: true }
@@ -111,7 +111,7 @@ router.get('/:id', getEvaluation);
  *             properties:
  *               employee_id: { type: string, format: uuid }
  *               year: { type: integer }
- *               period: { type: string, enum: [ANNUEL, MI_ANNUEL, PROBATOIRE], default: ANNUEL }
+ *               period: { type: string, enum: [ANNUEL, MI_PERIODE, PROBATOIRE], default: ANNUEL }
  *               status: { type: string, enum: [BROUILLON, EN_COURS, TERMINE], default: BROUILLON }
  *               objectives_score: { type: number, minimum: 0, maximum: 20 }
  *               skills_score: { type: number, minimum: 0, maximum: 20 }

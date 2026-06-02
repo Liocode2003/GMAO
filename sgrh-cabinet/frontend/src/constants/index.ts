@@ -14,7 +14,7 @@ export const ROLES_SALARY: Role[]    = [ROLES.DRH, ROLES.DIRECTION_GENERALE, ROL
 
 export const EVAL_PERIOD_LABELS: Record<string, string> = {
   ANNUEL:     'Annuel',
-  MI_ANNUEL:  'Mi-annuel',
+  MI_PERIODE: 'Mi-période',
   PROBATOIRE: 'Probatoire',
 };
 

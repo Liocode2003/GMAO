@@ -12,7 +12,7 @@ export const CAN_VIEW_SALARY: Role[] = [ROLES.DRH, ROLES.DIRECTION_GENERALE, ROL
 export const CAN_WRITE_COMMERCIAL: Role[] = [ROLES.DRH, ROLES.ASSOCIE, ROLES.MANAGER];
 
 export const LEAVE_STATUSES   = ['EN_ATTENTE', 'APPROUVE', 'REFUSE'] as const;
-export const EVAL_PERIODS     = ['ANNUEL', 'MI_ANNUEL', 'PROBATOIRE'] as const;
+export const EVAL_PERIODS     = ['ANNUEL', 'MI_PERIODE', 'PROBATOIRE'] as const;
 export const EVAL_STATUSES    = ['BROUILLON', 'EN_COURS', 'TERMINE'] as const;
 export const CANDIDATE_STATUSES = ['NOUVEAU', 'EN_COURS', 'ENTRETIEN', 'OFFRE', 'EMBAUCHE', 'REFUSE'] as const;
 export const COMMERCIAL_TYPES  = ['AMI', 'APPEL_OFFRE'] as const;

@@ -8,28 +8,26 @@ import path from 'path';
 import { PassThrough } from 'stream';
 
 // ============================================================
-// MOTEUR DE PAIE MAROCAIN 2024
+// MOTEUR DE PAIE BURKINA FASO
 // ============================================================
 
-const CNSS_RATE_EMPLOYEE = 0.0448;
-const CNSS_CEILING = 6000;           // plafond mensuel FCFA
-const CNSS_RATE_EMPLOYER_SOCIAL = 0.0898;  // plafonné
-const CNSS_RATE_EMPLOYER_FAMILY = 0.0640;  // non plafonné
-const AMO_RATE_EMPLOYEE = 0.0226;
-const AMO_RATE_EMPLOYER = 0.0365;
+const CNSS_RATE_EMPLOYEE = 0.055;           // 5,5 %
+const CNSS_CEILING = 350000;                // plafond mensuel FCFA
+const CNSS_RATE_EMPLOYER = 0.16;            // 16 % plafonné
 const PROF_DEDUCTION_RATE = 0.20;
-const PROF_DEDUCTION_MAX = 2500;     // FCFA/mois (30 000/an)
-const FAMILY_DEDUCTION_PER_CHARGE = 30; // FCFA/mois par ayant droit
+const PROF_DEDUCTION_MAX = 25000;           // FCFA/mois
+const FAMILY_DEDUCTION_PER_CHARGE = 1500;   // FCFA/mois par ayant droit
 
-// Barème IGR annuel (régime général)
-function calculateAnnualIGR(taxable: number): number {
+// Barème IUTS annuel (Burkina Faso)
+function calculateAnnualIUTS(taxable: number): number {
   if (taxable <= 0) return 0;
-  if (taxable <= 30000) return 0;
-  if (taxable <= 50000) return taxable * 0.10 - 3000;
-  if (taxable <= 60000) return taxable * 0.20 - 8000;
-  if (taxable <= 80000) return taxable * 0.30 - 14000;
-  if (taxable <= 180000) return taxable * 0.34 - 17200;
-  return taxable * 0.38 - 24400;
+  if (taxable <= 240000) return 0;
+  if (taxable <= 300000) return (taxable - 240000) * 0.12;
+  if (taxable <= 600000) return 7200 + (taxable - 300000) * 0.15;
+  if (taxable <= 1200000) return 52200 + (taxable - 600000) * 0.225;
+  if (taxable <= 2400000) return 187200 + (taxable - 1200000) * 0.26;
+  if (taxable <= 4800000) return 499200 + (taxable - 2400000) * 0.29;
+  return 1195200 + (taxable - 4800000) * 0.32;
 }
 
 function r2(n: number) { return Math.round(n * 100) / 100; }
@@ -68,44 +66,41 @@ function computePayslip(inp: PayslipInput): PayslipCalc {
     inp.overtime_pay + inp.prime_amount + inp.other_earnings_amount
   );
 
-  // CNSS salarié (plafonné à 6 000 FCFA)
+  // CNSS salarié (5,5 %, plafonné à 350 000 FCFA)
   const cnssBase = Math.min(gross, CNSS_CEILING);
   const cnss_employee = r2(cnssBase * CNSS_RATE_EMPLOYEE);
 
-  // AMO salarié
-  const amo_employee = r2(gross * AMO_RATE_EMPLOYEE);
+  // Pas d'AMO au Burkina Faso
+  const amo_employee = 0;
 
   // CIMR salarié (assis sur salaire de base uniquement)
   const cimr_employee = r2(inp.base_salary * inp.cimr_rate / 100);
 
-  // Déduction professionnelle (20% brut, max 2 500/mois)
+  // Déduction professionnelle (20% brut, max 25 000/mois)
   const professional_deduction = r2(Math.min(gross * PROF_DEDUCTION_RATE, PROF_DEDUCTION_MAX));
 
   // Base imposable mensuelle
   const net_taxable_monthly = r2(Math.max(0,
-    gross - cnss_employee - amo_employee - cimr_employee - professional_deduction
+    gross - cnss_employee - cimr_employee - professional_deduction
   ));
 
-  // IGR mensuel : annualiser → barème → diviser par 12
+  // IUTS mensuel : annualiser → barème → diviser par 12
   const annualTaxable = net_taxable_monthly * 12;
-  const annualIGR = calculateAnnualIGR(annualTaxable);
-  const igrRaw = r2(annualIGR / 12);
+  const annualIUTS = calculateAnnualIUTS(annualTaxable);
+  const iutsRaw = r2(annualIUTS / 12);
 
-  // Déduction charges de famille (30 FCFA/mois par ayant droit, max 6)
+  // Déduction charges de famille (1 500 FCFA/mois par ayant droit, max 6)
   const family_charge_deduction = r2(Math.min(inp.family_charges, 6) * FAMILY_DEDUCTION_PER_CHARGE);
-  const igr = r2(Math.max(0, igrRaw - family_charge_deduction));
+  const igr = r2(Math.max(0, iutsRaw - family_charge_deduction));
 
-  // Cotisations patronales (informatif)
-  const cnss_employer = r2(
-    Math.min(gross, CNSS_CEILING) * CNSS_RATE_EMPLOYER_SOCIAL +
-    gross * CNSS_RATE_EMPLOYER_FAMILY
-  );
-  const amo_employer = r2(gross * AMO_RATE_EMPLOYER);
-  const cimr_employer = cimr_employee; // taux identique par convention
+  // Cotisations patronales (informatif) — CNSS 16 % plafonné, pas d'AMO
+  const cnss_employer = r2(Math.min(gross, CNSS_CEILING) * CNSS_RATE_EMPLOYER);
+  const amo_employer = 0;
+  const cimr_employer = cimr_employee;
 
   // Net à payer
   const total_deductions = r2(
-    cnss_employee + amo_employee + cimr_employee + igr +
+    cnss_employee + cimr_employee + igr +
     inp.advance_amount + inp.other_deduction_amount
   );
   const net_salary = r2(gross - total_deductions);
@@ -229,11 +224,10 @@ async function generatePDF(payslipId: string): Promise<string> {
     if (parseFloat(ps.other_earnings_amount) > 0) leftLines.push([ps.other_earnings_label || 'Autres gains', parseFloat(ps.other_earnings_amount)]);
 
     const rightLines: [string, number][] = [
-      ['CNSS salarié (4,48% — plaf.)', parseFloat(ps.cnss_employee)],
-      ['AMO salarié (2,26%)', parseFloat(ps.amo_employee)],
+      ['CNSS salarié (5,5% — plaf. 350 000)', parseFloat(ps.cnss_employee)],
     ];
     if (parseFloat(ps.cimr_employee) > 0) rightLines.push([`CIMR salarié (${parseFloat(ps.cimr_rate)}%)`, parseFloat(ps.cimr_employee)]);
-    rightLines.push(['IGR', parseFloat(ps.igr)]);
+    rightLines.push(['IUTS', parseFloat(ps.igr)]);
     if (parseFloat(ps.advance_amount) > 0) rightLines.push(['Avance sur salaire', parseFloat(ps.advance_amount)]);
     if (parseFloat(ps.other_deduction_amount) > 0) rightLines.push([ps.other_deduction_label || 'Autres retenues', parseFloat(ps.other_deduction_amount)]);
 
@@ -259,7 +253,7 @@ async function generatePDF(payslipId: string): Promise<string> {
       .text(`SALAIRE BRUT : ${fmt(ps.gross_salary)} FCFA`, 44, y + 5)
       .fillColor(red)
       .text(`TOTAL RETENUES : ${fmt(
-        parseFloat(ps.cnss_employee) + parseFloat(ps.amo_employee) +
+        parseFloat(ps.cnss_employee) +
         parseFloat(ps.cimr_employee) + parseFloat(ps.igr) +
         parseFloat(ps.advance_amount) + parseFloat(ps.other_deduction_amount)
       )} FCFA`, 48 + halfW, y + 5);
@@ -271,7 +265,7 @@ async function generatePDF(payslipId: string): Promise<string> {
       .text(`NET À PAYER : ${fmt(ps.net_salary)} FCFA`, 0, y + 8, { align: 'center', width: W + 80 });
     y += 38;
 
-    // ── DÉTAIL IGR ────────────────────────────────────────
+    // ── DÉTAIL IUTS ───────────────────────────────────────
     doc.rect(40, y, W, 12).fill(light);
     doc.fillColor('#6b7280').fontSize(7.5).font('Helvetica')
       .text(`Base imposable mensuelle : ${fmt(ps.net_taxable_monthly)} FCFA   |   ` +
@@ -282,16 +276,15 @@ async function generatePDF(payslipId: string): Promise<string> {
     // ── COTISATIONS PATRONALES ────────────────────────────
     doc.rect(40, y, W, 12).fill('#f0fdf4');
     const cnssEmpl = parseFloat(ps.cnss_employer);
-    const amoEmpl = parseFloat(ps.amo_employer);
     const cimrEmpl = parseFloat(ps.cimr_employer);
     doc.fillColor('#15803d').fontSize(7.5).font('Helvetica')
-      .text(`Cotisations patronales (informatif) — CNSS : ${fmt(cnssEmpl)} FCFA  |  AMO : ${fmt(amoEmpl)} FCFA  |  CIMR : ${fmt(cimrEmpl)} FCFA  |  Coût total employeur : ${fmt(parseFloat(ps.gross_salary) + cnssEmpl + amoEmpl + cimrEmpl)} FCFA`, 44, y + 3);
+      .text(`Cotisations patronales (informatif) — CNSS patronal (16%) : ${fmt(cnssEmpl)} FCFA  |  CIMR : ${fmt(cimrEmpl)} FCFA  |  Coût total employeur : ${fmt(parseFloat(ps.gross_salary) + cnssEmpl + cimrEmpl)} FCFA`, 44, y + 3);
     y += 18;
 
     // ── CUMULS ANNUELS ────────────────────────────────────
     doc.rect(40, y, W, 12).fill(light);
     doc.fillColor('#374151').fontSize(7.5).font('Helvetica')
-      .text(`Cumuls ${ps.period_year} — Brut : ${fmt(ps.annual_gross_ytd)} FCFA  |  Net : ${fmt(ps.annual_net_ytd)} FCFA  |  IGR : ${fmt(ps.annual_igr_ytd)} FCFA`, 44, y + 3);
+      .text(`Cumuls ${ps.period_year} — Brut : ${fmt(ps.annual_gross_ytd)} FCFA  |  Net : ${fmt(ps.annual_net_ytd)} FCFA  |  IUTS : ${fmt(ps.annual_igr_ytd)} FCFA`, 44, y + 3);
     y += 24;
 
     // ── SIGNATURES ────────────────────────────────────────
@@ -709,8 +702,8 @@ async function generateAttestation9421(employeeId: string, year: number): Promis
   `, [employeeId, year]);
   const cumul = cumResult.rows[0];
 
-  const profDed = Math.min(parseFloat(cumul.total_brut) * 0.20, 30000);
-  const igrBase = Math.max(0, parseFloat(cumul.total_brut) - parseFloat(cumul.total_cnss) - parseFloat(cumul.total_amo) - parseFloat(cumul.total_cimr) - profDed);
+  const profDed = Math.min(parseFloat(cumul.total_brut) * 0.20, 300000); // max 25 000/mois * 12
+  const igrBase = Math.max(0, parseFloat(cumul.total_brut) - parseFloat(cumul.total_cnss) - parseFloat(cumul.total_cimr) - profDed);
 
   return new Promise<Buffer>((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 50 });
@@ -738,9 +731,9 @@ async function generateAttestation9421(employeeId: string, year: number): Promis
 
     // ── Titre modèle ──
     doc.fillColor(navy).fontSize(11).font('Helvetica-Bold')
-      .text('Modèle 9421 — Attestation de Revenu Salarial', 50, 120, { align: 'center', width: W });
+      .text('Attestation de Revenu Salarial', 50, 120, { align: 'center', width: W });
     doc.fillColor('#374151').fontSize(9).font('Helvetica')
-      .text('(Article 79 et 81 du Code Général des Impôts)', 50, 136, { align: 'center', width: W });
+      .text('(Régime fiscal Burkina Faso — IUTS)', 50, 136, { align: 'center', width: W });
 
     let y = 162;
 
@@ -775,12 +768,11 @@ async function generateAttestation9421(employeeId: string, year: number): Promis
 
     const tableLines: [string, number][] = [
       ['Salaire brut imposable', parseFloat(cumul.total_brut)],
-      ['Cotisations CNSS salarié', parseFloat(cumul.total_cnss)],
-      ['Cotisations AMO salarié', parseFloat(cumul.total_amo)],
+      ['Cotisations CNSS salarié (5,5%)', parseFloat(cumul.total_cnss)],
       ['Cotisations CIMR salarié', parseFloat(cumul.total_cimr)],
       ['Déduction frais professionnels (20%)', profDed],
       ['Base imposable (revenu net taxable)', igrBase],
-      ['Impôt sur le Revenu (IGR) retenu à la source', parseFloat(cumul.total_igr)],
+      ['IUTS (Impôt Unique sur les Traitements et Salaires)', parseFloat(cumul.total_igr)],
       ['Net total versé', parseFloat(cumul.total_net)],
     ];
 
@@ -876,9 +868,9 @@ export const exportMasseSalarialeExcel = async (req: Request, res: Response) => 
       { header: 'Bulletins',         key: 'count',     width: 12 },
       { header: 'Total brut (FCFA)',  key: 'brut',      width: 20 },
       { header: 'Total net (FCFA)',   key: 'net',       width: 20 },
-      { header: 'IGR total (FCFA)',   key: 'igr',       width: 18 },
+      { header: 'IUTS total (FCFA)',   key: 'igr',       width: 18 },
       { header: 'CNSS salarié',      key: 'cnss',      width: 16 },
-      { header: 'AMO salarié',       key: 'amo',       width: 16 },
+      { header: 'AMO salarié',       key: 'amo',       width: 16 }, // toujours 0 BF
       { header: 'CIMR salarié',      key: 'cimr',      width: 16 },
       { header: 'CNSS patronal',     key: 'cnss_pat',  width: 16 },
       { header: 'AMO patronal',      key: 'amo_pat',   width: 16 },
@@ -955,7 +947,7 @@ export const exportMasseSalarialeExcel = async (req: Request, res: Response) => 
       { header: 'Mois',         key: 'mo',    width: 12 },
       { header: 'Brut',         key: 'brut',  width: 16 },
       { header: 'Net',          key: 'net',   width: 16 },
-      { header: 'IGR',          key: 'igr',   width: 14 },
+      { header: 'IUTS',         key: 'igr',   width: 14 },
       { header: 'CNSS',         key: 'cnss',  width: 14 },
       { header: 'AMO',          key: 'amo',   width: 14 },
       { header: 'CIMR',         key: 'cimr',  width: 14 },

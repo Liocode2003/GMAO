@@ -134,7 +134,7 @@ export default function PayslipsPage() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Paie</h2>
-          <p className="text-gray-500 text-sm">Gestion des bulletins de paie — CNSS · ITS</p>
+          <p className="text-gray-500 text-sm">Gestion des bulletins de paie — CNSS · IUTS</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <select value={filterYear} onChange={e => setFilterYear(+e.target.value)} className="input w-28">
@@ -189,7 +189,7 @@ export default function PayslipsPage() {
                 <th>Période</th>
                 <th className="text-right">Brut</th>
                 <th className="text-right">Net</th>
-                <th className="text-right">IGR</th>
+                <th className="text-right">IUTS</th>
                 <th>Statut</th>
                 <th>Actions</th>
               </tr>
@@ -338,7 +338,7 @@ function MasseSalarialeTab({ year }: { year: number }) {
     name: m.monthLabel.substring(0, 3),
     'Brut total': Math.round(m.totalBrut),
     'Net total': Math.round(m.totalNet),
-    'IGR total': Math.round(m.totalIgr),
+    'IUTS total': Math.round(m.totalIgr),
   }));
 
   return (
@@ -361,7 +361,7 @@ function MasseSalarialeTab({ year }: { year: number }) {
         {[
           { label: 'Masse brute annuelle', value: data.totals.totalBrut, color: 'text-brand-700' },
           { label: 'Masse nette annuelle', value: data.totals.totalNet, color: 'text-green-700' },
-          { label: 'IGR total retenu', value: data.totals.totalIgr, color: 'text-red-600' },
+          { label: 'IUTS total retenu', value: data.totals.totalIgr, color: 'text-red-600' },
           { label: 'CNSS salarié total', value: data.totals.totalCnss, color: 'text-amber-700' },
         ].map(kpi => (
           <div key={kpi.label} className="card p-4">
@@ -384,7 +384,7 @@ function MasseSalarialeTab({ year }: { year: number }) {
             <Legend wrapperStyle={{ fontSize: 12 }} />
             <Bar dataKey="Brut total" fill="#3b82f6" radius={[3, 3, 0, 0]} />
             <Bar dataKey="Net total" fill="#10b981" radius={[3, 3, 0, 0]} />
-            <Bar dataKey="IGR total" fill="#ef4444" radius={[3, 3, 0, 0]} />
+            <Bar dataKey="IUTS total" fill="#ef4444" radius={[3, 3, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -398,7 +398,7 @@ function MasseSalarialeTab({ year }: { year: number }) {
               <th className="text-center">Bulletins</th>
               <th className="text-right">Brut total</th>
               <th className="text-right">Net total</th>
-              <th className="text-right">IGR total</th>
+              <th className="text-right">IUTS total</th>
               <th className="text-right">CNSS salarié</th>
               <th className="text-right">AMO salarié</th>
             </tr>
@@ -551,7 +551,7 @@ function CumulAnnuelTab({ year }: { year: number }) {
             {[
               { label: 'Brut cumulé', value: data.cumul.grossSalary, color: 'text-brand-700' },
               { label: 'Net cumulé', value: data.cumul.netSalary, color: 'text-green-700' },
-              { label: 'IGR annuel', value: data.cumul.igr, color: 'text-red-600' },
+              { label: 'IUTS annuel', value: data.cumul.igr, color: 'text-red-600' },
               { label: 'CNSS annuel', value: data.cumul.cnss, color: 'text-amber-700' },
               { label: 'AMO annuel', value: data.cumul.amo, color: 'text-purple-700' },
               { label: 'CIMR annuel', value: data.cumul.cimr, color: 'text-gray-700' },
@@ -571,7 +571,7 @@ function CumulAnnuelTab({ year }: { year: number }) {
                   <th>Mois</th>
                   <th className="text-right">Brut</th>
                   <th className="text-right">Net</th>
-                  <th className="text-right">IGR</th>
+                  <th className="text-right">IUTS</th>
                   <th className="text-right">CNSS</th>
                   <th className="text-right">AMO</th>
                   <th className="text-right">CIMR</th>
@@ -846,9 +846,8 @@ function PayslipModal({ editing, onClose, onSaved }: { editing: Payslip | null; 
                   <p className="text-xs font-semibold uppercase tracking-wider text-white/60 mb-3">Résultat du calcul</p>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm mb-3">
                     <CalcCard label="Salaire brut" value={fmt(calc.gross_salary)} />
-                    <CalcCard label="CNSS (4,48%)" value={`− ${fmt(calc.cnss_employee)}`} red />
-                    <CalcCard label="AMO (2,26%)" value={`− ${fmt(calc.amo_employee)}`} red />
-                    <CalcCard label="IGR" value={`− ${fmt(calc.igr)}`} red />
+                    <CalcCard label="CNSS (5,5%)" value={`− ${fmt(calc.cnss_employee)}`} red />
+                    <CalcCard label="IUTS" value={`− ${fmt(calc.igr)}`} red />
                     {calc.cimr_employee > 0 && <CalcCard label="CIMR salarié" value={`− ${fmt(calc.cimr_employee)}`} red />}
                     <CalcCard label="Base imposable" value={fmt(calc.net_taxable_monthly)} small />
                     <CalcCard label="Déd. prof. (20%)" value={fmt(calc.professional_deduction)} small />
@@ -859,7 +858,7 @@ function PayslipModal({ editing, onClose, onSaved }: { editing: Payslip | null; 
                     <span className="text-2xl font-bold">{fmt(calc.net_salary)} FCFA</span>
                   </div>
                   <p className="text-xs text-white/50 mt-2">
-                    Charges patronales : {fmt(calc.cnss_employer + calc.amo_employer + calc.cimr_employer)} FCFA
+                    Charges patronales : {fmt(calc.cnss_employer + calc.cimr_employer)} FCFA
                   </p>
                 </div>
               )}

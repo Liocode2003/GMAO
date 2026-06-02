@@ -8,6 +8,8 @@ import PaginationBar from '../../components/ui/PaginationBar';
 import toast from 'react-hot-toast';
 import { TableSkeletonRows } from '../../components/ui/Skeleton';
 import EmptyState from '../../components/ui/EmptyState';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import ChartTooltip from '../../components/ui/ChartTooltip';
 
 interface Training {
   id: string;
@@ -122,6 +124,31 @@ export default function TrainingsPage() {
         })}
       </div>
 
+      {/* Graphe heures mensuelles */}
+      {allTrainings.length > 0 && (() => {
+        const MONTHS = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+        const monthly = Array.from({ length: 12 }, (_, i) => ({
+          mois: MONTHS[i],
+          heures: allTrainings
+            .filter(t => new Date(t.date).getMonth() === i)
+            .reduce((s, t) => s + (parseFloat(String(t.duration_hours)) || 0), 0),
+        }));
+        return (
+          <div className="card p-4">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">Heures de formation mensuelles — {year}</h3>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={monthly} margin={{ top: 4, right: 8, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                <XAxis dataKey="mois" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                <Tooltip content={<ChartTooltip unit="h" />} />
+                <Bar dataKey="heures" name="Heures" fill="#6366f1" radius={[4, 4, 0, 0]} maxBarSize={40} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        );
+      })()}
+
       {/* Mobile cards */}
       <div className="sm:hidden space-y-3">
         {loading ? (
@@ -151,7 +178,6 @@ export default function TrainingsPage() {
               <span>{new Date(t.date).toLocaleDateString('fr-FR')}</span>
               {t.location && <span>{t.location}</span>}
               {t.duration_hours && <span>{t.duration_hours}h</span>}
-              <span>{t.participant_count} pers.</span>
             </div>
           </div>
         ))}
@@ -169,15 +195,14 @@ export default function TrainingsPage() {
               <th>Lieu</th>
               <SortTh col="duration_hours" label="Durée"         current={sort} order={order} onSort={handleSort} />
               <SortTh col="trainer"        label="Formateur"     current={sort} order={order} onSort={handleSort} />
-              <th>Participants</th>
               {canManage && <th>Actions</th>}
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <TableSkeletonRows cols={canManage ? 8 : 7} rows={5} />
+              <TableSkeletonRows cols={canManage ? 7 : 6} rows={5} />
             ) : trainings.length === 0 ? (
-              <tr><td colSpan={canManage ? 8 : 7}>
+              <tr><td colSpan={canManage ? 7 : 6}>
                 <EmptyState
                   icon={AcademicCapIcon}
                   title="Aucune formation enregistrée"
@@ -193,7 +218,6 @@ export default function TrainingsPage() {
                 <td className="text-sm text-gray-600">{t.location || '—'}</td>
                 <td className="text-sm">{t.duration_hours ? `${t.duration_hours}h` : '—'}</td>
                 <td className="text-sm text-gray-600">{t.trainer || '—'}</td>
-                <td><span className="badge badge-gray">{t.participant_count} pers.</span></td>
                 {canManage && (
                   <td>
                     <div className="flex gap-1">
@@ -216,7 +240,7 @@ export default function TrainingsPage() {
               <tr className="bg-gray-50 font-semibold">
                 <td colSpan={4} className="px-4 py-2 text-right text-sm text-gray-700">Total heures:</td>
                 <td className="px-4 py-2 text-sm text-brand-700">{totalHours.toFixed(0)}h</td>
-                <td colSpan={canManage ? 3 : 2} />
+                <td colSpan={canManage ? 2 : 1} />
               </tr>
             </tfoot>
           )}

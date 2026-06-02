@@ -40,7 +40,7 @@ interface Employee {
 
 const PERIOD_LABELS: Record<string, string> = {
   ANNUEL:    'Annuel',
-  MI_ANNUEL: 'Mi-annuel',
+  MI_PERIODE: 'Mi-période',
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -133,7 +133,7 @@ export default function EvaluationsPage() {
           <select value={period} onChange={e => handleFilterChange(year, e.target.value)} className="input w-36">
             <option value="">Toutes périodes</option>
             <option value="ANNUEL">Annuel</option>
-            <option value="MI_ANNUEL">Mi-annuel</option>
+            <option value="MI_PERIODE">Mi-période</option>
           </select>
           <select value={year} onChange={e => handleFilterChange(parseInt(e.target.value), period)} className="input w-24">
             {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(y => (
@@ -398,7 +398,7 @@ function EvaluationModal({ evaluation, year, onClose, onSaved }: {
               <select className="input" value={form.period}
                 onChange={e => setForm(p => ({ ...p, period: e.target.value }))}>
                 <option value="ANNUEL">Annuel</option>
-                <option value="MI_ANNUEL">Mi-annuel</option>
+                <option value="MI_PERIODE">Mi-période</option>
               </select>
             </div>
             <div>
