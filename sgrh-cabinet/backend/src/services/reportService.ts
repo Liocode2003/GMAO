@@ -1,4 +1,5 @@
 import ExcelJS from 'exceljs';
+import JSZip from 'jszip';
 import path from 'path';
 import fs from 'fs';
 import { query } from '../config/database';
@@ -158,6 +159,222 @@ function f(cell: ExcelJS.Cell, formula: string, result?: ExcelJS.CellValue) {
     : { formula }       as ExcelJS.CellFormulaValue);
 }
 
+// ─── XLSX chart injection ─────────────────────────────────────────────────────
+
+interface ChartSeries { name: string; values: number[]; color?: string }
+interface ChartDef {
+  sheetName: string; title: string; categories: string[];
+  series: ChartSeries[];
+  fromRow: number; fromCol: number; toRow: number; toCol: number;
+  pct?: boolean; barDir?: 'col' | 'bar';
+}
+
+function xe(s: string): string {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+const SCOL = ['1E3A5F','93C5FD','34D399','FCD34D','F87171','A78BFA'];
+
+function buildChartXml(def: ChartDef, n: number): string {
+  const axC = 100 + n * 10, axV = 101 + n * 10;
+  const dir = def.barDir ?? 'col';
+  const nCats = def.categories.length;
+  const catPts = def.categories.map((c,i) => `<c:pt idx="${i}"><c:v>${xe(c)}</c:v></c:pt>`).join('');
+  const fmt = def.pct ? '0.0%' : 'General';
+
+  const serXml = def.series.map((s, si) => {
+    const col = s.color ?? SCOL[si % SCOL.length];
+    const valPts = s.values.map((v,i) => `<c:pt idx="${i}"><c:v>${v}</c:v></c:pt>`).join('');
+    return `<c:ser>
+      <c:idx val="${si}"/><c:order val="${si}"/>
+      <c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="fr-FR"/><a:t>${xe(s.name)}</a:t></a:r></a:p></c:rich></c:tx>
+      <c:spPr><a:solidFill><a:srgbClr val="${col}"/></a:solidFill><a:ln><a:noFill/></a:ln></c:spPr>
+      <c:cat><c:strRef><c:f/><c:strCache><c:ptCount val="${nCats}"/>${catPts}</c:strCache></c:strRef></c:cat>
+      <c:val><c:numRef><c:f/><c:numCache><c:formatCode>${fmt}</c:formatCode><c:ptCount val="${nCats}"/>${valPts}</c:numCache></c:numRef></c:val>
+    </c:ser>`;
+  }).join('\n');
+
+  const catPos = dir === 'col' ? 'b' : 'l';
+  const valPos = dir === 'col' ? 'l' : 'b';
+
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+  xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <c:lang val="fr-FR"/>
+  <c:style val="2"/>
+  <c:chart>
+    <c:title>
+      <c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr b="1" sz="1000"/></a:pPr><a:r><a:t>${xe(def.title)}</a:t></a:r></a:p></c:rich></c:tx>
+      <c:overlay val="0"/>
+    </c:title>
+    <c:autoTitleDeleted val="0"/>
+    <c:plotArea>
+      <c:layout/>
+      <c:barChart>
+        <c:barDir val="${dir}"/>
+        <c:grouping val="clustered"/>
+        <c:varyColors val="0"/>
+        ${serXml}
+        <c:axId val="${axC}"/><c:axId val="${axV}"/>
+      </c:barChart>
+      <c:catAx>
+        <c:axId val="${axC}"/>
+        <c:scaling><c:orientation val="minMax"/></c:scaling>
+        <c:delete val="0"/>
+        <c:axPos val="${catPos}"/>
+        <c:numFmt formatCode="General" sourceLinked="0"/>
+        <c:tickLblPos val="nextTo"/>
+        <c:spPr><a:ln w="6350"><a:solidFill><a:srgbClr val="D1D5DB"/></a:solidFill></a:ln></c:spPr>
+        <c:txPr><a:bodyPr rot="-2700000"/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="800"/></a:pPr></a:p></c:txPr>
+        <c:crossAx val="${axV}"/>
+      </c:catAx>
+      <c:valAx>
+        <c:axId val="${axV}"/>
+        <c:scaling><c:orientation val="minMax"/></c:scaling>
+        <c:delete val="0"/>
+        <c:axPos val="${valPos}"/>
+        <c:numFmt formatCode="${fmt}" sourceLinked="0"/>
+        <c:tickLblPos val="nextTo"/>
+        <c:spPr><a:ln w="6350"><a:solidFill><a:srgbClr val="D1D5DB"/></a:solidFill></a:ln></c:spPr>
+        <c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="800"/></a:pPr></a:p></c:txPr>
+        <c:crossAx val="${axC}"/>
+      </c:valAx>
+    </c:plotArea>
+    <c:legend><c:legendPos val="b"/><c:overlay val="0"/></c:legend>
+    <c:plotVisOnly val="1"/>
+    <c:dispBlanksAs val="gap"/>
+  </c:chart>
+  <c:spPr>
+    <a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill>
+    <a:ln w="9525"><a:solidFill><a:srgbClr val="E2E8F0"/></a:solidFill></a:ln>
+  </c:spPr>
+</c:chartSpace>`;
+}
+
+function buildDrawingXml(n: number, def: ChartDef): string {
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing"
+  xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+  xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+  <xdr:twoCellAnchor moveWithCells="0" sizeWithCells="0">
+    <xdr:from><xdr:col>${def.fromCol}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${def.fromRow}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>
+    <xdr:to><xdr:col>${def.toCol}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${def.toRow}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>
+    <xdr:graphicFrame macro="">
+      <xdr:nvGraphicFramePr>
+        <xdr:cNvPr id="${n + 1}" name="Graphique ${n}"/>
+        <xdr:cNvGraphicFramePr><a:graphicFrameLocks noGrp="1"/></xdr:cNvGraphicFramePr>
+      </xdr:nvGraphicFramePr>
+      <xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm>
+      <a:graphic>
+        <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">
+          <c:chart r:id="rId1"/>
+        </a:graphicData>
+      </a:graphic>
+    </xdr:graphicFrame>
+    <xdr:clientData/>
+  </xdr:twoCellAnchor>
+</xdr:wsDr>`;
+}
+
+function buildDrawingRels(n: number): string {
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart${n}.xml"/>
+</Relationships>`;
+}
+
+async function injectCharts(filePath: string, charts: ChartDef[]): Promise<void> {
+  const buf = fs.readFileSync(filePath);
+  const zip = await JSZip.loadAsync(buf);
+
+  const wbRelsFile = zip.file('xl/_rels/workbook.xml.rels');
+  const wbFile     = zip.file('xl/workbook.xml');
+  if (!wbRelsFile || !wbFile) return;
+
+  const wbRels = await wbRelsFile.async('string');
+  const wbXml  = await wbFile.async('string');
+
+  // rId → sheet file number (e.g. rId3 → 3 for sheet3.xml)
+  const ridToFileNum = new Map<string, number>();
+  for (const m of wbRels.matchAll(/<Relationship[^>]+>/g)) {
+    const elem = m[0];
+    if (!elem.includes('/worksheet')) continue;
+    const id  = elem.match(/\bId="([^"]+)"/)?.[1];
+    const tgt = elem.match(/Target="worksheets\/sheet(\d+)\.xml"/)?.[1];
+    if (id && tgt) ridToFileNum.set(id, parseInt(tgt, 10));
+  }
+
+  // sheet name → file number
+  const nameToFileNum = new Map<string, number>();
+  for (const m of wbXml.matchAll(/<sheet\b[^/]*\/>/g)) {
+    const elem = m[0];
+    const rawName = elem.match(/\bname="([^"]+)"/)?.[1];
+    const rid     = elem.match(/r:id="([^"]+)"/)?.[1];
+    if (rawName && rid) {
+      const name = rawName.replace(/&amp;/g,'&').replace(/&apos;/g,"'").replace(/&quot;/g,'"').replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+      const fn = ridToFileNum.get(rid);
+      if (fn !== undefined) nameToFileNum.set(name, fn);
+    }
+  }
+
+  let contentTypes = await zip.file('[Content_Types].xml')!.async('string');
+
+  for (let i = 0; i < charts.length; i++) {
+    const def = charts[i];
+    const n   = i + 1;
+    const fileNum = nameToFileNum.get(def.sheetName);
+    if (!fileNum) { logger.warn(`injectCharts: sheet not found: "${def.sheetName}"`); continue; }
+
+    zip.file(`xl/charts/chart${n}.xml`,               buildChartXml(def, n));
+    zip.file(`xl/drawings/drawing${n}.xml`,            buildDrawingXml(n, def));
+    zip.file(`xl/drawings/_rels/drawing${n}.xml.rels`, buildDrawingRels(n));
+
+    // worksheet rels — create or append
+    const wsRelsPath     = `xl/worksheets/_rels/sheet${fileNum}.xml.rels`;
+    const existingRelsF  = zip.file(wsRelsPath);
+    let drawingRid: string;
+
+    if (existingRelsF) {
+      const existing = await existingRelsF.async('string');
+      const maxId = [...existing.matchAll(/Id="rId(\d+)"/g)]
+        .reduce((mx, m2) => Math.max(mx, parseInt(m2[1], 10)), 0);
+      drawingRid = `rId${maxId + 1}`;
+      zip.file(wsRelsPath, existing.replace('</Relationships>',
+        `  <Relationship Id="${drawingRid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing${n}.xml"/>
+</Relationships>`));
+    } else {
+      drawingRid = 'rId1';
+      zip.file(wsRelsPath,
+        `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="${drawingRid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing${n}.xml"/>
+</Relationships>`);
+    }
+
+    // add <drawing> element to worksheet XML
+    const wsPath = `xl/worksheets/sheet${fileNum}.xml`;
+    const wsXml  = await zip.file(wsPath)!.async('string');
+    if (!wsXml.includes('<drawing ')) {
+      zip.file(wsPath, wsXml.replace('</worksheet>', `<drawing r:id="${drawingRid}"/></worksheet>`));
+    }
+
+    // content types
+    if (!contentTypes.includes(`chart${n}.xml`)) {
+      contentTypes = contentTypes.replace('</Types>',
+        `  <Override PartName="/xl/charts/chart${n}.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>
+  <Override PartName="/xl/drawings/drawing${n}.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>
+</Types>`);
+    }
+  }
+
+  zip.file('[Content_Types].xml', contentTypes);
+
+  const out = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+  fs.writeFileSync(filePath, out);
+}
+
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 export const generateMonthlyReport = async (year: number, _month: number): Promise<string> => {
@@ -204,6 +421,91 @@ export const generateMonthlyReport = async (year: number, _month: number): Promi
   const filename = `Reporting_RH_ForvisMazars_BF_${year}.xlsx`;
   const filePath = path.join(dir, filename);
   await wb.xlsx.writeFile(filePath);
+
+  // ── Chart data pre-computation ─────────────────────────────────────────────
+  const permN  = empN.filter(r => ['CDI','CDD'].includes(r.contract_type)).length;
+  const permN1 = empN1.filter(r => ['CDI','CDD'].includes(r.contract_type)).length;
+  const consN  = empN.filter(r => ['CONSULTANT','FREELANCE'].includes(r.contract_type)).length;
+  const consN1 = empN1.filter(r => ['CONSULTANT','FREELANCE'].includes(r.contract_type)).length;
+
+  const deptN  = SL_KEYS.map(sl => empN.filter(r => r.service_line === sl).length);
+  const deptN1 = SL_KEYS.map(sl => empN1.filter(r => r.service_line === sl).length);
+
+  const AGE_FNS: Array<(a: number) => boolean> = [
+    a => a < 25,
+    a => a >= 25 && a <= 29,
+    a => a >= 30 && a <= 34,
+    a => a >= 35 && a <= 39,
+    a => a >= 40 && a <= 44,
+    a => a >= 45 && a <= 49,
+    a => a >= 50,
+  ];
+  const withBirthN = empN.filter(r => r.birth_date);
+  const ageCounts  = AGE_FNS.map(fn => withBirthN.filter(r => fn(calcAge(new Date(r.birth_date), endN))).length);
+
+  const effMoyN  = ((empN1.length + empN.length)  / 2) || 1;
+  const effMoyN1 = ((empN2.length + empN1.length) / 2) || 1;
+  const toGlobalN  = depN.length  / effMoyN;
+  const toGlobalN1 = depN1.length / effMoyN1;
+
+  const motifN  = DR_FR.map(l => depN.filter(r => DR_LABELS[r.departure_reason]  === l).length);
+  const motifN1 = DR_FR.map(l => depN1.filter(r => DR_LABELS[r.departure_reason] === l).length);
+
+  const charts: ChartDef[] = [
+    {
+      sheetName: 'Effectifs',
+      title: `Évolution des effectifs – ${year - 1} vs ${year}`,
+      categories: ['Permanents', 'Consultants', 'Total général'],
+      series: [
+        { name: `Mai ${year}`,     values: [permN,  consN,  permN  + consN],  color: '1E3A5F' },
+        { name: `Mai ${year - 1}`, values: [permN1, consN1, permN1 + consN1], color: '93C5FD' },
+      ],
+      fromRow: 16, fromCol: 0, toRow: 30, toCol: 5,
+    },
+    {
+      sheetName: 'Par Département',
+      title: `Effectifs par département – ${year - 1} vs ${year}`,
+      categories: SL_KEYS.map(k => SL_LABELS[k]),
+      series: [
+        { name: `Mai ${year}`,     values: deptN,  color: '1E3A5F' },
+        { name: `Mai ${year - 1}`, values: deptN1, color: '93C5FD' },
+      ],
+      fromRow: 11, fromCol: 0, toRow: 25, toCol: 5,
+    },
+    {
+      sheetName: "Tranches d'Âge",
+      title: `Répartition par tranches d'âge – Mai ${year}`,
+      categories: ['< 25 ans', '25-29', '30-34', '35-39', '40-44', '45-49', '≥ 50 ans'],
+      series: [
+        { name: `Effectif Mai ${year}`, values: ageCounts, color: '1E3A5F' },
+      ],
+      fromRow: 13, fromCol: 0, toRow: 27, toCol: 3,
+    },
+    {
+      sheetName: 'Turn-Over',
+      title: `Taux de Turn-Over – ${year - 1} vs ${year}`,
+      categories: ['Turn-Over Global', 'Turn-Over Fonctionnel'],
+      series: [
+        { name: `Mai ${year}`,     values: [toGlobalN,  0], color: '1E3A5F' },
+        { name: `Mai ${year - 1}`, values: [toGlobalN1, 0], color: '93C5FD' },
+      ],
+      fromRow: 26, fromCol: 0, toRow: 38, toCol: 3,
+      pct: true,
+    },
+    {
+      sheetName: 'Motifs de Départ',
+      title: `Motifs de départ – ${year - 1} vs ${year}`,
+      categories: DR_FR,
+      series: [
+        { name: `Mai ${year}`,     values: motifN,  color: '1E3A5F' },
+        { name: `Mai ${year - 1}`, values: motifN1, color: '93C5FD' },
+      ],
+      fromRow: 13, fromCol: 0, toRow: 27, toCol: 5,
+    },
+  ];
+
+  await injectCharts(filePath, charts);
+
   logger.info(`Rapport RH Forvis Mazars généré : ${filePath}`);
   return filePath;
 };
