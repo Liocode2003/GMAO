@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { Tree, TreeNode } from 'react-organizational-chart';
 import { Link } from 'react-router-dom';
 import {
   MagnifyingGlassIcon,
@@ -15,102 +14,107 @@ interface EmployeeNode {
   last_name: string;
   function: string;
   service_line: string;
-  grade: string;
   manager_id: string | null;
   photo_url: string | null;
   children?: EmployeeNode[];
 }
 
-// ── Palette département ──────────────────────────────────────────────────────
-const SL: Record<string, { accent: string; avatar: string; text: string; dot: string; label: string }> = {
-  AUDIT_ASSURANCE:     { accent: 'bg-indigo-500',  avatar: 'bg-indigo-100 text-indigo-700',  text: 'text-indigo-600',  dot: 'bg-indigo-500',  label: 'Audit & Assurance' },
-  CONSULTING_FA:       { accent: 'bg-violet-500',  avatar: 'bg-violet-100 text-violet-700',  text: 'text-violet-600',  dot: 'bg-violet-500',  label: 'Consulting & FA' },
-  OUTSOURCING:         { accent: 'bg-teal-500',    avatar: 'bg-teal-100 text-teal-700',      text: 'text-teal-600',    dot: 'bg-teal-500',    label: 'Outsourcing' },
-  ADMINISTRATION:      { accent: 'bg-slate-400',   avatar: 'bg-slate-100 text-slate-600',    text: 'text-slate-500',   dot: 'bg-slate-400',   label: 'Administration' },
-  JURIDIQUE_FISCALITE: { accent: 'bg-amber-500',   avatar: 'bg-amber-100 text-amber-700',    text: 'text-amber-600',   dot: 'bg-amber-500',   label: 'Tax & Legal' },
+// ── Palette ───────────────────────────────────────────────────────────────────
+const SL: Record<string, { color: string; light: string; text: string; label: string }> = {
+  AUDIT_ASSURANCE:     { color: '#6366f1', light: '#eef2ff', text: '#4338ca', label: 'Audit & Assurance' },
+  CONSULTING_FA:       { color: '#8b5cf6', light: '#f5f3ff', text: '#6d28d9', label: 'Consulting & FA' },
+  OUTSOURCING:         { color: '#14b8a6', light: '#f0fdfa', text: '#0f766e', label: 'Outsourcing' },
+  ADMINISTRATION:      { color: '#94a3b8', light: '#f8fafc', text: '#475569', label: 'Administration' },
+  JURIDIQUE_FISCALITE: { color: '#f59e0b', light: '#fffbeb', text: '#b45309', label: 'Tax & Legal' },
 };
 
 const FUNC: Record<string, string> = {
-  AUDITEUR: 'Auditeur',
-  JURISTE_FISCALISTE: 'Juriste Fiscaliste',
-  INFORMATICIEN: 'Informaticien',
-  MANAGER_PRINCIPAL: 'Manager Principal',
-  ASSOCIE: 'Associé',
-  DIRECTEUR: 'Directeur',
-  ASSISTANT_DIRECTION: 'Assist. Direction',
-  SECRETAIRE: 'Secrétaire',
-  CHAUFFEUR: 'Chauffeur',
+  AUDITEUR: 'Auditeur', JURISTE_FISCALISTE: 'Juriste Fiscaliste',
+  INFORMATICIEN: 'Informaticien', MANAGER_PRINCIPAL: 'Manager Principal',
+  ASSOCIE: 'Associé', DIRECTEUR: 'Directeur',
+  ASSISTANT_DIRECTION: 'Assist. Direction', SECRETAIRE: 'Secrétaire', CHAUFFEUR: 'Chauffeur',
 };
 
-// ── Construction de l'arbre ───────────────────────────────────────────────────
-function buildTree(employees: EmployeeNode[]): EmployeeNode[] {
+// ── Construction arbre ────────────────────────────────────────────────────────
+function buildTree(list: EmployeeNode[]): EmployeeNode[] {
   const map: Record<string, EmployeeNode> = {};
-  employees.forEach(e => { map[e.id] = { ...e, children: [] }; });
+  list.forEach(e => { map[e.id] = { ...e, children: [] }; });
   const roots: EmployeeNode[] = [];
-  employees.forEach(e => {
-    if (e.manager_id && map[e.manager_id]) {
-      map[e.manager_id].children!.push(map[e.id]);
-    } else {
-      roots.push(map[e.id]);
-    }
+  list.forEach(e => {
+    if (e.manager_id && map[e.manager_id]) map[e.manager_id].children!.push(map[e.id]);
+    else roots.push(map[e.id]);
   });
   return roots;
 }
 
-// ── Carte employé ─────────────────────────────────────────────────────────────
+// ── Carte ─────────────────────────────────────────────────────────────────────
 function OrgCard({ emp, search }: { emp: EmployeeNode; search: string }) {
-  const cfg = SL[emp.service_line] || SL.ADMINISTRATION;
+  const cfg = SL[emp.service_line] ?? SL.ADMINISTRATION;
   const q = search.trim().toLowerCase();
   const match = q.length >= 2 && (
-    emp.first_name.toLowerCase().includes(q) ||
-    emp.last_name.toLowerCase().includes(q)
+    emp.first_name.toLowerCase().includes(q) || emp.last_name.toLowerCase().includes(q)
   );
+  const initials = emp.first_name[0] + emp.last_name[0];
+  const func = FUNC[emp.function] ?? emp.function?.replace(/_/g, ' ') ?? '—';
 
   return (
     <Link to={`/personnel/${emp.id}`} className="block group" onClick={e => e.stopPropagation()}>
       <div
-        className={`
-          w-[136px] bg-white rounded-xl overflow-hidden select-none
-          transition-all duration-200 ease-out
-          group-hover:-translate-y-1 group-hover:shadow-xl
-          ${match
-            ? 'ring-2 ring-amber-400 ring-offset-2 shadow-lg'
-            : 'border border-gray-200/80 shadow-md'
-          }
-        `}
+        style={{
+          width: 140,
+          background: '#fff',
+          borderRadius: 12,
+          border: match ? `2px solid #fbbf24` : '1.5px solid #e5e7eb',
+          boxShadow: match
+            ? '0 0 0 3px #fef3c7, 0 4px 12px rgba(0,0,0,0.1)'
+            : '0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.06)',
+          overflow: 'hidden',
+          transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+          cursor: 'pointer',
+        }}
+        className="group-hover:-translate-y-1 group-hover:shadow-xl"
       >
-        {/* Accent top */}
-        <div className={`h-[3px] ${cfg.accent}`} />
+        {/* Accent bar */}
+        <div style={{ height: 3, background: cfg.color }} />
 
-        <div className="flex flex-col items-center px-3 pt-3 pb-3 gap-1.5">
+        {/* Content */}
+        <div style={{ padding: '12px 10px 10px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
           {/* Avatar */}
           <div
-            className={`
-              w-11 h-11 rounded-full flex items-center justify-center
-              text-[13px] font-bold overflow-hidden flex-shrink-0
-              ${cfg.avatar}
-            `}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: '50%',
+              background: cfg.light,
+              color: cfg.text,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 14,
+              fontWeight: 700,
+              overflow: 'hidden',
+              flexShrink: 0,
+            }}
           >
-            {emp.photo_url ? (
-              <img src={emp.photo_url} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <span>{emp.first_name[0]}{emp.last_name[0]}</span>
-            )}
+            {emp.photo_url
+              ? <img src={emp.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : initials
+            }
           </div>
 
-          {/* Identité */}
-          <div className="text-center w-full">
-            <p className="text-[11px] font-semibold text-gray-900 leading-tight truncate">
+          {/* Nom */}
+          <div style={{ textAlign: 'center', width: '100%' }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: '#111827', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {emp.last_name}
             </p>
-            <p className="text-[10px] text-gray-500 leading-tight truncate">
+            <p style={{ fontSize: 10, color: '#6b7280', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {emp.first_name}
             </p>
           </div>
 
           {/* Fonction */}
-          <p className="text-[9px] text-gray-400 truncate w-full text-center leading-tight">
-            {FUNC[emp.function] ?? emp.function?.replace(/_/g, ' ') ?? '—'}
+          <p style={{ fontSize: 9, color: '#9ca3af', width: '100%', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.2 }}>
+            {func}
           </p>
         </div>
       </div>
@@ -118,36 +122,87 @@ function OrgCard({ emp, search }: { emp: EmployeeNode; search: string }) {
   );
 }
 
-// ── Rendu récursif ────────────────────────────────────────────────────────────
-function renderNode(node: EmployeeNode, search: string): JSX.Element {
-  if (!node.children?.length) {
-    return <TreeNode key={node.id} label={<OrgCard emp={node} search={search} />} />;
-  }
+// ── Arbre CSS pur ─────────────────────────────────────────────────────────────
+const LINE = '#e2e8f0';
+const V = 24;   // vertical gap (px)
+const H = 22;   // horizontal padding each side (px)
+
+function OrgNode({ node, search }: { node: EmployeeNode; search: string }) {
+  const children = node.children ?? [];
+
   return (
-    <TreeNode key={node.id} label={<OrgCard emp={node} search={search} />}>
-      {node.children.map(child => renderNode(child, search))}
-    </TreeNode>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <OrgCard emp={node} search={search} />
+
+      {children.length > 0 && (
+        <>
+          {/* Tige verticale descendante */}
+          <div style={{ width: 1, height: V, background: LINE }} />
+
+          {/* Rangée enfants */}
+          <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+            {children.map((child, i) => {
+              const first = i === 0;
+              const last  = i === children.length - 1;
+              const only  = children.length === 1;
+
+              return (
+                <div
+                  key={child.id}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    paddingLeft: H,
+                    paddingRight: H,
+                    position: 'relative',
+                  }}
+                >
+                  {/* Segment horizontal */}
+                  {!only && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        height: 1,
+                        background: LINE,
+                        left:  first ? '50%' : 0,
+                        right: last  ? '50%' : 0,
+                      }}
+                    />
+                  )}
+                  {/* Tige verticale montante */}
+                  <div style={{ width: 1, height: V, background: LINE }} />
+                  {/* Nœud enfant */}
+                  <OrgNode node={child} search={search} />
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 
-// ── Page principale ───────────────────────────────────────────────────────────
+// ── Page ──────────────────────────────────────────────────────────────────────
 export default function OrganigrammePage() {
   const [employees, setEmployees] = useState<EmployeeNode[]>([]);
-  const [loading, setLoading]   = useState(true);
-  const [filterSL, setFilterSL] = useState('');
-  const [search, setSearch]     = useState('');
-  const [zoom, setZoom]         = useState(0.85);
-  const containerRef            = useRef<HTMLDivElement>(null);
+  const [loading, setLoading]     = useState(true);
+  const [filterSL, setFilterSL]   = useState('');
+  const [search, setSearch]       = useState('');
+  const [zoom, setZoom]           = useState(0.85);
+  const containerRef              = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     api.get('/employees', { params: { limit: 500, status: 'ACTIF' } })
-      .then(res => {
-        setEmployees((res.data.data || []).map((e: EmployeeNode) => ({
+      .then(res => setEmployees(
+        (res.data.data || []).map((e: EmployeeNode) => ({
           id: e.id, first_name: e.first_name, last_name: e.last_name,
-          function: e.function, service_line: e.service_line, grade: e.grade,
+          function: e.function, service_line: e.service_line,
           manager_id: e.manager_id, photo_url: e.photo_url,
-        })));
-      })
+        }))
+      ))
       .finally(() => setLoading(false));
   }, []);
 
@@ -164,7 +219,7 @@ export default function OrganigrammePage() {
   return (
     <div className="flex flex-col gap-4 animate-fade-in" style={{ height: 'calc(100vh - 100px)' }}>
 
-      {/* ── Barre d'outils ── */}
+      {/* Toolbar */}
       <div className="flex items-start justify-between gap-4 flex-shrink-0">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Organigramme</h2>
@@ -172,7 +227,6 @@ export default function OrganigrammePage() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Recherche */}
           <div className="relative">
             <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300 pointer-events-none" />
             <input
@@ -184,7 +238,6 @@ export default function OrganigrammePage() {
             />
           </div>
 
-          {/* Filtre département */}
           <select
             value={filterSL}
             onChange={e => setFilterSL(e.target.value)}
@@ -196,44 +249,29 @@ export default function OrganigrammePage() {
             ))}
           </select>
 
-          {/* Zoom */}
           <div className="flex items-center gap-0.5 bg-white border border-gray-200 rounded-xl px-1 h-9 shadow-sm">
-            <button
-              onClick={() => setZoom(z => Math.max(z - 0.1, 0.2))}
-              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
-              title="Zoom arrière"
-            >
+            <button onClick={() => setZoom(z => Math.max(z - 0.1, 0.2))} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
               <MinusIcon className="w-3.5 h-3.5" />
             </button>
-            <button
-              onClick={() => setZoom(0.85)}
-              className="text-xs font-mono text-gray-500 w-11 text-center hover:text-brand-600 transition-colors"
-            >
+            <button onClick={() => setZoom(0.85)} className="text-xs font-mono text-gray-500 w-11 text-center hover:text-brand-600 transition-colors">
               {Math.round(zoom * 100)}%
             </button>
-            <button
-              onClick={() => setZoom(z => Math.min(z + 0.1, 2))}
-              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
-              title="Zoom avant"
-            >
+            <button onClick={() => setZoom(z => Math.min(z + 0.1, 2))} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
               <PlusIcon className="w-3.5 h-3.5" />
             </button>
             <div className="w-px h-4 bg-gray-200 mx-0.5" />
-            <button
-              onClick={reset}
-              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-              title="Réinitialiser"
-            >
+            <button onClick={reset} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
               <ArrowPathIcon className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
       </div>
 
-      {/* ── Arbre ── */}
+      {/* Zone d'affichage */}
       <div
         ref={containerRef}
-        className="flex-1 bg-white rounded-2xl border border-gray-200 overflow-auto shadow-sm"
+        className="flex-1 rounded-2xl border border-gray-200 overflow-auto shadow-sm"
+        style={{ background: '#fafafa' }}
         onWheel={onWheel}
       >
         {loading ? (
@@ -241,66 +279,53 @@ export default function OrganigrammePage() {
             <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : tree.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
-            <p className="text-sm">Aucun collaborateur trouvé</p>
+          <div className="flex items-center justify-center h-full text-sm text-gray-400">
+            Aucun collaborateur trouvé
           </div>
         ) : (
           <div
             style={{
-              transform: `scale(${zoom})`,
-              transformOrigin: 'top center',
-              padding: '48px 80px 64px',
-              transition: 'transform 0.1s ease',
               display: 'inline-block',
               minWidth: '100%',
+              padding: '52px 80px 72px',
+              transform: `scale(${zoom})`,
+              transformOrigin: 'top center',
+              transition: 'transform 0.1s ease',
             }}
           >
             {tree.map((root, i) => (
-              <div key={root.id} style={{ marginBottom: i < tree.length - 1 ? 56 : 0 }}>
-                <Tree
-                  label={<OrgCard emp={root} search={search} />}
-                  lineWidth="1.5px"
-                  lineColor="#CBD5E1"
-                  lineBorderRadius="8px"
-                  lineHeight="36px"
-                >
-                  {root.children?.map(child => renderNode(child, search))}
-                </Tree>
+              <div key={root.id} style={{ marginBottom: i < tree.length - 1 ? 72 : 0 }}>
+                <OrgNode node={root} search={search} />
               </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* ── Légende ── */}
+      {/* Légende */}
       <div className="flex items-center gap-2 flex-wrap flex-shrink-0">
         {Object.entries(SL).map(([key, cfg]) => (
           <button
             key={key}
             onClick={() => setFilterSL(filterSL === key ? '' : key)}
-            className={`
-              flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium
-              border transition-all duration-150
-              ${filterSL === key
-                ? 'bg-gray-900 text-white border-gray-900'
-                : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400 hover:text-gray-700'
-              }
-            `}
+            style={filterSL === key ? { background: cfg.color, borderColor: cfg.color, color: '#fff' } : {}}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all duration-150 ${
+              filterSL === key ? '' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400 hover:text-gray-700'
+            }`}
           >
-            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cfg.dot}`} />
+            <span
+              className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+              style={{ background: filterSL === key ? '#fff' : cfg.color }}
+            />
             {cfg.label}
           </button>
         ))}
         {(filterSL || search) && (
-          <button
-            onClick={reset}
-            className="px-2.5 py-1 rounded-full text-[11px] font-medium border border-gray-200 text-gray-400 hover:text-gray-600 hover:border-gray-400 bg-white transition-all"
-          >
+          <button onClick={reset} className="px-2.5 py-1 rounded-full text-[11px] font-medium border border-gray-200 text-gray-400 hover:text-gray-600 bg-white transition-all">
             × Effacer
           </button>
         )}
       </div>
-
     </div>
   );
 }
