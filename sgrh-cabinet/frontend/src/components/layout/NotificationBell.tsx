@@ -11,7 +11,8 @@ import { useSSE } from '../../hooks/useSSE';
 
 interface Notification {
   id: string;
-  type: 'BIRTHDAY' | 'CONTRACT_END' | 'LEAVE_PENDING';
+  type: 'BIRTHDAY' | 'CONTRACT_END' | 'LEAVE_PENDING'
+      | 'MY_LEAVE_PENDING' | 'MY_LEAVE_APPROVED' | 'MY_LEAVE_REJECTED';
   title: string;
   body: string;
   employeeId: string;
@@ -102,8 +103,11 @@ export default function NotificationBell() {
   };
 
   const typeIcon = (type: Notification['type']) => {
-    if (type === 'BIRTHDAY') return <CalendarDaysIcon className="w-4 h-4 text-pink-500 flex-shrink-0" />;
-    if (type === 'LEAVE_PENDING') return <CalendarDaysIcon className="w-4 h-4 text-blue-500 flex-shrink-0" />;
+    if (type === 'BIRTHDAY')          return <CalendarDaysIcon className="w-4 h-4 text-pink-500 flex-shrink-0" />;
+    if (type === 'LEAVE_PENDING')     return <CalendarDaysIcon className="w-4 h-4 text-blue-500 flex-shrink-0" />;
+    if (type === 'MY_LEAVE_PENDING')  return <CalendarDaysIcon className="w-4 h-4 text-amber-500 flex-shrink-0" />;
+    if (type === 'MY_LEAVE_APPROVED') return <CalendarDaysIcon className="w-4 h-4 text-green-500 flex-shrink-0" />;
+    if (type === 'MY_LEAVE_REJECTED') return <CalendarDaysIcon className="w-4 h-4 text-red-500 flex-shrink-0" />;
     return <ExclamationTriangleIcon className="w-4 h-4 text-orange-500 flex-shrink-0" />;
   };
 
