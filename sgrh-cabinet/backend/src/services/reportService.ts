@@ -67,7 +67,7 @@ const borders = (color = 'FFD1D5DB'): ExcelJS.Borders => ({
   bottom:   { style: 'thin', color: { argb: color } },
   left:     { style: 'thin', color: { argb: color } },
   right:    { style: 'thin', color: { argb: color } },
-  diagonal: { style: 'thin', color: { argb: color } },
+  diagonal: {},
 });
 
 const styleHeader = (cell: ExcelJS.Cell) => {
