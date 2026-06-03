@@ -8,7 +8,7 @@ import ChartTooltip from '../../components/ui/ChartTooltip';
 type KPIDataExtended = KPIData & { turnoverRate?: number };
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line, Legend,
+  Legend,
 } from 'recharts';
 
 const MONTHS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
@@ -162,13 +162,13 @@ export default function KPIsPage() {
         <div className="card">
           <h3 className="text-base font-semibold text-gray-800 mb-4">Heures de formation mensuelles</h3>
           <ResponsiveContainer width="100%" height={220}>
-            <LineChart data={trainingChart} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+            <BarChart data={trainingChart} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
               <Tooltip content={<ChartTooltip />} />
-              <Line type="monotone" dataKey="Heures" stroke="#1d4ed8" strokeWidth={2} dot={{ r: 4 }} />
-            </LineChart>
+              <Bar dataKey="Heures" fill="#1d4ed8" radius={[3, 3, 0, 0]} />
+            </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
