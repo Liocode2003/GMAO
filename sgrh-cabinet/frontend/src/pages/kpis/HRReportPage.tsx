@@ -31,39 +31,6 @@ function DeltaBadge({ delta }: { delta: number }) {
   );
 }
 
-function TurnoverCard({
-  title, data, formula,
-}: {
-  title: string;
-  data: { current: HRReportData['turnover']['global']['current']; prev: HRReportData['turnover']['global']['prev'] };
-  formula: string;
-}) {
-  return (
-    <div className="card">
-      <h3 className="text-sm font-semibold text-gray-700 mb-3 pb-2 border-b">{title}</h3>
-      <div className="grid grid-cols-2 gap-4">
-        {([['current', 'Période actuelle'], ['prev', 'Période précédente']] as const).map(([key, label]) => {
-          const d = data[key];
-          return (
-            <div key={key} className={`rounded-xl p-3 ${key === 'current' ? 'bg-blue-50' : 'bg-gray-50'}`}>
-              <p className="text-xs font-medium text-gray-500 mb-2">{label}</p>
-              <p className="text-2xl font-bold text-gray-800">{d.rate}%</p>
-              <div className="mt-2 space-y-1 text-xs text-gray-600">
-                <div className="flex justify-between"><span>Départs</span><span className="font-medium">{d.departures}</span></div>
-                <div className="flex justify-between"><span>Eff. moyen</span><span className="font-medium">{d.avgHead}</span></div>
-                <div className="flex justify-between text-gray-400"><span>{formula}</span></div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      <p className="text-xs text-gray-400 mt-3">
-        Formule : départs ÷ effectif moyen × 100 &nbsp;|&nbsp; effectif moyen = (début + fin) ÷ 2
-      </p>
-    </div>
-  );
-}
-
 export default function HRReportPage() {
   const currentYear  = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
@@ -105,7 +72,7 @@ export default function HRReportPage() {
   }, [year, month]);
 
   const periodLabel     = data ? `Fin ${MONTHS[data.period.month]} ${data.period.year}` : '';
-  const prevPeriodLabel = data ? `Fin ${MONTHS[data.prevPeriod.month]} ${data.prevPeriod.year}` : '';
+  const prevPeriodLabel = data ? `Année ${data.prevPeriod.year} (complète)` : '';
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -155,24 +122,46 @@ export default function HRReportPage() {
               <UsersIcon className="w-5 h-5 text-blue-600" />
               <h3 className="text-base font-semibold text-gray-800">Effectif total (hors stagiaires école)</h3>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              <div className="text-center p-4 bg-blue-50 rounded-xl">
-                <p className="text-xs text-gray-500 mb-1">{periodLabel}</p>
-                <p className="text-3xl font-bold text-blue-700">{data.headcount.current}</p>
-              </div>
-              <div className="text-center p-4 bg-gray-50 rounded-xl">
-                <p className="text-xs text-gray-500 mb-1">{prevPeriodLabel}</p>
-                <p className="text-3xl font-bold text-gray-600">{data.headcount.prev}</p>
-              </div>
-              <div className="text-center p-4 bg-white border rounded-xl">
-                <p className="text-xs text-gray-500 mb-1">Évolution</p>
-                <div className="flex items-center justify-center gap-1 mt-1">
-                  <p className="text-2xl font-bold">
-                    {data.headcount.delta > 0 ? '+' : ''}{data.headcount.delta}
-                  </p>
-                  <DeltaBadge delta={data.headcount.delta} />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
+              {/* KPIs */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center p-4 bg-blue-50 rounded-xl">
+                  <p className="text-xs text-gray-500 mb-1">{periodLabel}</p>
+                  <p className="text-3xl font-bold text-blue-700">{data.headcount.current}</p>
+                </div>
+                <div className="text-center p-4 bg-gray-50 rounded-xl">
+                  <p className="text-xs text-gray-500 mb-1">{prevPeriodLabel}</p>
+                  <p className="text-3xl font-bold text-gray-600">{data.headcount.prev}</p>
+                </div>
+                <div className="text-center p-4 bg-white border rounded-xl">
+                  <p className="text-xs text-gray-500 mb-1">Évolution</p>
+                  <div className="flex items-center justify-center gap-1 mt-1">
+                    <p className="text-2xl font-bold">
+                      {data.headcount.delta > 0 ? '+' : ''}{data.headcount.delta}
+                    </p>
+                    <DeltaBadge delta={data.headcount.delta} />
+                  </div>
                 </div>
               </div>
+              {/* Graphique */}
+              <ResponsiveContainer width="100%" height={150}>
+                <BarChart
+                  data={[
+                    { name: 'Période actuelle', value: data.headcount.current },
+                    { name: 'Période préc.', value: data.headcount.prev },
+                  ]}
+                  margin={{ top: 0, right: 10, left: -20, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="name" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Bar dataKey="value" radius={[4, 4, 0, 0]} name="Effectif">
+                    <Cell fill="#1d4ed8" />
+                    <Cell fill="#9ca3af" />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </div>
 
@@ -182,32 +171,59 @@ export default function HRReportPage() {
               <UserGroupIcon className="w-5 h-5 text-pink-600" />
               <h3 className="text-base font-semibold text-gray-800">Répartition Hommes / Femmes</h3>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {([['current', periodLabel], ['prev', prevPeriodLabel]] as const).map(([key, label]) => {
-                const g = data.gender[key];
-                const total = g.M + g.F;
-                const pctM = total > 0 ? Math.round(g.M / total * 100) : 0;
-                const pctF = total > 0 ? Math.round(g.F / total * 100) : 0;
-                return (
-                  <div key={key}>
-                    <p className="text-sm font-medium text-gray-600 mb-2">{label}</p>
-                    <div className="grid grid-cols-2 gap-3 mb-3">
-                      <div className="text-center p-3 bg-blue-50 rounded-lg">
-                        <p className="text-xl font-bold text-blue-700">{g.M}</p>
-                        <p className="text-xs text-gray-500">Hommes ({pctM}%)</p>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
+              {/* Stats deux périodes */}
+              <div className="space-y-4">
+                {([['current', periodLabel], ['prev', prevPeriodLabel]] as const).map(([key, label]) => {
+                  const g = data.gender[key];
+                  const total = g.M + g.F;
+                  const pctM = total > 0 ? Math.round(g.M / total * 100) : 0;
+                  const pctF = total > 0 ? Math.round(g.F / total * 100) : 0;
+                  return (
+                    <div key={key}>
+                      <p className="text-sm font-medium text-gray-600 mb-2">{label}</p>
+                      <div className="grid grid-cols-2 gap-3 mb-2">
+                        <div className="text-center p-2 bg-blue-50 rounded-lg">
+                          <p className="text-xl font-bold text-blue-700">{g.M}</p>
+                          <p className="text-xs text-gray-500">Hommes ({pctM}%)</p>
+                        </div>
+                        <div className="text-center p-2 bg-pink-50 rounded-lg">
+                          <p className="text-xl font-bold text-pink-600">{g.F}</p>
+                          <p className="text-xs text-gray-500">Femmes ({pctF}%)</p>
+                        </div>
                       </div>
-                      <div className="text-center p-3 bg-pink-50 rounded-lg">
-                        <p className="text-xl font-bold text-pink-600">{g.F}</p>
-                        <p className="text-xs text-gray-500">Femmes ({pctF}%)</p>
+                      <div className="h-2.5 rounded-full overflow-hidden bg-gray-100 flex">
+                        <div className="h-full bg-blue-500 transition-all" style={{ width: `${pctM}%` }} />
+                        <div className="h-full bg-pink-400 transition-all" style={{ width: `${pctF}%` }} />
                       </div>
                     </div>
-                    <div className="h-3 rounded-full overflow-hidden bg-gray-100 flex">
-                      <div className="h-full bg-blue-500 transition-all" style={{ width: `${pctM}%` }} />
-                      <div className="h-full bg-pink-400 transition-all" style={{ width: `${pctF}%` }} />
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
+              {/* Graphique H/F période actuelle */}
+              <div>
+                <p className="text-xs text-center text-gray-500 mb-1">{periodLabel}</p>
+                <ResponsiveContainer width="100%" height={160}>
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: 'Hommes', value: data.gender.current.M },
+                        { name: 'Femmes', value: data.gender.current.F },
+                      ]}
+                      cx="50%" cy="50%" innerRadius={40} outerRadius={65}
+                      dataKey="value" paddingAngle={3}
+                    >
+                      <Cell fill="#3b82f6" />
+                      <Cell fill="#ec4899" />
+                    </Pie>
+                    <Tooltip formatter={(v: number) => {
+                      const total = data.gender.current.M + data.gender.current.F;
+                      return [`${v} (${total > 0 ? Math.round(v / total * 100) : 0}%)`, ''];
+                    }} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
 
@@ -217,87 +233,214 @@ export default function HRReportPage() {
               <ChartBarIcon className="w-5 h-5 text-green-600" />
               <h3 className="text-base font-semibold text-gray-800">Effectifs par ligne de service</h3>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-2 text-gray-500 font-medium">Département</th>
-                    <th className="text-right py-2 text-blue-600 font-medium">{periodLabel}</th>
-                    <th className="text-right py-2 text-gray-500 font-medium">{prevPeriodLabel}</th>
-                    <th className="text-right py-2 text-gray-500 font-medium">Évol.</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(() => {
-                    const allLines = new Set([
-                      ...data.byDepartment.current.map(d => d.service_line),
-                      ...data.byDepartment.prev.map(d => d.service_line),
-                    ]);
-                    return [...allLines].map(sl => {
-                      const cur  = data.byDepartment.current.find(d => d.service_line === sl)?.count ?? 0;
-                      const prev = data.byDepartment.prev.find(d => d.service_line === sl)?.count ?? 0;
-                      const delta = cur - prev;
-                      return (
-                        <tr key={sl} className="border-b border-gray-50 hover:bg-gray-50">
-                          <td className="py-2 font-medium text-gray-700">
-                            {SERVICE_LINE_LABELS[sl as keyof typeof SERVICE_LINE_LABELS] || sl}
-                          </td>
-                          <td className="py-2 text-right font-bold text-blue-700">{cur}</td>
-                          <td className="py-2 text-right text-gray-500">{prev}</td>
-                          <td className="py-2 text-right">
-                            <DeltaBadge delta={delta} />
-                          </td>
-                        </tr>
-                      );
-                    });
-                  })()}
-                </tbody>
-              </table>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+              {/* Tableau */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-2 text-gray-500 font-medium">Département</th>
+                      <th className="text-right py-2 text-blue-600 font-medium">{periodLabel}</th>
+                      <th className="text-right py-2 text-gray-500 font-medium">{prevPeriodLabel}</th>
+                      <th className="text-right py-2 text-gray-500 font-medium">Évol.</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      const allLines = new Set([
+                        ...data.byDepartment.current.map(d => d.service_line),
+                        ...data.byDepartment.prev.map(d => d.service_line),
+                      ]);
+                      return [...allLines].map(sl => {
+                        const cur  = data.byDepartment.current.find(d => d.service_line === sl)?.count ?? 0;
+                        const prev = data.byDepartment.prev.find(d => d.service_line === sl)?.count ?? 0;
+                        const delta = cur - prev;
+                        return (
+                          <tr key={sl} className="border-b border-gray-50 hover:bg-gray-50">
+                            <td className="py-2 font-medium text-gray-700">
+                              {SERVICE_LINE_LABELS[sl as keyof typeof SERVICE_LINE_LABELS] || sl}
+                            </td>
+                            <td className="py-2 text-right font-bold text-blue-700">{cur}</td>
+                            <td className="py-2 text-right text-gray-500">{prev}</td>
+                            <td className="py-2 text-right"><DeltaBadge delta={delta} /></td>
+                          </tr>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+              {/* Graphique groupé N / N-1 */}
+              {(() => {
+                const allLines = new Set([
+                  ...data.byDepartment.current.map(d => d.service_line),
+                  ...data.byDepartment.prev.map(d => d.service_line),
+                ]);
+                const chartData = [...allLines].map(sl => ({
+                  name: (SERVICE_LINE_LABELS[sl as keyof typeof SERVICE_LINE_LABELS] || sl).replace(/ /g, '\n'),
+                  current: data.byDepartment.current.find(d => d.service_line === sl)?.count ?? 0,
+                  prev:    data.byDepartment.prev.find(d => d.service_line === sl)?.count ?? 0,
+                }));
+                return (
+                  <ResponsiveContainer width="100%" height={200}>
+                    <BarChart data={chartData} margin={{ top: 0, right: 10, left: -20, bottom: 30 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis dataKey="name" tick={{ fontSize: 9 }} axisLine={false} tickLine={false} interval={0} />
+                      <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                      <Tooltip content={<ChartTooltip />} />
+                      <Legend wrapperStyle={{ fontSize: 11 }} />
+                      <Bar dataKey="current" name="Période actuelle" fill="#1d4ed8" radius={[3, 3, 0, 0]} />
+                      <Bar dataKey="prev"    name="Période préc."   fill="#9ca3af" radius={[3, 3, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                );
+              })()}
             </div>
           </div>
 
-          {/* ── 4. TRANCHES D'ÂGE (période courante) ── */}
+          {/* ── 4. TRANCHES D'ÂGE ── */}
           <div className="card">
             <h3 className="text-base font-semibold text-gray-800 mb-1">
               Répartition par tranche d'âge — {periodLabel}
             </h3>
             <p className="text-xs text-gray-400 mb-4">Effectif total (hors stagiaires)</p>
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart
-                data={['< 30 ans', '30-39 ans', '40-49 ans', '50 ans et +'].map(label => ({
-                  name: label,
-                  count: data.ageGroups.find(a => a.label === label)?.count ?? 0,
-                }))}
-                margin={{ top: 0, right: 0, left: -20, bottom: 0 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-                <Tooltip content={<ChartTooltip />} />
-                <Bar dataKey="count" fill="#1d4ed8" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
+              {/* Stats par tranche */}
+              <div className="grid grid-cols-2 gap-3">
+                {['< 30 ans', '30-39 ans', '40-49 ans', '50 ans et +'].map((label, i) => {
+                  const count = data.ageGroups.find(a => a.label === label)?.count ?? 0;
+                  const total = data.ageGroups.reduce((s, a) => s + a.count, 0);
+                  const pct   = total > 0 ? Math.round(count / total * 100) : 0;
+                  return (
+                    <div key={label} className="p-3 bg-gray-50 rounded-xl text-center border border-gray-100">
+                      <p className="text-xs text-gray-500 mb-1">{label}</p>
+                      <p className="text-2xl font-bold" style={{ color: COLORS[i] }}>{count}</p>
+                      <p className="text-xs text-gray-400">{pct}%</p>
+                    </div>
+                  );
+                })}
+              </div>
+              {/* Graphique */}
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart
+                  data={['< 30 ans', '30-39 ans', '40-49 ans', '50 ans et +'].map((label, i) => ({
+                    name: label,
+                    count: data.ageGroups.find(a => a.label === label)?.count ?? 0,
+                    fill: COLORS[i],
+                  }))}
+                  margin={{ top: 0, right: 0, left: -20, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Bar dataKey="count" radius={[4, 4, 0, 0]} name="Effectif">
+                    {['< 30 ans', '30-39 ans', '40-49 ans', '50 ans et +'].map((_, i) => (
+                      <Cell key={i} fill={COLORS[i]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
 
-          {/* ── 5 & 6. TURN OVER GLOBAL ── */}
-          <TurnoverCard
-            title="Turn Over Global (hors stagiaires école)"
-            data={data.turnover.global}
-            formula={`${data.turnover.global.current.departures} ÷ ${data.turnover.global.current.avgHead} × 100`}
-          />
-
-          {/* ── 7 & 8. TURN OVER FONCTIONNEL ── */}
-          <TurnoverCard
-            title="Turn Over Fonctionnel (CDI / CDD uniquement)"
-            data={data.turnover.functional}
-            formula={`${data.turnover.functional.current.departures} ÷ ${data.turnover.functional.current.avgHead} × 100`}
-          />
-
-          {/* ── 9. MOTIFS DE DÉPART ── */}
+          {/* ── 5. TURN OVER GLOBAL ── */}
           <div className="card">
-            <h3 className="text-base font-semibold text-gray-800 mb-4">
-              Motifs de départ
+            <h3 className="text-sm font-semibold text-gray-700 mb-3 pb-2 border-b">
+              Turn Over Global (hors stagiaires école)
             </h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
+              {/* Stats */}
+              <div className="grid grid-cols-2 gap-4">
+                {([['current', 'Période actuelle', 'bg-blue-50'] , ['prev', 'Période précédente', 'bg-gray-50']] as const).map(([key, label, bg]) => {
+                  const d = data.turnover.global[key];
+                  return (
+                    <div key={key} className={`rounded-xl p-3 ${bg}`}>
+                      <p className="text-xs font-medium text-gray-500 mb-2">{label}</p>
+                      <p className="text-2xl font-bold text-gray-800">{d.rate}%</p>
+                      <div className="mt-2 space-y-1 text-xs text-gray-600">
+                        <div className="flex justify-between"><span>Départs</span><span className="font-medium">{d.departures}</span></div>
+                        <div className="flex justify-between"><span>Eff. moyen</span><span className="font-medium">{d.avgHead}</span></div>
+                      </div>
+                    </div>
+                  );
+                })}
+                <p className="col-span-2 text-xs text-gray-400">
+                  Formule : départs ÷ effectif moyen × 100 &nbsp;|&nbsp; effectif moyen = (début + fin) ÷ 2
+                </p>
+              </div>
+              {/* Graphique */}
+              <ResponsiveContainer width="100%" height={150}>
+                <BarChart
+                  data={[
+                    { name: 'Période actuelle', taux: data.turnover.global.current.rate },
+                    { name: 'Période préc.',    taux: data.turnover.global.prev.rate },
+                  ]}
+                  margin={{ top: 0, right: 10, left: -15, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="name" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} unit="%" />
+                  <Tooltip content={<ChartTooltip />} formatter={(v: number) => [`${v}%`, 'Taux']} />
+                  <Bar dataKey="taux" radius={[4, 4, 0, 0]} name="Taux (%)">
+                    <Cell fill="#1d4ed8" />
+                    <Cell fill="#9ca3af" />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* ── 6. TURN OVER FONCTIONNEL ── */}
+          <div className="card">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3 pb-2 border-b">
+              Turn Over Fonctionnel (CDI / CDD uniquement)
+            </h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
+              {/* Stats */}
+              <div className="grid grid-cols-2 gap-4">
+                {([['current', 'Période actuelle', 'bg-blue-50'], ['prev', 'Période précédente', 'bg-gray-50']] as const).map(([key, label, bg]) => {
+                  const d = data.turnover.functional[key];
+                  return (
+                    <div key={key} className={`rounded-xl p-3 ${bg}`}>
+                      <p className="text-xs font-medium text-gray-500 mb-2">{label}</p>
+                      <p className="text-2xl font-bold text-gray-800">{d.rate}%</p>
+                      <div className="mt-2 space-y-1 text-xs text-gray-600">
+                        <div className="flex justify-between"><span>Départs</span><span className="font-medium">{d.departures}</span></div>
+                        <div className="flex justify-between"><span>Eff. moyen</span><span className="font-medium">{d.avgHead}</span></div>
+                      </div>
+                    </div>
+                  );
+                })}
+                <p className="col-span-2 text-xs text-gray-400">
+                  Formule : départs ÷ effectif moyen × 100 &nbsp;|&nbsp; effectif moyen = (début + fin) ÷ 2
+                </p>
+              </div>
+              {/* Graphique */}
+              <ResponsiveContainer width="100%" height={150}>
+                <BarChart
+                  data={[
+                    { name: 'Période actuelle', taux: data.turnover.functional.current.rate },
+                    { name: 'Période préc.',    taux: data.turnover.functional.prev.rate },
+                  ]}
+                  margin={{ top: 0, right: 10, left: -15, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="name" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} unit="%" />
+                  <Tooltip content={<ChartTooltip />} formatter={(v: number) => [`${v}%`, 'Taux']} />
+                  <Bar dataKey="taux" radius={[4, 4, 0, 0]} name="Taux (%)">
+                    <Cell fill="#059669" />
+                    <Cell fill="#9ca3af" />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* ── 7. MOTIFS DE DÉPART ── */}
+          <div className="card">
+            <h3 className="text-base font-semibold text-gray-800 mb-4">Motifs de départ</h3>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {([['current', periodLabel], ['prev', prevPeriodLabel]] as const).map(([key, label]) => {
                 const reasons = data.departureReasons[key];

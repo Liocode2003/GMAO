@@ -4,6 +4,66 @@ import fs from 'fs';
 import { query } from '../config/database';
 import { logger } from '../utils/logger';
 
+// Supprime les drawing.xml vides/orphelins générés par ExcelJS (bug connu v4.4.0)
+async function stripEmptyDrawings(filePath: string): Promise<void> {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const JSZip = require('jszip');
+    const data = fs.readFileSync(filePath);
+    const zip  = await JSZip.loadAsync(data);
+    const files = Object.keys(zip.files) as string[];
+
+    let modified = false;
+
+    // 1. Identifier les drawings vides ou sans contenu réel
+    const emptyDrawings = new Set<string>();
+    for (const f of files) {
+      if (!/^xl\/drawings\/drawing\d+\.xml$/.test(f)) continue;
+      const xml: string = await zip.files[f].async('string');
+      if (!xml.includes('CellAnchor')) emptyDrawings.add(f);
+    }
+
+    // 2. Nettoyer les _rels des feuilles (même si le drawing n'existe pas dans zip)
+    for (const relsPath of files.filter(f => /xl\/worksheets\/_rels\//.test(f))) {
+      const rels: string = await zip.files[relsPath].async('string');
+      // Supprimer TOUTE référence drawing (vide ou orpheline)
+      const cleaned = rels.replace(/<Relationship[^>]+Target="[^"]*drawing\d+\.xml"[^>]*\/>/g, (m) => {
+        const target = m.match(/Target="([^"]+)"/)?.[1] ?? '';
+        const drawPath = 'xl/drawings/' + target.split('/').pop();
+        if (emptyDrawings.has(drawPath) || !zip.files[drawPath]) { modified = true; return ''; }
+        return m;
+      });
+      if (cleaned !== rels) zip.file(relsPath, cleaned);
+    }
+
+    // 3. Supprimer les fichiers drawing vides + leurs _rels
+    for (const dp of emptyDrawings) {
+      zip.remove(dp);
+      const num = dp.match(/drawing(\d+)/)?.[1];
+      if (num) zip.remove(`xl/drawings/_rels/drawing${num}.xml.rels`);
+      modified = true;
+    }
+
+    // 4. Nettoyer Content_Types.xml
+    if (modified && zip.files['[Content_Types].xml']) {
+      const ct: string = await zip.files['[Content_Types].xml'].async('string');
+      const ctCleaned = ct.replace(/<Override[^>]+\/xl\/drawings\/drawing\d+\.xml"[^/]*\/>/g, (m) => {
+        const name = m.match(/drawing\d+\.xml/)?.[0] ?? '';
+        return zip.files[`xl/drawings/${name}`] ? m : '';
+      });
+      if (ctCleaned !== ct) zip.file('[Content_Types].xml', ctCleaned);
+    }
+
+    if (modified) {
+      const buf: Buffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+      fs.writeFileSync(filePath, buf);
+      logger.info(`stripEmptyDrawings: nettoyage OK → ${emptyDrawings.size} drawing(s) supprimé(s)`);
+    }
+  } catch (err) {
+    logger.warn('stripEmptyDrawings skipped:', err);
+  }
+}
+
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
 const MONTH_NAMES = [
@@ -67,7 +127,7 @@ const borders = (color = 'FFD1D5DB'): ExcelJS.Borders => ({
   bottom:   { style: 'thin', color: { argb: color } },
   left:     { style: 'thin', color: { argb: color } },
   right:    { style: 'thin', color: { argb: color } },
-  diagonal: { style: 'thin', color: { argb: color } },
+  diagonal: {},
 });
 
 const styleHeader = (cell: ExcelJS.Cell) => {
@@ -168,6 +228,7 @@ export const generateMonthlyReport = async (year: number, month: number): Promis
   const filename = `Reporting_RH_ForvisMazars_BF_${monthName}${year}.xlsx`;
   const filePath = path.join(reportsDir, filename);
   await wb.xlsx.writeFile(filePath);
+  await stripEmptyDrawings(filePath);
   logger.info(`Rapport généré : ${filePath}`);
   return filePath;
 };
