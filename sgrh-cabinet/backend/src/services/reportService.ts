@@ -1,44 +1,66 @@
 import ExcelJS from 'exceljs';
-import JSZip from 'jszip';
 import path from 'path';
 import fs from 'fs';
 import { query } from '../config/database';
 import { logger } from '../utils/logger';
 
-// Supprime les fichiers drawing.xml vides générés par ExcelJS (bug connu)
+// Supprime les drawing.xml vides/orphelins générés par ExcelJS (bug connu v4.4.0)
 async function stripEmptyDrawings(filePath: string): Promise<void> {
-  const data = fs.readFileSync(filePath);
-  const zip  = await JSZip.loadAsync(data);
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const JSZip = require('jszip');
+    const data = fs.readFileSync(filePath);
+    const zip  = await JSZip.loadAsync(data);
+    const files = Object.keys(zip.files) as string[];
 
-  const drawings = Object.keys(zip.files).filter(n => /^xl\/drawings\/drawing\d+\.xml$/.test(n));
-  if (drawings.length === 0) return;
+    let modified = false;
 
-  let modified = false;
-  for (const drawingPath of drawings) {
-    const xml = await zip.files[drawingPath].async('string');
-    if (xml.includes('CellAnchor')) continue; // contenu réel → on garde
+    // 1. Identifier les drawings vides ou sans contenu réel
+    const emptyDrawings = new Set<string>();
+    for (const f of files) {
+      if (!/^xl\/drawings\/drawing\d+\.xml$/.test(f)) continue;
+      const xml: string = await zip.files[f].async('string');
+      if (!xml.includes('CellAnchor')) emptyDrawings.add(f);
+    }
 
-    const num = drawingPath.match(/drawing(\d+)\.xml/)?.[1] ?? '';
-    zip.remove(drawingPath);
-    zip.remove(`xl/drawings/_rels/drawing${num}.xml.rels`);
-
-    for (const relsPath of Object.keys(zip.files).filter(n => /xl\/worksheets\/_rels\//.test(n))) {
-      const rels = await zip.files[relsPath].async('string');
-      const cleaned = rels.replace(new RegExp(`<Relationship[^>]+drawing${num}\\.xml"[^/]*/>`, 'g'), '');
+    // 2. Nettoyer les _rels des feuilles (même si le drawing n'existe pas dans zip)
+    for (const relsPath of files.filter(f => /xl\/worksheets\/_rels\//.test(f))) {
+      const rels: string = await zip.files[relsPath].async('string');
+      // Supprimer TOUTE référence drawing (vide ou orpheline)
+      const cleaned = rels.replace(/<Relationship[^>]+Target="[^"]*drawing\d+\.xml"[^>]*\/>/g, (m) => {
+        const target = m.match(/Target="([^"]+)"/)?.[1] ?? '';
+        const drawPath = 'xl/drawings/' + target.split('/').pop();
+        if (emptyDrawings.has(drawPath) || !zip.files[drawPath]) { modified = true; return ''; }
+        return m;
+      });
       if (cleaned !== rels) zip.file(relsPath, cleaned);
     }
 
-    const ctXml = await zip.files['[Content_Types].xml'].async('string');
-    zip.file('[Content_Types].xml',
-      ctXml.replace(new RegExp(`<Override[^>]+drawing${num}\\.xml"[^/]*/>`, 'g'), '')
-    );
+    // 3. Supprimer les fichiers drawing vides + leurs _rels
+    for (const dp of emptyDrawings) {
+      zip.remove(dp);
+      const num = dp.match(/drawing(\d+)/)?.[1];
+      if (num) zip.remove(`xl/drawings/_rels/drawing${num}.xml.rels`);
+      modified = true;
+    }
 
-    modified = true;
-  }
+    // 4. Nettoyer Content_Types.xml
+    if (modified && zip.files['[Content_Types].xml']) {
+      const ct: string = await zip.files['[Content_Types].xml'].async('string');
+      const ctCleaned = ct.replace(/<Override[^>]+\/xl\/drawings\/drawing\d+\.xml"[^/]*\/>/g, (m) => {
+        const name = m.match(/drawing\d+\.xml/)?.[0] ?? '';
+        return zip.files[`xl/drawings/${name}`] ? m : '';
+      });
+      if (ctCleaned !== ct) zip.file('[Content_Types].xml', ctCleaned);
+    }
 
-  if (modified) {
-    const buf = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
-    fs.writeFileSync(filePath, buf);
+    if (modified) {
+      const buf: Buffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+      fs.writeFileSync(filePath, buf);
+      logger.info(`stripEmptyDrawings: nettoyage OK → ${emptyDrawings.size} drawing(s) supprimé(s)`);
+    }
+  } catch (err) {
+    logger.warn('stripEmptyDrawings skipped:', err);
   }
 }
 
