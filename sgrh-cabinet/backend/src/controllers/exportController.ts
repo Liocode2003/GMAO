@@ -21,12 +21,12 @@ async function fetchEmployeesForExport(req: Request) {
   let pi = 1;
 
   if (search) { conditions.push(`(e.first_name ILIKE $${pi} OR e.last_name ILIKE $${pi} OR e.matricule ILIKE $${pi})`); params.push(`%${search}%`); pi++; }
-  if (service_line) { conditions.push(`e.service_line = $${pi++}`); params.push(service_line); }
-  if (grade) { conditions.push(`e.grade = $${pi++}`); params.push(grade); }
-  if (contract_type) { conditions.push(`e.contract_type = $${pi++}`); params.push(contract_type); }
+  if (service_line) { conditions.push(`e.service_line::text = $${pi++}`); params.push(service_line); }
+  if (grade) { conditions.push(`e.grade::text = $${pi++}`); params.push(grade); }
+  if (contract_type) { conditions.push(`e.contract_type::text = $${pi++}`); params.push(contract_type); }
   if (status === 'ACTIF') { conditions.push('(e.exit_date IS NULL OR e.exit_date > CURRENT_DATE)'); }
   else if (status === 'INACTIF') { conditions.push('(e.exit_date IS NOT NULL AND e.exit_date <= CURRENT_DATE)'); }
-  if (gender) { conditions.push(`e.gender = $${pi++}`); params.push(gender); }
+  if (gender) { conditions.push(`e.gender::text = $${pi++}`); params.push(gender); }
 
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   const dataRes = await query(
