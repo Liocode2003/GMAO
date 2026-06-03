@@ -7,66 +7,76 @@
 BEGIN;
 
 -- ============================================================
--- 1. MISE À JOUR EMPLOYÉS — birth_date, téléphone, salaire
+-- 1. MISE À JOUR EMPLOYÉS — birth_date (réelles), téléphone, salaire
 -- ============================================================
-UPDATE employees SET birth_date='1988-04-12', phone='+226 70 12 34 01', salary=1250000 WHERE matricule='FM-001';
-UPDATE employees SET birth_date='1992-07-18', phone='+226 65 23 45 02', salary=920000  WHERE matricule='FM-002';
-UPDATE employees SET birth_date='1992-11-05', phone='+226 07 34 56 03', salary=600000  WHERE matricule='FM-003';
-UPDATE employees SET birth_date='1982-03-25', phone='+226 70 45 67 04', salary=2200000 WHERE matricule='FM-004';
-UPDATE employees SET birth_date='1985-09-14', phone='+226 76 56 78 05', salary=1500000 WHERE matricule='FM-005';
-UPDATE employees SET birth_date='1998-02-20', phone='+226 65 67 89 06', salary=280000  WHERE matricule='FM-006';
-UPDATE employees SET birth_date='1994-06-08', phone='+226 07 78 90 07', salary=730000  WHERE matricule='FM-007';
-UPDATE employees SET birth_date='1983-12-03', phone='+226 70 89 01 08', salary=1850000 WHERE matricule='FM-008';
-UPDATE employees SET birth_date='1990-05-17', phone='+226 65 90 12 09', salary=1200000 WHERE matricule='FM-009';
-UPDATE employees SET birth_date='1995-08-22', phone='+226 07 01 23 10', salary=710000  WHERE matricule='FM-010';
-UPDATE employees SET birth_date='1994-01-30', phone='+226 70 12 34 11', salary=580000  WHERE matricule='FM-011';
-UPDATE employees SET birth_date='1993-04-11', phone='+226 76 23 45 12', salary=560000  WHERE matricule='FM-012';
-UPDATE employees SET birth_date='1993-11-19', phone='+226 65 34 56 13', salary=700000  WHERE matricule='FM-013';
-UPDATE employees SET birth_date='1999-07-05', phone='+226 07 45 67 14', salary=260000  WHERE matricule='FM-014';
-UPDATE employees SET birth_date='1991-03-28', phone='+226 70 56 78 15', salary=940000  WHERE matricule='FM-015';
-UPDATE employees SET birth_date='1989-10-14', phone='+226 65 67 89 16', salary=1180000 WHERE matricule='FM-016';
-UPDATE employees SET birth_date='1989-02-07', phone='+226 07 78 90 17', salary=1210000 WHERE matricule='FM-017';
-UPDATE employees SET birth_date='1978-08-30', phone='+226 70 89 01 18', salary=4500000 WHERE matricule='FM-018';
-UPDATE employees SET birth_date='2000-05-23', phone='+226 76 90 12 19', salary=320000  WHERE matricule='FM-019';
-UPDATE employees SET birth_date='1986-11-15', phone='+226 65 01 23 20', salary=1230000 WHERE matricule='FM-020';
-UPDATE employees SET birth_date='2001-09-04', phone='+226 07 12 34 21', salary=300000  WHERE matricule='FM-021';
-UPDATE employees SET birth_date='1994-04-26', phone='+226 70 23 45 22', salary=690000  WHERE matricule='FM-022';
-UPDATE employees SET birth_date='1982-07-09', phone='+226 65 34 56 23', salary=1780000 WHERE matricule='FM-023';
-UPDATE employees SET birth_date='1993-06-18', phone='+226 07 45 67 24', salary=550000  WHERE matricule='FM-024';
-UPDATE employees SET birth_date='1994-12-31', phone='+226 70 56 78 25', salary=270000  WHERE matricule='FM-025';
-UPDATE employees SET birth_date='1994-09-03', phone='+226 76 67 89 26', salary=720000  WHERE matricule='FM-026';
-UPDATE employees SET birth_date='1975-05-11', phone='+226 65 78 90 27', salary=5200000 WHERE matricule='FM-027';
-UPDATE employees SET birth_date='1985-01-19', phone='+226 07 89 01 28', salary=1250000 WHERE matricule='FM-028';
-UPDATE employees SET birth_date='1997-08-14', phone='+226 70 90 12 29', salary=460000  WHERE matricule='FM-029';
-UPDATE employees SET birth_date='1994-12-05', phone='+226 65 01 23 30', salary=700000  WHERE matricule='FM-030';
-UPDATE employees SET birth_date='1977-03-22', phone='+226 07 12 34 31', salary=4800000 WHERE matricule='FM-031';
-UPDATE employees SET birth_date='1992-10-17', phone='+226 70 23 45 32', salary=910000  WHERE matricule='FM-032';
-UPDATE employees SET birth_date='1988-06-28', phone='+226 76 34 56 33', salary=1270000 WHERE matricule='FM-033';
-UPDATE employees SET birth_date='1979-09-07', phone='+226 65 45 67 34', salary=4200000 WHERE matricule='FM-034';
-UPDATE employees SET birth_date='2001-03-16', phone='+226 07 56 78 35', salary=285000  WHERE matricule='FM-035';
-UPDATE employees SET birth_date='1993-07-31', phone='+226 70 67 89 36', salary=695000  WHERE matricule='FM-036';
-UPDATE employees SET birth_date='1980-04-02', phone='+226 65 78 90 37', salary=3200000 WHERE matricule='FM-037';
-UPDATE employees SET birth_date='2002-01-08', phone='+226 07 89 01 38', salary=275000  WHERE matricule='FM-038';
-UPDATE employees SET birth_date='1985-11-25', phone='+226 70 90 12 39', salary=1220000 WHERE matricule='FM-039';
-UPDATE employees SET birth_date='2000-08-19', phone='+226 76 01 23 40', salary=265000  WHERE matricule='FM-040';
-UPDATE employees SET birth_date='1999-04-13', phone='+226 65 12 34 41', salary=280000  WHERE matricule='FM-041';
-UPDATE employees SET birth_date='1993-10-06', phone='+226 07 23 45 42', salary=470000  WHERE matricule='FM-042';
-UPDATE employees SET birth_date='1994-02-14', phone='+226 70 34 56 43', salary=715000  WHERE matricule='FM-043';
-UPDATE employees SET birth_date='1984-05-27', phone='+226 65 45 67 44', salary=1820000 WHERE matricule='FM-044';
-UPDATE employees SET birth_date='1986-08-10', phone='+226 07 56 78 45', salary=1490000 WHERE matricule='FM-045';
-UPDATE employees SET birth_date='1990-07-22', phone='+226 70 67 89 46', salary=590000  WHERE matricule='CONS-001';
-UPDATE employees SET birth_date='1994-03-15', phone='+226 76 78 90 47', salary=560000  WHERE matricule='CONS-002';
-UPDATE employees SET birth_date='1988-11-28', phone='+226 65 89 01 48', salary=620000  WHERE matricule='CONS-003';
-UPDATE employees SET birth_date='1991-05-03', phone='+226 07 90 12 49', salary=575000  WHERE matricule='CONS-004';
-UPDATE employees SET birth_date='1993-09-18', phone='+226 70 01 23 50', salary=555000  WHERE matricule='CONS-005';
+UPDATE employees SET birth_date='1985-01-17', phone='+226 70 12 34 01', salary=1250000 WHERE matricule='FM-001';
+UPDATE employees SET birth_date='1998-09-01', phone='+226 65 23 45 02', salary=920000  WHERE matricule='FM-002';
+UPDATE employees SET birth_date='2000-03-13', phone='+226 07 34 56 03', salary=600000  WHERE matricule='FM-003';
+UPDATE employees SET birth_date='1988-12-31', phone='+226 70 45 67 04', salary=2200000 WHERE matricule='FM-004';
+UPDATE employees SET birth_date='1985-04-18', phone='+226 76 56 78 05', salary=1500000 WHERE matricule='FM-005';
+UPDATE employees SET birth_date='1967-12-12', phone='+226 65 67 89 06', salary=280000  WHERE matricule='FM-006';
+UPDATE employees SET birth_date='1989-05-14', phone='+226 07 78 90 07', salary=730000  WHERE matricule='FM-007';
+UPDATE employees SET birth_date='1984-08-24', phone='+226 70 89 01 08', salary=1850000 WHERE matricule='FM-008';
+UPDATE employees SET birth_date='1992-01-13', phone='+226 65 90 12 09', salary=1200000 WHERE matricule='FM-009';
+UPDATE employees SET birth_date='1998-09-16', phone='+226 07 01 23 10', salary=710000  WHERE matricule='FM-010';
+UPDATE employees SET birth_date='1997-12-31', phone='+226 70 12 34 11', salary=580000  WHERE matricule='FM-011';
+UPDATE employees SET birth_date='1992-02-26', phone='+226 76 23 45 12', salary=560000  WHERE matricule='FM-012';
+UPDATE employees SET birth_date='1996-05-07', phone='+226 65 34 56 13', salary=700000  WHERE matricule='FM-013';
+UPDATE employees SET birth_date='1981-07-13', phone='+226 07 45 67 14', salary=260000  WHERE matricule='FM-014';
+UPDATE employees SET birth_date='1998-06-23', phone='+226 70 56 78 15', salary=940000  WHERE matricule='FM-015';
+UPDATE employees SET birth_date='1996-02-14', phone='+226 65 67 89 16', salary=1180000 WHERE matricule='FM-016';
+UPDATE employees SET birth_date='1989-10-22', phone='+226 07 78 90 17', salary=1210000 WHERE matricule='FM-017';
+UPDATE employees SET birth_date='1988-02-07', phone='+226 70 89 01 18', salary=4500000 WHERE matricule='FM-018';
+UPDATE employees SET birth_date='1998-01-01', phone='+226 76 90 12 19', salary=320000  WHERE matricule='FM-019';
+UPDATE employees SET birth_date='1993-12-19', phone='+226 65 01 23 20', salary=1230000 WHERE matricule='FM-020';
+UPDATE employees SET birth_date='2001-07-30', phone='+226 07 12 34 21', salary=300000  WHERE matricule='FM-021';
+UPDATE employees SET birth_date='1987-03-29', phone='+226 70 23 45 22', salary=690000  WHERE matricule='FM-022';
+UPDATE employees SET birth_date='1979-06-04', phone='+226 65 34 56 23', salary=1780000 WHERE matricule='FM-023';
+UPDATE employees SET birth_date='1996-01-10', phone='+226 07 45 67 24', salary=550000  WHERE matricule='FM-024';
+UPDATE employees SET birth_date='1990-12-01', phone='+226 70 56 78 25', salary=270000  WHERE matricule='FM-025';
+UPDATE employees SET birth_date='1997-04-22', phone='+226 76 67 89 26', salary=720000  WHERE matricule='FM-026';
+UPDATE employees SET birth_date='1972-08-28', phone='+226 65 78 90 27', salary=5200000 WHERE matricule='FM-027';
+UPDATE employees SET birth_date='1991-06-29', phone='+226 07 89 01 28', salary=1250000 WHERE matricule='FM-028';
+UPDATE employees SET birth_date='1999-10-01', phone='+226 70 90 12 29', salary=460000  WHERE matricule='FM-029';
+UPDATE employees SET birth_date='1995-09-26', phone='+226 65 01 23 30', salary=700000  WHERE matricule='FM-030';
+UPDATE employees SET birth_date='1972-04-25', phone='+226 07 12 34 31', salary=4800000 WHERE matricule='FM-031';
+UPDATE employees SET birth_date='1994-06-28', phone='+226 70 23 45 32', salary=910000  WHERE matricule='FM-032';
+UPDATE employees SET birth_date='1980-07-08', phone='+226 76 34 56 33', salary=1270000 WHERE matricule='FM-033';
+-- FM-034 supprimé de la liste du personnel
+UPDATE employees SET birth_date='1995-12-08', phone='+226 07 56 78 35', salary=285000  WHERE matricule='FM-035';
+UPDATE employees SET birth_date='1998-12-31', phone='+226 70 67 89 36', salary=695000  WHERE matricule='FM-036';
+UPDATE employees SET birth_date='1976-03-25', phone='+226 65 78 90 37', salary=3200000 WHERE matricule='FM-037';
+UPDATE employees SET birth_date='2000-06-20', phone='+226 07 89 01 38', salary=275000  WHERE matricule='FM-038';
+UPDATE employees SET birth_date='1991-08-08', phone='+226 70 90 12 39', salary=1220000 WHERE matricule='FM-039';
+UPDATE employees SET birth_date='1995-04-18', phone='+226 76 01 23 40', salary=265000  WHERE matricule='FM-040';
+UPDATE employees SET birth_date='1999-04-07', phone='+226 65 12 34 41', salary=280000  WHERE matricule='FM-041';
+UPDATE employees SET birth_date='1990-01-01', phone='+226 07 23 45 42', salary=470000  WHERE matricule='FM-042';
+UPDATE employees SET birth_date='1996-12-31', phone='+226 70 34 56 43', salary=715000  WHERE matricule='FM-043';
+UPDATE employees SET birth_date='1986-07-25', phone='+226 65 45 67 44', salary=1820000 WHERE matricule='FM-044';
+UPDATE employees SET birth_date='1979-12-12', phone='+226 07 56 78 45', salary=1490000 WHERE matricule='FM-045';
+-- Nouveaux permanents
+UPDATE employees SET birth_date='1988-03-18', phone='+226 70 11 22 46', salary=800000  WHERE matricule='FM-046';
+UPDATE employees SET birth_date='1989-10-14', phone='+226 65 11 22 47', salary=800000  WHERE matricule='FM-047';
+UPDATE employees SET birth_date='1995-06-04', phone='+226 07 11 22 48', salary=320000  WHERE matricule='FM-048';
+UPDATE employees SET birth_date='1997-06-13', phone='+226 70 11 22 49', salary=800000  WHERE matricule='FM-049';
+UPDATE employees SET birth_date='1985-12-31', phone='+226 65 11 22 50', salary=1200000 WHERE matricule='FM-050';
+UPDATE employees SET birth_date='1992-12-23', phone='+226 07 11 22 51', salary=470000  WHERE matricule='FM-051';
+UPDATE employees SET birth_date='1991-01-01', phone='+226 70 11 22 52', salary=920000  WHERE matricule='FM-052';
+-- Consultants
+UPDATE employees SET birth_date='1996-09-16', phone='+226 70 67 89 46', salary=590000  WHERE matricule='CONS-001';
+UPDATE employees SET birth_date='2002-11-30', phone='+226 76 78 90 47', salary=560000  WHERE matricule='CONS-002';
+UPDATE employees SET birth_date='1992-12-23', phone='+226 65 89 01 48', salary=620000  WHERE matricule='CONS-003';
+UPDATE employees SET birth_date='2001-07-14', phone='+226 07 90 12 49', salary=575000  WHERE matricule='CONS-004';
+UPDATE employees SET birth_date='2001-11-11', phone='+226 70 01 23 50', salary=555000  WHERE matricule='CONS-005';
 
 -- ============================================================
 -- 2. HIÉRARCHIE — manager_id pour l'organigramme
 -- ============================================================
--- Associés FM-018 (Audit), FM-027 (Consulting), FM-031 (Audit), FM-034 (Admin) → racine
+-- Associés FM-018 (Audit), FM-027 (Consulting), FM-031 (Audit) → racine
+-- FM-045 ZOUNGRANA (RAF) et FM-037 (Directeur Admin) → racine admin
 
--- FM-037 (Directeur Admin) rapporte à FM-034
-UPDATE employees SET manager_id='0232c465-e837-40d1-9261-fb17e803d031' WHERE matricule='FM-037';
+-- FM-037 (Directeur Admin) rapporte à FM-045 (RAF)
+UPDATE employees SET manager_id='d0b17e1a-a266-4eca-9254-c49ea8d755e6' WHERE matricule='FM-037';
 -- FM-004 BAYALA (SM Consulting) rapporte à FM-027
 UPDATE employees SET manager_id='50b657a8-e27f-482e-84b2-1b4abbd57c84' WHERE matricule='FM-004';
 -- FM-008 DARGA (AM3 Audit) rapporte à FM-031
