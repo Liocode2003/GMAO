@@ -1,8 +1,46 @@
 import ExcelJS from 'exceljs';
+import JSZip from 'jszip';
 import path from 'path';
 import fs from 'fs';
 import { query } from '../config/database';
 import { logger } from '../utils/logger';
+
+// Supprime les fichiers drawing.xml vides générés par ExcelJS (bug connu)
+async function stripEmptyDrawings(filePath: string): Promise<void> {
+  const data = fs.readFileSync(filePath);
+  const zip  = await JSZip.loadAsync(data);
+
+  const drawings = Object.keys(zip.files).filter(n => /^xl\/drawings\/drawing\d+\.xml$/.test(n));
+  if (drawings.length === 0) return;
+
+  let modified = false;
+  for (const drawingPath of drawings) {
+    const xml = await zip.files[drawingPath].async('string');
+    if (xml.includes('CellAnchor')) continue; // contenu réel → on garde
+
+    const num = drawingPath.match(/drawing(\d+)\.xml/)?.[1] ?? '';
+    zip.remove(drawingPath);
+    zip.remove(`xl/drawings/_rels/drawing${num}.xml.rels`);
+
+    for (const relsPath of Object.keys(zip.files).filter(n => /xl\/worksheets\/_rels\//.test(n))) {
+      const rels = await zip.files[relsPath].async('string');
+      const cleaned = rels.replace(new RegExp(`<Relationship[^>]+drawing${num}\\.xml"[^/]*/>`, 'g'), '');
+      if (cleaned !== rels) zip.file(relsPath, cleaned);
+    }
+
+    const ctXml = await zip.files['[Content_Types].xml'].async('string');
+    zip.file('[Content_Types].xml',
+      ctXml.replace(new RegExp(`<Override[^>]+drawing${num}\\.xml"[^/]*/>`, 'g'), '')
+    );
+
+    modified = true;
+  }
+
+  if (modified) {
+    const buf = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+    fs.writeFileSync(filePath, buf);
+  }
+}
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
@@ -168,6 +206,7 @@ export const generateMonthlyReport = async (year: number, month: number): Promis
   const filename = `Reporting_RH_ForvisMazars_BF_${monthName}${year}.xlsx`;
   const filePath = path.join(reportsDir, filename);
   await wb.xlsx.writeFile(filePath);
+  await stripEmptyDrawings(filePath);
   logger.info(`Rapport généré : ${filePath}`);
   return filePath;
 };
