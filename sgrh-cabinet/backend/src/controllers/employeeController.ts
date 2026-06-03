@@ -40,14 +40,14 @@ export const listEmployees = async (req: Request, res: Response) => {
     params.push(`%${search}%`);
     pi++;
   }
-  if (service_line) { conditions.push(`e.service_line = $${pi++}`); params.push(service_line); }
-  if (grade) { conditions.push(`e.grade = $${pi++}`); params.push(grade); }
-  if (fn) { conditions.push(`e.function = $${pi++}`); params.push(fn); }
-  if (contract_type) { conditions.push(`e.contract_type = $${pi++}`); params.push(contract_type); }
+  if (service_line) { conditions.push(`e.service_line::text = $${pi++}`); params.push(service_line); }
+  if (grade) { conditions.push(`e.grade::text = $${pi++}`); params.push(grade); }
+  if (fn) { conditions.push(`e."function"::text = $${pi++}`); params.push(fn); }
+  if (contract_type) { conditions.push(`e.contract_type::text = $${pi++}`); params.push(contract_type); }
   // statut calculé dynamiquement
   if (status === 'ACTIF') { conditions.push('(e.exit_date IS NULL OR e.exit_date > CURRENT_DATE)'); }
   else if (status === 'INACTIF') { conditions.push('(e.exit_date IS NOT NULL AND e.exit_date <= CURRENT_DATE)'); }
-  if (gender) { conditions.push(`e.gender = $${pi++}`); params.push(gender); }
+  if (gender) { conditions.push(`e.gender::text = $${pi++}`); params.push(gender); }
   if (season) { conditions.push(`EXTRACT(YEAR FROM e.entry_date) = $${pi++}`); params.push(season); }
   if (has_email === 'true') { conditions.push('e.email IS NOT NULL'); }
   if (has_email === 'false') { conditions.push('e.email IS NULL'); }
