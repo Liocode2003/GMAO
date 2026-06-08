@@ -49,7 +49,7 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           {/* Logo */}
           <div className="mb-8">
-            <img src="/logo.svg" alt="Logo" className="h-10 mb-6" />
+            <img src="/logo.svg" alt="Forvis Mazars" className="h-14 mb-6 w-auto" />
             <h2 className="text-2xl font-bold text-gray-900">Connexion</h2>
             <p className="text-gray-500 text-sm mt-1">Accédez à votre espace RH</p>
           </div>

@@ -1,4 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 120" width="300" height="120">
-  <text x="10" y="55" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="58" fill="#ffffff">forv/s</text>
-  <text x="10" y="112" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="58" fill="rgba(255,255,255,0.85)">mazars</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 310 130" width="310" height="130">
+  <!-- forv/s : blanc -->
+  <text x="4" y="62"
+    font-family="'Arial Rounded MT Bold','Century Gothic','Trebuchet MS',Arial,sans-serif"
+    font-weight="900" font-size="64" letter-spacing="-2"
+    fill="#ffffff">forv</text>
+  <text x="200" y="62"
+    font-family="'Arial Rounded MT Bold','Century Gothic','Trebuchet MS',Arial,sans-serif"
+    font-weight="900" font-size="64" letter-spacing="-2"
+    fill="#ffffff" transform="skewX(-12)">&#47;</text>
+  <text x="225" y="62"
+    font-family="'Arial Rounded MT Bold','Century Gothic','Trebuchet MS',Arial,sans-serif"
+    font-weight="900" font-size="64" letter-spacing="-2"
+    fill="#ffffff">s</text>
+  <!-- mazars : blanc légèrement transparent -->
+  <text x="4" y="126"
+    font-family="'Arial Rounded MT Bold','Century Gothic','Trebuchet MS',Arial,sans-serif"
+    font-weight="900" font-size="64" letter-spacing="-2"
+    fill="rgba(255,255,255,0.92)">mazars</text>
 </svg>

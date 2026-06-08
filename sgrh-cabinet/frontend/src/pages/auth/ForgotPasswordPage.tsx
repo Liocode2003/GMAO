@@ -26,7 +26,7 @@ export default function ForgotPasswordPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8">
-          <img src="/logo.svg" alt="Logo" className="h-10 mb-6" />
+          <img src="/logo.svg" alt="Forvis Mazars" className="h-14 mb-6 w-auto" />
           <h2 className="text-2xl font-bold text-gray-900">Mot de passe oublié</h2>
           <p className="text-gray-500 text-sm mt-1">
             Entrez votre email pour recevoir un lien de réinitialisation
