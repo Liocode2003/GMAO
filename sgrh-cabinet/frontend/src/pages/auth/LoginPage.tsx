@@ -25,25 +25,17 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Côté gauche — Photo */}
-      <div className="hidden lg:flex lg:w-1/2 relative">
-        <img
-          src="/team-photo.png"
-          alt="Équipe Forvis Mazars"
-          className="absolute inset-0 w-full h-full object-cover object-center"
-        />
-        {/* Overlay sombre en haut pour lisibilité du logo */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/40" />
-        {/* Logo en haut à gauche */}
-        <div className="absolute top-8 left-10">
-          <ForvisMazarsLogo variant="white" height={56} />
-        </div>
-        {/* Tagline en bas à gauche */}
-        <div className="absolute bottom-10 left-10 right-10 text-white">
-          <p className="text-2xl font-bold leading-snug">
+      {/* Côté gauche — Branded panel */}
+      <div
+        className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12"
+        style={{ background: 'linear-gradient(135deg, #1E2D72 0%, #1A89D4 100%)' }}
+      >
+        <ForvisMazarsLogo variant="white" height={60} />
+        <div className="text-white">
+          <p className="text-3xl font-bold leading-snug mb-3">
             Bienvenue dans votre<br />espace RH
           </p>
-          <p className="text-sm mt-2 text-white/75">
+          <p className="text-base text-white/70">
             Gérez vos collaborateurs, formations et performances
           </p>
         </div>
