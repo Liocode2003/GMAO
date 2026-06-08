@@ -385,8 +385,8 @@ export const generateMonthlyReport = async (year: number, _month: number): Promi
 
   const rows = (await query(`
     SELECT id, matricule, first_name, last_name,
-      entry_date, birth_date, gender, grade,
-      service_line, contract_type, exit_date, departure_reason
+      entry_date, birth_date, gender, grade, position_title,
+      service_line, contract_type, exit_date, departure_reason, departure_type
     FROM employees ORDER BY last_name, first_name
   `)).rows;
 
@@ -409,7 +409,7 @@ export const generateMonthlyReport = async (year: number, _month: number): Promi
   sheetParametres(wb, year);
   sheetListePersonnel(wb, rows, endN);
   sheetEffectifs(wb, year, empN, empN1);
-  sheetMouvements(wb, departures);
+  sheetMouvements(wb, departures, year);
   sheetParDepartement(wb, year, empN, empN1);
   sheetTranchesAge(wb, empN, endN);
   sheetTurnOver(wb, year, empN, empN1, empN2, depN, depN1);
@@ -612,7 +612,7 @@ function sheetListePersonnel(wb: ExcelJS.Workbook, rows: any[], endN: Date) {
       entry  ?? '',
       birth  ?? '',
       toGenderLabel(emp.gender || ''),
-      GRADE_LABELS[emp.grade] ?? emp.grade ?? '',
+      emp.position_title || GRADE_LABELS[emp.grade] || emp.grade || '',
       SL_LABELS[emp.service_line] ?? emp.service_line ?? '',
       toContractCategory(emp.contract_type || ''),
       exit   ?? '',
@@ -816,9 +816,19 @@ function sheetEffectifs(wb: ExcelJS.Workbook, year: number, empN: any[], empN1: 
 // ─────────────────────────────────────────────────────────────────────────────
 //  ONGLET 4 — Mouvements  (colonne G = formule période dynamique)
 // ─────────────────────────────────────────────────────────────────────────────
-function sheetMouvements(wb: ExcelJS.Workbook, departures: any[]) {
+function sheetMouvements(wb: ExcelJS.Workbook, departures: any[], year?: number) {
   const sh = wb.addWorksheet('Mouvements');
   [5, 32, 14, 30, 14, 13, 20].forEach((w, i) => sh.getColumn(i + 1).width = w);
+  const yr = year ?? new Date().getFullYear();
+  const periodLabel  = (d: Date) => {
+    const start1 = new Date(yr - 1, 5, 1); // 01/06/N-1
+    const end1   = new Date(yr,     4, 31); // 31/05/N
+    const start2 = new Date(yr - 2, 5, 1); // 01/06/N-2
+    const end2   = new Date(yr - 1, 4, 31); // 31/05/N-1
+    if (d >= start1 && d <= end1) return `Mai ${yr}`;
+    if (d >= start2 && d <= end2) return `Mai ${yr - 1}`;
+    return 'Autre';
+  };
 
   sh.mergeCells('A1:G1');
   ap(sh.getCell('A1'), S.title(12));
@@ -832,7 +842,7 @@ function sheetMouvements(wb: ExcelJS.Workbook, departures: any[]) {
   departures.forEach((dep, idx) => {
     const rn  = idx + 3;
     const alt = idx % 2 === 1;
-    const vol = isVoluntary(dep.departure_reason || '');
+    const vol = dep.departure_type ? dep.departure_type === 'VOLONTAIRE' : isVoluntary(dep.departure_reason || '');
     const dr  = dep.departure_reason ? (DR_LABELS[dep.departure_reason] ?? dep.departure_reason) : '—';
 
     sh.getCell(`A${rn}`).value = idx + 1;
@@ -857,9 +867,12 @@ function sheetMouvements(wb: ExcelJS.Workbook, departures: any[]) {
     ap(sh.getCell(`F${rn}`), S.data(alt));
 
     // Colonne G : formule dynamique — rattache la période selon la date de départ
+    const exitDateForPeriod = dep.exit_date ? new Date(dep.exit_date) : null;
+    const periodResult = exitDateForPeriod ? periodLabel(exitDateForPeriod) : '';
     f(sh.getCell(`G${rn}`),
       `IF(C${rn}="","",IF(AND(C${rn}>=Paramètres!$B$8,C${rn}<=Paramètres!$B$6),Paramètres!$B$11,`+
-      `IF(AND(C${rn}>=Paramètres!$B$7,C${rn}<=Paramètres!$B$5),Paramètres!$B$10,"Autre")))`
+      `IF(AND(C${rn}>=Paramètres!$B$7,C${rn}<=Paramètres!$B$5),Paramètres!$B$10,"Autre")))`,
+      periodResult
     );
     ap(sh.getCell(`G${rn}`), S.data(alt));
 
@@ -1113,8 +1126,8 @@ function sheetTurnOver(
   const effMoyN1  = (effDebN1 + effFinN1) / 2;
   const depNtot   = depN.length;
   const depN1tot  = depN1.length;
-  const depNvol   = depN.filter(r => isVoluntary(r.departure_reason || '')).length;
-  const depN1vol  = depN1.filter(r => isVoluntary(r.departure_reason || '')).length;
+  const depNvol   = depN.filter(r => r.departure_type ? r.departure_type === 'VOLONTAIRE' : isVoluntary(r.departure_reason || '')).length;
+  const depN1vol  = depN1.filter(r => r.departure_type ? r.departure_type === 'VOLONTAIRE' : isVoluntary(r.departure_reason || '')).length;
   const depNinv   = depNtot - depNvol;
   const depN1inv  = depN1tot - depN1vol;
 
