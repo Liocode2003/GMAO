@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import ForvisMazarsLogo from '../../components/ui/ForvisMazarsLogo';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -49,7 +50,7 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           {/* Logo */}
           <div className="mb-8">
-            <img src="/logo.svg" alt="Forvis Mazars" className="h-14 mb-6 w-auto" />
+            <ForvisMazarsLogo variant="color" height={52} className="mb-6" />
             <h2 className="text-2xl font-bold text-gray-900">Connexion</h2>
             <p className="text-gray-500 text-sm mt-1">Accédez à votre espace RH</p>
           </div>
