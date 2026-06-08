@@ -29,6 +29,7 @@ services:
       - ./database/migrations/016_commercial_nullable.sql:/docker-entrypoint-initdb.d/16_commercial_nullable.sql:ro
       - ./database/migrations/017_remove_department.sql:/docker-entrypoint-initdb.d/17_remove_department.sql:ro
       - ./database/migrations/018_fix_trigger_department.sql:/docker-entrypoint-initdb.d/18_fix_trigger_department.sql:ro
+      - ./database/migrations/019_cleanup_removed_statuses.sql:/docker-entrypoint-initdb.d/19_cleanup_removed_statuses.sql:ro
       - ./database/migrations/020_rename_mi_annuel.sql:/docker-entrypoint-initdb.d/20_rename_mi_annuel.sql:ro
       - ./database/seeds/real_employees.sql:/docker-entrypoint-initdb.d/90_real_employees.sql:ro
       - ./database/seeds/complete_seed.sql:/docker-entrypoint-initdb.d/99_complete_seed.sql:ro
