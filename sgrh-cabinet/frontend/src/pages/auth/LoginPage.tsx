@@ -32,8 +32,12 @@ export default function LoginPage() {
           alt="Équipe Forvis Mazars"
           className="absolute inset-0 w-full h-full object-cover object-center"
         />
-        {/* Overlay dégradé léger en bas pour lisibilité */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+        {/* Overlay sombre en haut pour lisibilité du logo */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/40" />
+        {/* Logo en haut à gauche */}
+        <div className="absolute top-8 left-10">
+          <ForvisMazarsLogo variant="white" height={56} />
+        </div>
         {/* Tagline en bas à gauche */}
         <div className="absolute bottom-10 left-10 right-10 text-white">
           <p className="text-2xl font-bold leading-snug">
