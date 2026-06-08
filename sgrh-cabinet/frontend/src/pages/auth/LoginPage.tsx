@@ -31,12 +31,12 @@ export default function LoginPage() {
           src="/team-photo.png"
           alt="Équipe Forvis Mazars"
           className="absolute inset-0 w-full h-full object-cover"
-          style={{ objectPosition: 'center 85%' }}
+          style={{ objectPosition: 'center 15%' }}
         />
-        {/* Overlay: couvre entièrement le haut (faux logo), dégradé vers transparent */}
+        {/* Overlay: opaque uniquement en haut (cache le faux logo), transparent en dessous */}
         <div
           className="absolute inset-0"
-          style={{ background: 'linear-gradient(to bottom, #1E2D72 0%, #1E2D72 40%, rgba(30,45,114,0.5) 60%, rgba(0,0,0,0.3) 100%)' }}
+          style={{ background: 'linear-gradient(to bottom, #1E2D72 0%, #1E2D72 22%, rgba(30,45,114,0.15) 32%, transparent 42%, rgba(0,0,0,0.25) 100%)' }}
         />
         {/* Vrai logo en haut à gauche */}
         <div className="absolute top-8 left-10">
