@@ -375,6 +375,34 @@ function EvaluationModal({ evaluation, year, onClose, onSaved }: {
     improvements:     evaluation?.improvements || '',
   });
   const [saving, setSaving] = useState(false);
+  const [docName, setDocName]     = useState<string | null>(evaluation?.document_name || null);
+  const [uploading, setUploading] = useState(false);
+  const modalFileRef = useRef<HTMLInputElement>(null);
+
+  const handleModalUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !evaluation) return;
+    const fd = new FormData();
+    fd.append('file', file);
+    setUploading(true);
+    try {
+      await api.post(`/evaluations/${evaluation.id}/document`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setDocName(file.name);
+      toast.success('Document uploadé');
+    } catch {
+      toast.error('Erreur upload');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleModalDeleteDoc = async () => {
+    if (!evaluation || !confirm('Supprimer le document ?')) return;
+    await api.delete(`/evaluations/${evaluation.id}/document`);
+    setDocName(null);
+    toast.success('Document supprimé');
+  };
 
   useEffect(() => {
     api.get('/employees', { params: { limit: 200, status: 'ACTIF' } })
@@ -503,6 +531,36 @@ function EvaluationModal({ evaluation, year, onClose, onSaved }: {
             </div>
           ))}
         </div>
+
+        {/* Document — uniquement en mode édition */}
+        {evaluation && (
+          <div className="px-6 pb-4 border-t pt-4 flex-shrink-0">
+            <input ref={modalFileRef} type="file" className="hidden"
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+              onChange={handleModalUpload} />
+            <p className="text-sm font-semibold text-gray-600 mb-2">Document attaché</p>
+            {docName ? (
+              <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
+                <DocumentIcon className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                <span className="text-sm text-gray-700 truncate flex-1">{docName}</span>
+                <button onClick={() => { const a = document.createElement('a'); a.href = `/api/evaluations/${evaluation.id}/document`; a.click(); }}
+                  className="p-1 text-blue-500 hover:text-blue-700" title="Télécharger">
+                  <ArrowDownTrayIcon className="w-4 h-4" />
+                </button>
+                <button onClick={handleModalDeleteDoc}
+                  className="p-1 text-gray-300 hover:text-red-500" title="Supprimer">
+                  <XMarkIcon className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => modalFileRef.current?.click()} disabled={uploading}
+                className="flex items-center gap-2 text-sm text-gray-400 hover:text-blue-600 hover:bg-blue-50 border border-dashed border-gray-300 hover:border-blue-400 rounded-lg px-4 py-2 w-full justify-center transition-colors disabled:opacity-50">
+                <CloudArrowUpIcon className="w-5 h-5" />
+                {uploading ? 'Upload en cours...' : 'Importer un document (PDF, Word, image)'}
+              </button>
+            )}
+          </div>
+        )}
 
         <div className="flex gap-3 justify-end px-6 py-4 border-t flex-shrink-0">
           <button onClick={onClose} className="btn-secondary">Annuler</button>
