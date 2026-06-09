@@ -176,7 +176,7 @@ export default function OrganigrammePage() {
   const [loading, setLoading]     = useState(true);
   const [filterSL, setFilterSL]   = useState('');
   const [search, setSearch]       = useState('');
-  const [zoom, setZoom]           = useState(0.55);
+  const [zoom, setZoom]           = useState(0.50);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const innerRef     = useRef<HTMLDivElement>(null);
