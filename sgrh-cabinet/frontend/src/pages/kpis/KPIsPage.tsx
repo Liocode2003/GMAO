@@ -187,24 +187,6 @@ export default function KPIsPage() {
         </ResponsiveContainer>
       </div>
 
-      {/* Diplômes — Section 7.4 */}
-      <div className="card">
-        <h3 className="text-base font-semibold text-gray-800 mb-4">Diplômes professionnels</h3>
-        {data.diplomas.length === 0 ? (
-          <p className="text-gray-400 text-sm text-center py-4">Aucun diplôme enregistré pour cette période</p>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {data.diplomas.map(d => (
-              <KPICard
-                key={d.diploma_type}
-                label={DIPLOMA_LABELS[d.diploma_type] || d.diploma_type}
-                value={d.count}
-                color="text-brand-700"
-              />
-            ))}
-          </div>
-        )}
-      </div>
 
       {/* Effectifs par ligne de service */}
       <div className="card overflow-x-auto">
