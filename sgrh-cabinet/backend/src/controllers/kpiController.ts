@@ -16,12 +16,12 @@ export const getDashboard = async (req: Request, res: Response) => {
       turnoverData,
     ] = await Promise.all([
       // Total actif (hors stagiaires)
-      query(`SELECT COUNT(*) as total FROM employees WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE) AND contract_type != 'STAGE'`),
+      query(`SELECT COUNT(*) as total FROM employees WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE) AND entry_date <= CURRENT_DATE AND contract_type != 'STAGE'`),
 
       // Par ligne de service (hors stagiaires)
       query(`
         SELECT service_line, COUNT(*) as count
-        FROM employees WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE) AND contract_type != 'STAGE'
+        FROM employees WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE) AND entry_date <= CURRENT_DATE AND contract_type != 'STAGE'
         GROUP BY service_line ORDER BY count DESC
       `),
 
@@ -29,7 +29,7 @@ export const getDashboard = async (req: Request, res: Response) => {
       query(`
         SELECT gender, COUNT(*) as count,
           ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 1) as percentage
-        FROM employees WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE) AND contract_type != 'STAGE'
+        FROM employees WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE) AND entry_date <= CURRENT_DATE AND contract_type != 'STAGE'
         GROUP BY gender
       `),
 
@@ -50,14 +50,14 @@ export const getDashboard = async (req: Request, res: Response) => {
             ELSE 'plus_50'
           END as age_group,
           COUNT(*) as count
-        FROM employees WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE) AND contract_type != 'STAGE'
+        FROM employees WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE) AND entry_date <= CURRENT_DATE AND contract_type != 'STAGE'
         GROUP BY age_group
       `),
 
       // Par saison
       query(`
         SELECT EXTRACT(YEAR FROM entry_date) as season, COUNT(*) as count
-        FROM employees WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE) AND contract_type != 'STAGE'
+        FROM employees WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE) AND entry_date <= CURRENT_DATE AND contract_type != 'STAGE'
         GROUP BY season ORDER BY season DESC
       `),
 
@@ -219,7 +219,7 @@ export const getKPIs = async (req: Request, res: Response) => {
     const byServiceAndGrade = await query(`
       SELECT service_line, grade, COUNT(*) as count
       FROM employees
-      WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE) AND contract_type != 'STAGE'
+      WHERE (exit_date IS NULL OR exit_date > CURRENT_DATE) AND entry_date <= CURRENT_DATE AND contract_type != 'STAGE'
       GROUP BY service_line, grade
       ORDER BY service_line, grade
     `);
