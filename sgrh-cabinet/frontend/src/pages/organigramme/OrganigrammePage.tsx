@@ -176,7 +176,7 @@ export default function OrganigrammePage() {
   const [loading, setLoading]     = useState(true);
   const [filterSL, setFilterSL]   = useState('');
   const [search, setSearch]       = useState('');
-  const [zoom, setZoom]           = useState(1);
+  const [zoom, setZoom]           = useState(0.65);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const innerRef     = useRef<HTMLDivElement>(null);
@@ -209,11 +209,7 @@ export default function OrganigrammePage() {
     setZoom(Math.max(Math.min(fit, 1), 0.15));
   }, []);
 
-  useEffect(() => {
-    if (loading) return;
-    const id = requestAnimationFrame(() => requestAnimationFrame(autoFit));
-    return () => cancelAnimationFrame(id);
-  }, [loading, employees, filterSL, autoFit]);
+  // Auto-fit only when explicitly requested via reset button, not on load
 
   const reset = () => {
     setSearch('');

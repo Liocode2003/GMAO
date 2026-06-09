@@ -33,13 +33,13 @@ export default function LoginPage() {
           className="absolute inset-0 w-full h-full object-cover"
           style={{ objectPosition: 'center top' }}
         />
-        {/* Zone haute : blur + navy pour effacer le faux logo */}
+        {/* Zone haute : navy opaque + blur pour effacer totalement le faux logo */}
         <div
           className="absolute left-0 right-0 top-0"
           style={{
-            height: '38%',
-            backdropFilter: 'blur(18px)',
-            background: 'linear-gradient(to bottom, #1E2D72 0%, rgba(30,45,114,0.85) 55%, transparent 100%)',
+            height: '50%',
+            backdropFilter: 'blur(24px)',
+            background: 'linear-gradient(to bottom, #1E2D72 0%, #1E2D72 45%, rgba(30,45,114,0.3) 75%, transparent 100%)',
           }}
         />
         {/* Zone basse : dégradé sombre pour lisibilité du texte */}
