@@ -89,8 +89,20 @@ export const downloadDocument = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Fichier introuvable sur le serveur' });
     }
 
-    res.setHeader('Content-Type', doc.mime_type || 'application/octet-stream');
-    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(doc.name)}${path.extname(safeName)}"`);
+    const ext = path.extname(safeName).toLowerCase();
+    const mimeMap: Record<string, string> = {
+      '.pdf':  'application/pdf',
+      '.doc':  'application/msword',
+      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      '.jpg':  'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png':  'image/png',
+    };
+    const contentType = mimeMap[ext] || doc.mime_type || 'application/octet-stream';
+    const filename = `${encodeURIComponent(doc.name)}${ext}`;
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     return res.sendFile(filePath);
   } catch (err) {
     logger.error('downloadDocument error', err);
