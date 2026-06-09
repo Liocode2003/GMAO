@@ -1,6 +1,27 @@
 import { Request, Response } from 'express';
 import { query } from '../config/database';
 import { logger } from '../utils/logger';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+
+const EVAL_UPLOADS_DIR = path.join(process.cwd(), 'uploads', 'evaluations');
+if (!fs.existsSync(EVAL_UPLOADS_DIR)) fs.mkdirSync(EVAL_UPLOADS_DIR, { recursive: true });
+
+const evalStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, EVAL_UPLOADS_DIR),
+  filename:    (_req, file, cb) => cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(file.originalname)}`),
+});
+
+export const uploadEvalDoc = multer({
+  storage: evalStorage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png'].includes(ext)) cb(null, true);
+    else cb(new Error('Format non autorisé (pdf, doc, docx, jpg, png)'));
+  },
+});
 
 const ALLOWED_SORT_EVALS = ['employee_name', 'year', 'overall_score', 'created_at'];
 const EVAL_SORT_MAP: Record<string, string> = {
@@ -198,6 +219,74 @@ export const deleteEvaluation = async (req: Request, res: Response) => {
     return res.json({ message: 'Évaluation supprimée' });
   } catch (err) {
     logger.error('deleteEvaluation error', err);
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
+
+// ── Document attaché à une évaluation ────────────────────────────────────────
+
+export const uploadEvalDocument = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const file = req.file;
+  if (!file) return res.status(400).json({ error: 'Fichier requis' });
+  try {
+    // Supprimer l'ancien fichier s'il existe
+    const existing = await query(`SELECT document_path FROM evaluations WHERE id = $1`, [id]);
+    if (!existing.rows[0]) return res.status(404).json({ error: 'Évaluation non trouvée' });
+    if (existing.rows[0].document_path) {
+      const old = path.join(EVAL_UPLOADS_DIR, path.basename(existing.rows[0].document_path));
+      if (fs.existsSync(old)) fs.unlinkSync(old);
+    }
+    await query(
+      `UPDATE evaluations SET document_path = $1, document_name = $2, document_mime = $3, updated_at = NOW() WHERE id = $4`,
+      [file.filename, file.originalname, file.mimetype, id]
+    );
+    logger.info(`Document évaluation uploadé: ${file.filename} pour ${id}`);
+    return res.json({ message: 'Document uploadé', document_name: file.originalname });
+  } catch (err) {
+    if (file) fs.unlinkSync(file.path);
+    logger.error('uploadEvalDocument error', err);
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
+
+export const downloadEvalDocument = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    const result = await query(`SELECT document_path, document_name, document_mime FROM evaluations WHERE id = $1`, [id]);
+    const ev = result.rows[0];
+    if (!ev?.document_path) return res.status(404).json({ error: 'Aucun document' });
+    const filePath = path.join(EVAL_UPLOADS_DIR, path.basename(ev.document_path));
+    if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Fichier introuvable' });
+    const ext = path.extname(ev.document_path).toLowerCase();
+    const mimeMap: Record<string, string> = {
+      '.pdf': 'application/pdf', '.doc': 'application/msword',
+      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
+    };
+    res.setHeader('Content-Type', mimeMap[ext] || ev.document_mime || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(ev.document_name || 'document')}"`);
+    return res.sendFile(filePath);
+  } catch (err) {
+    logger.error('downloadEvalDocument error', err);
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
+
+export const deleteEvalDocument = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    const result = await query(`SELECT document_path FROM evaluations WHERE id = $1`, [id]);
+    const ev = result.rows[0];
+    if (!ev) return res.status(404).json({ error: 'Évaluation non trouvée' });
+    if (ev.document_path) {
+      const filePath = path.join(EVAL_UPLOADS_DIR, path.basename(ev.document_path));
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    }
+    await query(`UPDATE evaluations SET document_path = NULL, document_name = NULL, document_mime = NULL, updated_at = NOW() WHERE id = $1`, [id]);
+    return res.json({ message: 'Document supprimé' });
+  } catch (err) {
+    logger.error('deleteEvalDocument error', err);
     return res.status(500).json({ error: 'Erreur serveur' });
   }
 };

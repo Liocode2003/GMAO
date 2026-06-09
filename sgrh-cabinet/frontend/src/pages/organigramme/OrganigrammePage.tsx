@@ -183,6 +183,19 @@ export default function OrganigrammePage() {
   const zoomRef      = useRef(1);
   zoomRef.current    = zoom;
 
+  const autoFit = useCallback(() => {
+    const container = containerRef.current;
+    const inner     = innerRef.current;
+    if (!container || !inner) return;
+    const cur      = zoomRef.current;
+    const naturalW = inner.offsetWidth  / cur;
+    const naturalH = inner.offsetHeight / cur;
+    const cw = container.clientWidth  - 40;
+    const ch = container.clientHeight - 40;
+    const fit = Math.min(cw / naturalW, ch / naturalH);
+    setZoom(Math.max(Math.min(fit, 1), 0.15));
+  }, []);
+
   useEffect(() => {
     api.get('/employees', { params: { limit: 500, status: 'ACTIF' } })
       .then(res => setEmployees(
@@ -201,19 +214,6 @@ export default function OrganigrammePage() {
     if (employees.length === 0) return;
     requestAnimationFrame(() => requestAnimationFrame(autoFit));
   }, [employees, autoFit]);
-
-  const autoFit = useCallback(() => {
-    const container = containerRef.current;
-    const inner     = innerRef.current;
-    if (!container || !inner) return;
-    const cur      = zoomRef.current;
-    const naturalW = inner.offsetWidth  / cur;
-    const naturalH = inner.offsetHeight / cur;
-    const cw = container.clientWidth  - 40;
-    const ch = container.clientHeight - 40;
-    const fit = Math.min(cw / naturalW, ch / naturalH);
-    setZoom(Math.max(Math.min(fit, 1), 0.15));
-  }, []);
 
   const reset = () => {
     setSearch('');

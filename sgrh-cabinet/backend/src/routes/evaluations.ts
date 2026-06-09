@@ -4,6 +4,7 @@ import { validate } from '../middleware/validate';
 import { createEvaluationSchema, updateEvaluationSchema } from '../schemas/evaluationSchemas';
 import {
   listEvaluations, getEvaluation, createEvaluation, updateEvaluation, deleteEvaluation,
+  uploadEvalDoc, uploadEvalDocument, downloadEvalDocument, deleteEvalDocument,
 } from '../controllers/evaluationsController';
 
 const router = Router();
@@ -181,5 +182,10 @@ router.put('/:id', authorize('DRH', 'MANAGER'), validate(updateEvaluationSchema)
  *         description: Évaluation introuvable
  */
 router.delete('/:id', authorize('DRH'), deleteEvaluation);
+
+// ── Document attaché ──────────────────────────────────────────────────────────
+router.post('/:id/document',   authorize('DRH', 'MANAGER'), uploadEvalDoc.single('file'), uploadEvalDocument);
+router.get('/:id/document',    downloadEvalDocument);
+router.delete('/:id/document', authorize('DRH', 'MANAGER'), deleteEvalDocument);
 
 export default router;
