@@ -25,42 +25,64 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Côté gauche — Photo */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
-        <img
-          src="/team-photo.png"
-          alt="Équipe Forvis Mazars"
-          className="absolute inset-0 w-full h-full object-cover"
-          style={{ objectPosition: 'center top' }}
-        />
-        {/* Zone haute : navy opaque + blur pour effacer totalement le faux logo */}
-        <div
-          className="absolute left-0 right-0 top-0"
-          style={{
-            height: '50%',
-            backdropFilter: 'blur(24px)',
-            background: 'linear-gradient(to bottom, #1E2D72 0%, #1E2D72 45%, rgba(30,45,114,0.3) 75%, transparent 100%)',
-          }}
-        />
-        {/* Zone basse : dégradé sombre pour lisibilité du texte */}
-        <div
-          className="absolute left-0 right-0 bottom-0"
-          style={{
-            height: '45%',
-            background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 100%)',
-          }}
-        />
-        {/* Vrai logo en haut à gauche */}
-        <div className="absolute top-8 left-10">
-          <ForvisMazarsLogo variant="white" height={56} />
+      {/* Côté gauche — Panneau décoratif branded */}
+      <div
+        className="hidden lg:flex lg:w-1/2 relative overflow-hidden flex-col justify-between p-12"
+        style={{ background: 'linear-gradient(145deg, #0f1f5c 0%, #1E2D72 40%, #1a5fa8 100%)' }}
+      >
+        {/* Cercles décoratifs SVG en arrière-plan */}
+        <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+          <circle cx="75%" cy="12%" r="220" fill="rgba(26,137,212,0.15)" />
+          <circle cx="90%" cy="45%" r="160" fill="rgba(26,137,212,0.10)" />
+          <circle cx="15%" cy="80%" r="280" fill="rgba(26,137,212,0.12)" />
+          <circle cx="60%" cy="90%" r="120" fill="rgba(255,255,255,0.04)" />
+          <circle cx="5%"  cy="20%" r="80"  fill="rgba(255,255,255,0.05)" />
+          {/* Lignes décoratives */}
+          <line x1="0" y1="55%" x2="100%" y2="45%" stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
+          <line x1="0" y1="65%" x2="100%" y2="55%" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
+        </svg>
+
+        {/* Grille de points */}
+        <svg className="absolute inset-0 w-full h-full opacity-10" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id="dots" x="0" y="0" width="32" height="32" patternUnits="userSpaceOnUse">
+              <circle cx="2" cy="2" r="1.5" fill="white" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#dots)" />
+        </svg>
+
+        {/* Logo */}
+        <div className="relative z-10">
+          <ForvisMazarsLogo variant="white" height={60} />
         </div>
-        {/* Tagline en bas à gauche */}
-        <div className="absolute bottom-10 left-10 right-10 text-white">
-          <p className="text-2xl font-bold leading-snug">
-            Bienvenue dans votre<br />espace RH
+
+        {/* Bloc central — texte + stats */}
+        <div className="relative z-10 flex-1 flex flex-col justify-center py-12">
+          <p className="text-white/50 text-xs font-semibold uppercase tracking-widest mb-4">
+            Système de Gestion RH
           </p>
-          <p className="text-sm mt-2 text-white/75">
-            Gérez vos collaborateurs, formations et performances
+          <h1 className="text-white text-4xl font-bold leading-tight mb-6">
+            Pilotez vos<br />ressources humaines<br />en toute simplicité
+          </h1>
+          <div className="flex gap-6 mt-2">
+            {[
+              { value: '56', label: 'Collaborateurs' },
+              { value: '5',  label: 'Départements' },
+              { value: '11', label: 'Modules RH' },
+            ].map(stat => (
+              <div key={stat.label}>
+                <p className="text-white text-2xl font-bold">{stat.value}</p>
+                <p className="text-white/50 text-xs mt-0.5">{stat.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Tagline bas */}
+        <div className="relative z-10">
+          <p className="text-white/40 text-xs">
+            © {new Date().getFullYear()} Forvis Mazars Burkina Faso
           </p>
         </div>
       </div>
