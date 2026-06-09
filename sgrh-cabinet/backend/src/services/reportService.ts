@@ -451,7 +451,44 @@ export const generateMonthlyReport = async (year: number, _month: number): Promi
   const motifN  = DR_FR.map(l => depN.filter(r => DR_LABELS[r.departure_reason]  === l).length);
   const motifN1 = DR_FR.map(l => depN1.filter(r => DR_LABELS[r.departure_reason] === l).length);
 
+  const isVol = (r: any) => r.departure_type ? r.departure_type === 'VOLONTAIRE' : isVoluntary(r.departure_reason || '');
+  const depNvol  = depN.filter(isVol).length;
+  const depN1vol = depN1.filter(isVol).length;
+  const depNinv  = depN.length - depNvol;
+  const depN1inv = depN1.length - depN1vol;
+
   const charts: ChartDef[] = [
+    {
+      sheetName: 'Paramètres',
+      title: `Synthèse des effectifs – ${year - 1} vs ${year}`,
+      categories: ['Permanents', 'Consultants', 'Total général'],
+      series: [
+        { name: `Mai ${year}`,     values: [permN,  consN,  permN  + consN],  color: '1E3A5F' },
+        { name: `Mai ${year - 1}`, values: [permN1, consN1, permN1 + consN1], color: '93C5FD' },
+      ],
+      fromRow: 14, fromCol: 0, toRow: 28, toCol: 5,
+    },
+    {
+      sheetName: 'Liste Personnel',
+      title: `Effectifs par département – ${year - 1} vs ${year}`,
+      categories: SL_KEYS.map(k => SL_LABELS[k]),
+      series: [
+        { name: `Mai ${year}`,     values: deptN,  color: '1E3A5F' },
+        { name: `Mai ${year - 1}`, values: deptN1, color: '93C5FD' },
+      ],
+      fromRow: 65, fromCol: 0, toRow: 80, toCol: 5,
+      barDir: 'bar',
+    },
+    {
+      sheetName: 'Mouvements',
+      title: `Départs par type – ${year - 1} vs ${year}`,
+      categories: ['Volontaire', 'Involontaire'],
+      series: [
+        { name: `Mai ${year}`,     values: [depNvol,  depNinv],  color: '1E3A5F' },
+        { name: `Mai ${year - 1}`, values: [depN1vol, depN1inv], color: '93C5FD' },
+      ],
+      fromRow: 38, fromCol: 0, toRow: 52, toCol: 4,
+    },
     {
       sheetName: 'Effectifs',
       title: `Évolution des effectifs – ${year - 1} vs ${year}`,
