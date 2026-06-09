@@ -400,7 +400,6 @@ function MasseSalarialeTab({ year }: { year: number }) {
               <th className="text-right">Net total</th>
               <th className="text-right">IUTS total</th>
               <th className="text-right">CNSS salarié</th>
-              <th className="text-right">AMO salarié</th>
             </tr>
           </thead>
           <tbody>
@@ -412,7 +411,6 @@ function MasseSalarialeTab({ year }: { year: number }) {
                 <td className="text-right font-mono text-sm font-semibold text-brand-700">{fmt(m.totalNet)}</td>
                 <td className="text-right font-mono text-sm text-red-600">{fmt(m.totalIgr)}</td>
                 <td className="text-right font-mono text-sm">{fmt(m.totalCnss)}</td>
-                <td className="text-right font-mono text-sm">{fmt(m.totalAmo)}</td>
               </tr>
             ))}
             <tr className="bg-gray-50 font-semibold text-sm border-t-2 border-gray-200">
@@ -422,7 +420,6 @@ function MasseSalarialeTab({ year }: { year: number }) {
               <td className="text-right font-mono text-green-700">{fmt(data.totals.totalNet)}</td>
               <td className="text-right font-mono text-red-600">{fmt(data.totals.totalIgr)}</td>
               <td className="text-right font-mono">{fmt(data.totals.totalCnss)}</td>
-              <td className="text-right font-mono">{fmt(data.months.reduce((s, m) => s + m.totalAmo, 0))}</td>
             </tr>
           </tbody>
         </table>
@@ -547,14 +544,12 @@ function CumulAnnuelTab({ year }: { year: number }) {
       {data && !loading && data.slips.length > 0 && (
         <>
           {/* Cumul KPI */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
               { label: 'Brut cumulé', value: data.cumul.grossSalary, color: 'text-brand-700' },
               { label: 'Net cumulé', value: data.cumul.netSalary, color: 'text-green-700' },
               { label: 'IUTS annuel', value: data.cumul.igr, color: 'text-red-600' },
               { label: 'CNSS annuel', value: data.cumul.cnss, color: 'text-amber-700' },
-              { label: 'AMO annuel', value: data.cumul.amo, color: 'text-purple-700' },
-              { label: 'CIMR annuel', value: data.cumul.cimr, color: 'text-gray-700' },
             ].map(kpi => (
               <div key={kpi.label} className="card p-3">
                 <p className="text-xs text-gray-500 mb-1">{kpi.label}</p>
@@ -573,8 +568,6 @@ function CumulAnnuelTab({ year }: { year: number }) {
                   <th className="text-right">Net</th>
                   <th className="text-right">IUTS</th>
                   <th className="text-right">CNSS</th>
-                  <th className="text-right">AMO</th>
-                  <th className="text-right">CIMR</th>
                 </tr>
               </thead>
               <tbody>
@@ -585,8 +578,6 @@ function CumulAnnuelTab({ year }: { year: number }) {
                     <td className="text-right font-mono text-sm font-semibold text-brand-700">{fmt(s.netSalary)}</td>
                     <td className="text-right font-mono text-sm text-red-600">{fmt(s.igr)}</td>
                     <td className="text-right font-mono text-sm">{fmt(s.cnss)}</td>
-                    <td className="text-right font-mono text-sm">{fmt(s.amo)}</td>
-                    <td className="text-right font-mono text-sm">{fmt(s.cimr)}</td>
                   </tr>
                 ))}
                 <tr className="bg-gray-50 font-semibold border-t-2 border-gray-200 text-sm">
@@ -595,8 +586,6 @@ function CumulAnnuelTab({ year }: { year: number }) {
                   <td className="text-right font-mono text-green-700">{fmt(data.cumul.netSalary)}</td>
                   <td className="text-right font-mono text-red-600">{fmt(data.cumul.igr)}</td>
                   <td className="text-right font-mono">{fmt(data.cumul.cnss)}</td>
-                  <td className="text-right font-mono">{fmt(data.cumul.amo)}</td>
-                  <td className="text-right font-mono">{fmt(data.cumul.cimr)}</td>
                 </tr>
               </tbody>
             </table>
