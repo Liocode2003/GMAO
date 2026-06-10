@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { MagnifyingGlassIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import api from '../../services/api';
@@ -180,21 +180,6 @@ export default function OrganigrammePage() {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const innerRef     = useRef<HTMLDivElement>(null);
-  const zoomRef      = useRef(1);
-  zoomRef.current    = zoom;
-
-  const autoFit = useCallback(() => {
-    const container = containerRef.current;
-    const inner     = innerRef.current;
-    if (!container || !inner) return;
-    const cur      = zoomRef.current;
-    const naturalW = inner.offsetWidth  / cur;
-    const naturalH = inner.offsetHeight / cur;
-    const cw = container.clientWidth  - 40;
-    const ch = container.clientHeight - 40;
-    const fit = Math.min(cw / naturalW, ch / naturalH);
-    setZoom(Math.max(Math.min(fit, 1), 0.15));
-  }, []);
 
   useEffect(() => {
     api.get('/employees', { params: { limit: 500, status: 'ACTIF' } })
@@ -209,16 +194,10 @@ export default function OrganigrammePage() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Auto-fit once after data loads and DOM renders
-  useEffect(() => {
-    if (employees.length === 0) return;
-    requestAnimationFrame(() => requestAnimationFrame(autoFit));
-  }, [employees, autoFit]);
-
   const reset = () => {
     setSearch('');
     setFilterSL('');
-    requestAnimationFrame(() => requestAnimationFrame(autoFit));
+    setZoom(0.50);
   };
 
   const filtered = filterSL ? employees.filter(e => e.service_line === filterSL) : employees;
