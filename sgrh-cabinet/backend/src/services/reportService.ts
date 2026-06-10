@@ -187,7 +187,7 @@ function buildChartXml(def: ChartDef, n: number): string {
     const valPts = s.values.map((v,i) => `<c:pt idx="${i}"><c:v>${v}</c:v></c:pt>`).join('');
     return `<c:ser>
       <c:idx val="${si}"/><c:order val="${si}"/>
-      <c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="fr-FR"/><a:t>${xe(s.name)}</a:t></a:r></a:p></c:rich></c:tx>
+      <c:tx><c:v>${xe(s.name)}</c:v></c:tx>
       <c:spPr><a:solidFill><a:srgbClr val="${col}"/></a:solidFill><a:ln><a:noFill/></a:ln></c:spPr>
       <c:cat><c:strRef><c:f/><c:strCache><c:ptCount val="${nCats}"/>${catPts}</c:strCache></c:strRef></c:cat>
       <c:val><c:numRef><c:f/><c:numCache><c:formatCode>${fmt}</c:formatCode><c:ptCount val="${nCats}"/>${valPts}</c:numCache></c:numRef></c:val>
@@ -227,6 +227,7 @@ function buildChartXml(def: ChartDef, n: number): string {
         <c:tickLblPos val="nextTo"/>
         <c:spPr><a:ln w="6350"><a:solidFill><a:srgbClr val="D1D5DB"/></a:solidFill></a:ln></c:spPr>
         <c:txPr><a:bodyPr rot="-2700000"/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="800"/></a:pPr></a:p></c:txPr>
+        <c:crosses val="autoZero"/>
         <c:crossAx val="${axV}"/>
       </c:catAx>
       <c:valAx>
@@ -235,9 +236,11 @@ function buildChartXml(def: ChartDef, n: number): string {
         <c:delete val="0"/>
         <c:axPos val="${valPos}"/>
         <c:numFmt formatCode="${fmt}" sourceLinked="0"/>
+        <c:majorGridlines/>
         <c:tickLblPos val="nextTo"/>
         <c:spPr><a:ln w="6350"><a:solidFill><a:srgbClr val="D1D5DB"/></a:solidFill></a:ln></c:spPr>
         <c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="800"/></a:pPr></a:p></c:txPr>
+        <c:crosses val="autoZero"/>
         <c:crossAx val="${axC}"/>
       </c:valAx>
     </c:plotArea>
