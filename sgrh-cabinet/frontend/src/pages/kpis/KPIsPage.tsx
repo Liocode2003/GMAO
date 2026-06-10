@@ -159,7 +159,7 @@ export default function KPIsPage() {
 
         {/* Heures de formation */}
         <div className="card">
-          <h3 className="text-base font-semibold text-gray-800 mb-4">Heures de formation mensuelles</h3>
+          <h3 className="text-base font-semibold text-gray-800 mb-4">Heures-personne de formation mensuelles</h3>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={trainingChart} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -176,11 +176,11 @@ export default function KPIsPage() {
       {/* Par grade */}
       <div className="card">
         <h3 className="text-base font-semibold text-gray-800 mb-4">Effectif par grade</h3>
-        <ResponsiveContainer width="100%" height={250}>
-          <BarChart data={gradeChart} layout="vertical" margin={{ top: 0, right: 20, left: 130, bottom: 0 }}>
+        <ResponsiveContainer width="100%" height={Math.max(300, gradeChart.length * 40)}>
+          <BarChart data={gradeChart} layout="vertical" margin={{ top: 0, right: 20, left: 140, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
             <XAxis type="number" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-            <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={130} axisLine={false} tickLine={false} />
+            <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={140} axisLine={false} tickLine={false} />
             <Tooltip content={<ChartTooltip />} />
             <Bar dataKey="count" fill="#1d4ed8" radius={[0, 4, 4, 0]} />
           </BarChart>

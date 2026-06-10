@@ -320,8 +320,10 @@ export const getMonthlyKPIs = async (req: Request, res: Response) => {
       `, [year, m]);
 
       const trainingHours = await query(`
-        SELECT COALESCE(SUM(duration_hours), 0) as hours FROM trainings
-        WHERE EXTRACT(YEAR FROM date) = $1 AND EXTRACT(MONTH FROM date) = $2
+        SELECT COALESCE(SUM(t.duration_hours), 0) as hours
+        FROM training_participants tp
+        JOIN trainings t ON t.id = tp.training_id
+        WHERE EXTRACT(YEAR FROM t.date) = $1 AND EXTRACT(MONTH FROM t.date) = $2
       `, [year, m]);
 
       monthlyData.push({
