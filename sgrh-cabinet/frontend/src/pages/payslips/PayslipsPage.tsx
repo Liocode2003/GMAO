@@ -111,7 +111,7 @@ export default function PayslipsPage() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Paie</h2>
-          <p className="text-gray-500 text-sm">Gestion des bulletins de paie — CNSS · IUTS</p>
+          <p className="text-gray-500 text-sm">Gestion des bulletins de paie - CNSS · IUTS</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <select value={filterYear} onChange={e => setFilterYear(+e.target.value)} className="input w-28">
@@ -159,7 +159,7 @@ export default function PayslipsPage() {
                 <tr key={ps.id}>
                   <td>
                     <div className="font-medium text-gray-800">{ps.last_name} {ps.first_name}</div>
-                    <div className="text-xs text-gray-500">{ps.matricule} — {ps.service_line}</div>
+                    <div className="text-xs text-gray-500">{ps.matricule} - {ps.service_line}</div>
                   </td>
                   <td className="font-medium">{MONTHS[ps.period_month]} {ps.period_year}</td>
                   <td className="text-right font-mono text-sm">{fmt(ps.gross_salary)}</td>
