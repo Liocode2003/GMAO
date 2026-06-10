@@ -124,25 +124,26 @@ export default function TrainingsPage() {
         })}
       </div>
 
-      {/* Graphe heures mensuelles */}
-      {allTrainings.length > 0 && (() => {
-        const MONTHS = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
-        const monthly = Array.from({ length: 12 }, (_, i) => ({
-          mois: MONTHS[i],
-          heures: allTrainings
-            .filter(t => new Date(t.date).getMonth() === i)
-            .reduce((s, t) => s + (parseFloat(String(t.duration_hours)) || 0), 0),
-        }));
+      {/* Top formations par participants */}
+      {allTrainings.filter(t => t.participant_count > 0).length > 0 && (() => {
+        const top = [...allTrainings]
+          .filter(t => t.participant_count > 0)
+          .sort((a, b) => b.participant_count - a.participant_count)
+          .slice(0, 8)
+          .map(t => ({
+            name: t.title.length > 38 ? t.title.slice(0, 38) + '…' : t.title,
+            participants: t.participant_count,
+          }));
         return (
           <div className="card p-4">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Heures de formation mensuelles — {year}</h3>
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={monthly} margin={{ top: 4, right: 8, left: -10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                <XAxis dataKey="mois" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-                <Tooltip content={<ChartTooltip unit="h" />} />
-                <Bar dataKey="heures" name="Heures" fill="#6366f1" radius={[4, 4, 0, 0]} maxBarSize={40} />
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">Top formations par participants — {year}</h3>
+            <ResponsiveContainer width="100%" height={Math.max(180, top.length * 38)}>
+              <BarChart data={top} layout="vertical" margin={{ top: 0, right: 40, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 10.5, fill: '#374151' }} width={220} axisLine={false} tickLine={false} />
+                <Tooltip content={<ChartTooltip />} />
+                <Bar dataKey="participants" name="Participants" fill="#6366f1" radius={[0, 4, 4, 0]} maxBarSize={22} />
               </BarChart>
             </ResponsiveContainer>
           </div>
