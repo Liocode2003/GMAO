@@ -288,18 +288,25 @@ function buildDrawingRels(n: number): string {
 </Relationships>`;
 }
 
+const DEFLATE_OPTS = { compression: 'DEFLATE' as const, compressionOptions: { level: 6 } };
+
 async function injectCharts(filePath: string, charts: ChartDef[]): Promise<void> {
-  const buf = fs.readFileSync(filePath);
-  const zip = await JSZip.loadAsync(buf);
+  let buf: Buffer;
+  try { buf = fs.readFileSync(filePath); }
+  catch { logger.error('injectCharts: cannot read file'); return; }
+
+  let zip: JSZip;
+  try { zip = await JSZip.loadAsync(buf); }
+  catch (e) { logger.error('injectCharts: cannot parse zip', e); return; }
 
   const wbRelsFile = zip.file('xl/_rels/workbook.xml.rels');
   const wbFile     = zip.file('xl/workbook.xml');
-  if (!wbRelsFile || !wbFile) return;
+  if (!wbRelsFile || !wbFile) { logger.error('injectCharts: missing workbook files'); return; }
 
   const wbRels = await wbRelsFile.async('string');
   const wbXml  = await wbFile.async('string');
 
-  // rId → sheet file number (e.g. rId3 → 3 for sheet3.xml)
+  // rId → sheet file number
   const ridToFileNum = new Map<string, number>();
   for (const m of wbRels.matchAll(/<Relationship[^>]+>/g)) {
     const elem = m[0];
@@ -316,13 +323,17 @@ async function injectCharts(filePath: string, charts: ChartDef[]): Promise<void>
     const rawName = elem.match(/\bname="([^"]+)"/)?.[1];
     const rid     = elem.match(/r:id="([^"]+)"/)?.[1];
     if (rawName && rid) {
-      const name = rawName.replace(/&amp;/g,'&').replace(/&apos;/g,"'").replace(/&quot;/g,'"').replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+      const name = rawName
+        .replace(/&amp;/g,'&').replace(/&apos;/g,"'")
+        .replace(/&quot;/g,'"').replace(/&lt;/g,'<').replace(/&gt;/g,'>');
       const fn = ridToFileNum.get(rid);
       if (fn !== undefined) nameToFileNum.set(name, fn);
     }
   }
 
-  let contentTypes = await zip.file('[Content_Types].xml')!.async('string');
+  const ctFile = zip.file('[Content_Types].xml');
+  if (!ctFile) { logger.error('injectCharts: missing [Content_Types].xml'); return; }
+  let contentTypes = await ctFile.async('string');
 
   for (let i = 0; i < charts.length; i++) {
     const def = charts[i];
@@ -330,13 +341,14 @@ async function injectCharts(filePath: string, charts: ChartDef[]): Promise<void>
     const fileNum = nameToFileNum.get(def.sheetName);
     if (!fileNum) { logger.warn(`injectCharts: sheet not found: "${def.sheetName}"`); continue; }
 
-    zip.file(`xl/charts/chart${n}.xml`,               buildChartXml(def, n));
-    zip.file(`xl/drawings/drawing${n}.xml`,            buildDrawingXml(n, def));
-    zip.file(`xl/drawings/_rels/drawing${n}.xml.rels`, buildDrawingRels(n));
+    // New files — per-file DEFLATE (does NOT affect existing files)
+    zip.file(`xl/charts/chart${n}.xml`,               buildChartXml(def, n),   DEFLATE_OPTS);
+    zip.file(`xl/drawings/drawing${n}.xml`,            buildDrawingXml(n, def), DEFLATE_OPTS);
+    zip.file(`xl/drawings/_rels/drawing${n}.xml.rels`, buildDrawingRels(n),     DEFLATE_OPTS);
 
     // worksheet rels — create or append
-    const wsRelsPath     = `xl/worksheets/_rels/sheet${fileNum}.xml.rels`;
-    const existingRelsF  = zip.file(wsRelsPath);
+    const wsRelsPath    = `xl/worksheets/_rels/sheet${fileNum}.xml.rels`;
+    const existingRelsF = zip.file(wsRelsPath);
     let drawingRid: string;
 
     if (existingRelsF) {
@@ -346,21 +358,23 @@ async function injectCharts(filePath: string, charts: ChartDef[]): Promise<void>
       drawingRid = `rId${maxId + 1}`;
       zip.file(wsRelsPath, existing.replace('</Relationships>',
         `  <Relationship Id="${drawingRid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing${n}.xml"/>
-</Relationships>`));
+</Relationships>`), DEFLATE_OPTS);
     } else {
       drawingRid = 'rId1';
       zip.file(wsRelsPath,
         `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="${drawingRid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing${n}.xml"/>
-</Relationships>`);
+</Relationships>`, DEFLATE_OPTS);
     }
 
     // add <drawing> element to worksheet XML
     const wsPath = `xl/worksheets/sheet${fileNum}.xml`;
-    const wsXml  = await zip.file(wsPath)!.async('string');
+    const wsFile = zip.file(wsPath);
+    if (!wsFile) continue;
+    const wsXml = await wsFile.async('string');
     if (!wsXml.includes('<drawing ')) {
-      zip.file(wsPath, wsXml.replace('</worksheet>', `<drawing r:id="${drawingRid}"/></worksheet>`));
+      zip.file(wsPath, wsXml.replace('</worksheet>', `<drawing r:id="${drawingRid}"/></worksheet>`), DEFLATE_OPTS);
     }
 
     // content types
@@ -372,9 +386,11 @@ async function injectCharts(filePath: string, charts: ChartDef[]): Promise<void>
     }
   }
 
-  zip.file('[Content_Types].xml', contentTypes);
+  zip.file('[Content_Types].xml', contentTypes, DEFLATE_OPTS);
 
-  const out = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+  // IMPORTANT: no global compression — each file uses its own setting,
+  // preserving the original compression of untouched ExcelJS-generated files.
+  const out = await zip.generateAsync({ type: 'nodebuffer' });
   fs.writeFileSync(filePath, out);
 }
 
