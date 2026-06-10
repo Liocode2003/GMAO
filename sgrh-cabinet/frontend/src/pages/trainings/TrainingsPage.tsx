@@ -261,6 +261,8 @@ export default function TrainingsPage() {
   );
 }
 
+interface EmpOption { id: string; label: string; }
+
 function TrainingModal({ training, onClose, onSaved }: {
   training: Training | null;
   onClose: () => void;
@@ -280,6 +282,29 @@ function TrainingModal({ training, onClose, onSaved }: {
   });
   const [saving, setSaving] = useState(false);
 
+  const [employees, setEmployees]             = useState<EmpOption[]>([]);
+  const [selectedIds, setSelectedIds]         = useState<Set<string>>(
+    new Set((training?.participants || []).map(p => p.id))
+  );
+  const [participantSearch, setParticipantSearch] = useState('');
+
+  useEffect(() => {
+    api.get('/employees', { params: { limit: 500, status: 'ACTIF' } })
+      .then(res => setEmployees(
+        (res.data.data || []).map((e: { id: string; first_name: string; last_name: string }) => ({
+          id: e.id,
+          label: `${e.first_name} ${e.last_name}`,
+        }))
+      ));
+  }, []);
+
+  const toggleEmp = (id: string) =>
+    setSelectedIds(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+
+  const filteredEmps = employees.filter(e =>
+    e.label.toLowerCase().includes(participantSearch.toLowerCase())
+  );
+
   const handleSave = async () => {
     if (!form.title || !form.date) {
       toast.error('Thème et date requis');
@@ -287,11 +312,12 @@ function TrainingModal({ training, onClose, onSaved }: {
     }
     setSaving(true);
     try {
+      const payload = { ...form, participant_ids: Array.from(selectedIds) };
       if (training) {
-        await api.put(`/trainings/${training.id}`, form);
+        await api.put(`/trainings/${training.id}`, payload);
         toast.success('Formation mise à jour');
       } else {
-        await api.post('/trainings', form);
+        await api.post('/trainings', payload);
         toast.success('Formation créée');
       }
       onSaved();
@@ -350,6 +376,47 @@ function TrainingModal({ training, onClose, onSaved }: {
             <label className="label">Formateur</label>
             <input className="input" value={form.trainer} onChange={e => setForm(p => ({ ...p, trainer: e.target.value }))} placeholder="Nom du formateur" />
           </div>
+
+          {/* Participants */}
+          <div>
+            <label className="label">
+              Participants
+              {selectedIds.size > 0 && (
+                <span className="ml-2 inline-flex items-center justify-center w-5 h-5 rounded-full bg-brand-600 text-white text-[10px] font-bold">{selectedIds.size}</span>
+              )}
+            </label>
+            <input
+              className="input mb-2"
+              placeholder="Rechercher un collaborateur…"
+              value={participantSearch}
+              onChange={e => setParticipantSearch(e.target.value)}
+            />
+            <div className="border border-gray-200 rounded-lg overflow-y-auto max-h-40 divide-y divide-gray-50">
+              {filteredEmps.length === 0 ? (
+                <p className="text-xs text-gray-400 text-center py-3">Aucun résultat</p>
+              ) : filteredEmps.map(emp => (
+                <label key={emp.id} className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-gray-50 select-none">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(emp.id)}
+                    onChange={() => toggleEmp(emp.id)}
+                    className="w-3.5 h-3.5 accent-brand-600"
+                  />
+                  <span className="text-sm text-gray-700">{emp.label}</span>
+                </label>
+              ))}
+            </div>
+            {selectedIds.size > 0 && (
+              <button
+                type="button"
+                onClick={() => setSelectedIds(new Set())}
+                className="mt-1.5 text-xs text-gray-400 hover:text-red-500"
+              >
+                Tout désélectionner
+              </button>
+            )}
+          </div>
+
           <div>
             <label className="label">Observations</label>
             <textarea className="input h-20 resize-none" value={form.observations} onChange={e => setForm(p => ({ ...p, observations: e.target.value }))} />
