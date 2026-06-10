@@ -161,9 +161,16 @@ function f(cell: ExcelJS.Cell, formula: string, result?: ExcelJS.CellValue) {
 
 // ─── XLSX chart injection ─────────────────────────────────────────────────────
 
-interface ChartSeries { name: string; values: number[]; color?: string }
+interface ChartSeries {
+  name: string;
+  values: number[];          // cached values (fallback for static viewers)
+  color?: string;
+  valRef?: string;           // live cell range, e.g. "Sheet!$B$4:$B$8"
+  nameRef?: string;          // live cell for series name, e.g. "Sheet!$B$3"
+}
 interface ChartDef {
   sheetName: string; title: string; categories: string[];
+  catRef?: string;           // live cell range for category labels
   series: ChartSeries[];
   fromRow: number; fromCol: number; toRow: number; toCol: number;
   pct?: boolean; barDir?: 'col' | 'bar';
@@ -182,15 +189,31 @@ function buildChartXml(def: ChartDef, n: number): string {
   const catPts = def.categories.map((c,i) => `<c:pt idx="${i}"><c:v>${xe(c)}</c:v></c:pt>`).join('');
   const fmt = def.pct ? '0.0%' : 'General';
 
+  // Category axis XML — live reference if available, inline cache always included
+  const catXml = def.catRef
+    ? `<c:strRef><c:f>${xe(def.catRef)}</c:f><c:strCache><c:ptCount val="${nCats}"/>${catPts}</c:strCache></c:strRef>`
+    : `<c:strRef><c:f/><c:strCache><c:ptCount val="${nCats}"/>${catPts}</c:strCache></c:strRef>`;
+
   const serXml = def.series.map((s, si) => {
     const col = s.color ?? SCOL[si % SCOL.length];
     const valPts = s.values.map((v,i) => `<c:pt idx="${i}"><c:v>${v}</c:v></c:pt>`).join('');
+
+    // Series name — live cell ref if available
+    const txXml = s.nameRef
+      ? `<c:tx><c:strRef><c:f>${xe(s.nameRef)}</c:f><c:strCache><c:ptCount val="1"/><c:pt idx="0"><c:v>${xe(s.name)}</c:v></c:pt></c:strCache></c:strRef></c:tx>`
+      : `<c:tx><c:v>${xe(s.name)}</c:v></c:tx>`;
+
+    // Values — live cell range if available
+    const valXml = s.valRef
+      ? `<c:numRef><c:f>${xe(s.valRef)}</c:f><c:numCache><c:formatCode>${fmt}</c:formatCode><c:ptCount val="${nCats}"/>${valPts}</c:numCache></c:numRef>`
+      : `<c:numRef><c:f/><c:numCache><c:formatCode>${fmt}</c:formatCode><c:ptCount val="${nCats}"/>${valPts}</c:numCache></c:numRef>`;
+
     return `<c:ser>
       <c:idx val="${si}"/><c:order val="${si}"/>
-      <c:tx><c:v>${xe(s.name)}</c:v></c:tx>
+      ${txXml}
       <c:spPr><a:solidFill><a:srgbClr val="${col}"/></a:solidFill><a:ln><a:noFill/></a:ln></c:spPr>
-      <c:cat><c:strRef><c:f/><c:strCache><c:ptCount val="${nCats}"/>${catPts}</c:strCache></c:strRef></c:cat>
-      <c:val><c:numRef><c:f/><c:numCache><c:formatCode>${fmt}</c:formatCode><c:ptCount val="${nCats}"/>${valPts}</c:numCache></c:numRef></c:val>
+      <c:cat>${catXml}</c:cat>
+      <c:val>${valXml}</c:val>
     </c:ser>`;
   }).join('\n');
 
@@ -481,9 +504,10 @@ export const generateMonthlyReport = async (year: number, _month: number): Promi
       sheetName: 'Paramètres',
       title: `Synthèse des effectifs – ${year - 1} vs ${year}`,
       categories: ['Permanents', 'Consultants', 'Total général'],
+      catRef: 'Effectifs!$A$5:$A$7',
       series: [
-        { name: `Mai ${year}`,     values: [permN,  consN,  permN  + consN],  color: '1E3A5F' },
-        { name: `Mai ${year - 1}`, values: [permN1, consN1, permN1 + consN1], color: '93C5FD' },
+        { name: `Mai ${year}`,     values: [permN,  consN,  permN  + consN],  color: '1E3A5F', valRef: 'Effectifs!$B$5:$B$7', nameRef: 'Effectifs!$B$4' },
+        { name: `Mai ${year - 1}`, values: [permN1, consN1, permN1 + consN1], color: '93C5FD', valRef: 'Effectifs!$C$5:$C$7', nameRef: 'Effectifs!$C$4' },
       ],
       fromRow: 14, fromCol: 0, toRow: 28, toCol: 5,
     },
@@ -491,9 +515,10 @@ export const generateMonthlyReport = async (year: number, _month: number): Promi
       sheetName: 'Liste Personnel',
       title: `Effectifs par département – ${year - 1} vs ${year}`,
       categories: SL_KEYS.map(k => SL_LABELS[k]),
+      catRef: "'Par Département'!$A$4:$A$8",
       series: [
-        { name: `Mai ${year}`,     values: deptN,  color: '1E3A5F' },
-        { name: `Mai ${year - 1}`, values: deptN1, color: '93C5FD' },
+        { name: `Mai ${year}`,     values: deptN,  color: '1E3A5F', valRef: "'Par Département'!$B$4:$B$8", nameRef: "'Par Département'!$B$3" },
+        { name: `Mai ${year - 1}`, values: deptN1, color: '93C5FD', valRef: "'Par Département'!$D$4:$D$8", nameRef: "'Par Département'!$D$3" },
       ],
       fromRow: 65, fromCol: 0, toRow: 80, toCol: 5,
       barDir: 'bar',
@@ -503,8 +528,8 @@ export const generateMonthlyReport = async (year: number, _month: number): Promi
       title: `Départs par type – ${year - 1} vs ${year}`,
       categories: ['Volontaire', 'Involontaire'],
       series: [
-        { name: `Mai ${year}`,     values: [depNvol,  depNinv],  color: '1E3A5F' },
-        { name: `Mai ${year - 1}`, values: [depN1vol, depN1inv], color: '93C5FD' },
+        { name: `Mai ${year}`,     values: [depNvol,  depNinv],  color: '1E3A5F', valRef: "'Turn-Over'!$B$14:$B$15", nameRef: "'Turn-Over'!$B$9" },
+        { name: `Mai ${year - 1}`, values: [depN1vol, depN1inv], color: '93C5FD', valRef: "'Turn-Over'!$C$14:$C$15", nameRef: "'Turn-Over'!$C$9" },
       ],
       fromRow: 38, fromCol: 0, toRow: 52, toCol: 4,
     },
@@ -512,9 +537,10 @@ export const generateMonthlyReport = async (year: number, _month: number): Promi
       sheetName: 'Effectifs',
       title: `Évolution des effectifs – ${year - 1} vs ${year}`,
       categories: ['Permanents', 'Consultants', 'Total général'],
+      catRef: 'Effectifs!$A$5:$A$7',
       series: [
-        { name: `Mai ${year}`,     values: [permN,  consN,  permN  + consN],  color: '1E3A5F' },
-        { name: `Mai ${year - 1}`, values: [permN1, consN1, permN1 + consN1], color: '93C5FD' },
+        { name: `Mai ${year}`,     values: [permN,  consN,  permN  + consN],  color: '1E3A5F', valRef: 'Effectifs!$B$5:$B$7', nameRef: 'Effectifs!$B$4' },
+        { name: `Mai ${year - 1}`, values: [permN1, consN1, permN1 + consN1], color: '93C5FD', valRef: 'Effectifs!$C$5:$C$7', nameRef: 'Effectifs!$C$4' },
       ],
       fromRow: 16, fromCol: 0, toRow: 30, toCol: 5,
     },
@@ -522,28 +548,31 @@ export const generateMonthlyReport = async (year: number, _month: number): Promi
       sheetName: 'Par Département',
       title: `Effectifs par département – ${year - 1} vs ${year}`,
       categories: SL_KEYS.map(k => SL_LABELS[k]),
+      catRef: "'Par Département'!$A$4:$A$8",
       series: [
-        { name: `Mai ${year}`,     values: deptN,  color: '1E3A5F' },
-        { name: `Mai ${year - 1}`, values: deptN1, color: '93C5FD' },
+        { name: `Mai ${year}`,     values: deptN,  color: '1E3A5F', valRef: "'Par Département'!$B$4:$B$8", nameRef: "'Par Département'!$B$3" },
+        { name: `Mai ${year - 1}`, values: deptN1, color: '93C5FD', valRef: "'Par Département'!$D$4:$D$8", nameRef: "'Par Département'!$D$3" },
       ],
       fromRow: 11, fromCol: 0, toRow: 25, toCol: 5,
     },
     {
       sheetName: "Tranches d'Âge",
       title: `Répartition par tranches d'âge – Mai ${year}`,
-      categories: ['< 25 ans', '25-29', '30-34', '35-39', '40-44', '45-49', '≥ 50 ans'],
+      categories: ['Moins de 25 ans', '25 – 29 ans', '30 – 34 ans', '35 – 39 ans', '40 – 44 ans', '45 – 49 ans', '50 ans et plus'],
+      catRef: "'Tranches d''Âge'!$A$4:$A$10",
       series: [
-        { name: `Effectif Mai ${year}`, values: ageCounts, color: '1E3A5F' },
+        { name: `Effectif Mai ${year}`, values: ageCounts, color: '1E3A5F', valRef: "'Tranches d''Âge'!$B$4:$B$10", nameRef: 'Paramètres!$B$10' },
       ],
       fromRow: 13, fromCol: 0, toRow: 27, toCol: 3,
     },
     {
       sheetName: 'Turn-Over',
       title: `Taux de Turn-Over – ${year - 1} vs ${year}`,
-      categories: ['Turn-Over Global', 'Turn-Over Fonctionnel'],
+      categories: ['Turn-Over Global (%)', 'Turn-Over Fonctionnel (%)'],
+      catRef: "'Turn-Over'!$A$21:$A$22",
       series: [
-        { name: `Mai ${year}`,     values: [toGlobalN,  0], color: '1E3A5F' },
-        { name: `Mai ${year - 1}`, values: [toGlobalN1, 0], color: '93C5FD' },
+        { name: `Mai ${year}`,     values: [toGlobalN,  0], color: '1E3A5F', valRef: "'Turn-Over'!$B$21:$B$22", nameRef: "'Turn-Over'!$B$20" },
+        { name: `Mai ${year - 1}`, values: [toGlobalN1, 0], color: '93C5FD', valRef: "'Turn-Over'!$C$21:$C$22", nameRef: "'Turn-Over'!$C$20" },
       ],
       fromRow: 26, fromCol: 0, toRow: 38, toCol: 3,
       pct: true,
@@ -552,9 +581,10 @@ export const generateMonthlyReport = async (year: number, _month: number): Promi
       sheetName: 'Motifs de Départ',
       title: `Motifs de départ – ${year - 1} vs ${year}`,
       categories: DR_FR,
+      catRef: "'Motifs de Départ'!$A$4:$A$8",
       series: [
-        { name: `Mai ${year}`,     values: motifN,  color: '1E3A5F' },
-        { name: `Mai ${year - 1}`, values: motifN1, color: '93C5FD' },
+        { name: `Mai ${year}`,     values: motifN,  color: '1E3A5F', valRef: "'Motifs de Départ'!$B$4:$B$8", nameRef: "'Motifs de Départ'!$B$3" },
+        { name: `Mai ${year - 1}`, values: motifN1, color: '93C5FD', valRef: "'Motifs de Départ'!$D$4:$D$8", nameRef: "'Motifs de Départ'!$D$3" },
       ],
       fromRow: 13, fromCol: 0, toRow: 27, toCol: 5,
     },
