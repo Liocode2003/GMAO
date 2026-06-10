@@ -26,49 +26,12 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex">
       {/* Côté gauche — Image RH */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden flex-col justify-between p-12">
-        {/* Image de fond */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden items-center justify-center bg-gray-50">
         <img
           src="/hr-login.png"
           alt="Human Resources"
-          className="absolute inset-0 w-full h-full object-cover"
+          className="w-full h-full object-contain p-8"
         />
-        {/* Overlay semi-transparent pour lisibilité */}
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(145deg, rgba(15,31,92,0.75) 0%, rgba(30,45,114,0.65) 50%, rgba(26,95,168,0.60) 100%)' }} />
-
-        {/* Logo */}
-        <div className="relative z-10">
-          <ForvisMazarsLogo variant="white" height={60} />
-        </div>
-
-        {/* Bloc central — texte + stats */}
-        <div className="relative z-10 flex-1 flex flex-col justify-center py-12">
-          <p className="text-white/50 text-xs font-semibold uppercase tracking-widest mb-4">
-            Système de Gestion RH
-          </p>
-          <h1 className="text-white text-4xl font-bold leading-tight mb-6">
-            Pilotez vos<br />ressources humaines<br />en toute simplicité
-          </h1>
-          <div className="flex gap-6 mt-2">
-            {[
-              { value: '56', label: 'Collaborateurs' },
-              { value: '5',  label: 'Départements' },
-              { value: '11', label: 'Modules RH' },
-            ].map(stat => (
-              <div key={stat.label}>
-                <p className="text-white text-2xl font-bold">{stat.value}</p>
-                <p className="text-white/50 text-xs mt-0.5">{stat.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Tagline bas */}
-        <div className="relative z-10">
-          <p className="text-white/40 text-xs">
-            © {new Date().getFullYear()} Forvis Mazars Burkina Faso
-          </p>
-        </div>
       </div>
 
       {/* Côté droit — Formulaire */}
