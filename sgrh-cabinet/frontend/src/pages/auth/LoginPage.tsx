@@ -29,7 +29,7 @@ export default function LoginPage() {
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden flex-col justify-between p-12">
         {/* Image de fond */}
         <img
-          src="/hr-login.jpg"
+          src="/hr-login.png"
           alt="Human Resources"
           className="absolute inset-0 w-full h-full object-cover"
         />
