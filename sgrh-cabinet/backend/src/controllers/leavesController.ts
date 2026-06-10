@@ -35,30 +35,24 @@ function calendarDays(start: string, end: string): number {
 }
 
 /**
- * Calcul pro-rata du droit annuel de congés (base légale : 30 jours ouvrables/an).
+ * Calcul du droit annuel de congés : 2,5 jours par mois calendaire travaillé.
+ * Base légale Burkina Faso : 30 jours/an = 2,5 jours × 12 mois.
  *
- * - Employé présent depuis le 1er janvier → 30 jours
- * - Employé arrivé en cours d'année       → (mois restants / 12) × 30, arrondi au 0.5 supérieur
- * - Employé pas encore en poste           → 0
- *
- * Le calcul tient compte du nombre réel de jours dans l'année (365 ou 366)
- * pour une précision maximale lors d'une arrivée en cours d'année.
+ * - Employé présent avant l'année → 12 mois × 2,5 = 30 jours
+ * - Employé arrivé en cours d'année → nombre de mois calendaires (mois d'entrée inclus) × 2,5
+ * - Employé pas encore en poste → 0
  */
 function proRataAllowance(entryDate: string, year: number): number {
   const entry = new Date(entryDate);
-  const total = daysInYear(year); // 365 ou 366 selon que l'année est bissextile
+  const entryYear = entry.getFullYear();
 
-  if (entry.getFullYear() < year) return 30; // présent depuis le 1er janvier → droit complet
-  if (entry.getFullYear() > year) return 0;  // pas encore en poste cette année
+  if (entryYear < year) return 30;  // présent dès le 1er janvier → droit complet
+  if (entryYear > year) return 0;   // pas encore en poste cette année
 
-  // Jours restants du jour d'entrée au 31 décembre (inclus)
-  const yearEnd = new Date(year, 11, 31);
-  const diffMs = yearEnd.getTime() - entry.getTime();
-  const daysRemaining = Math.ceil(diffMs / (24 * 3600 * 1000)) + 1;
-
-  // Pro-rata précis basé sur les jours réels de l'année (365 ou 366)
-  const raw = (daysRemaining / total) * 30;
-  return Math.ceil(raw * 2) / 2; // arrondi au demi-jour supérieur
+  // Mois travaillés dans l'année : du mois d'entrée à décembre (inclus)
+  // getMonth() est 0-indexé (0=janvier, 11=décembre)
+  const monthsWorked = 12 - entry.getMonth();
+  return monthsWorked * 2.5;
 }
 
 async function getHREmails(): Promise<string[]> {
@@ -79,7 +73,7 @@ async function ensureBalance(employeeId: string, year: number): Promise<void> {
   await query(
     `INSERT INTO leave_balances (employee_id, year, annual_allowance, carry_over, days_taken, days_unpaid)
      VALUES ($1, $2, $3, 0, 0, 0)
-     ON CONFLICT (employee_id, year) DO NOTHING`,
+     ON CONFLICT (employee_id, year) DO UPDATE SET annual_allowance = EXCLUDED.annual_allowance, updated_at = NOW()`,
     [employeeId, year, allowance]
   );
 }
@@ -122,25 +116,7 @@ export const getLeaveBalance = async (req: Request, res: Response) => {
       [id, year]
     );
 
-    const bal = balRes.rows[0] || null;
-    if (bal) {
-      // Correction automatique des données corrompues :
-      // annual_allowance doit être entre 0 et 30 jours (droit légal max = 30 j/an)
-      const MAX_LEGAL_ALLOWANCE = 30;
-      if (Number(bal.annual_allowance) > MAX_LEGAL_ALLOWANCE) {
-        const corrected = bal.entry_date
-          ? proRataAllowance(bal.entry_date, year)
-          : MAX_LEGAL_ALLOWANCE;
-        bal.annual_allowance = corrected;
-        await query(
-          `UPDATE leave_balances SET annual_allowance = $1, updated_at = NOW()
-           WHERE employee_id = $2 AND year = $3`,
-          [corrected, id, year]
-        );
-        logger.info(`Correction annual_allowance: valeur corrompue → ${corrected} (employé ${id}, année ${year})`);
-      }
-    }
-    return res.json(bal);
+    return res.json(balRes.rows[0] || null);
   } catch (err) {
     logger.error('getLeaveBalance error', err);
     return res.status(500).json({ error: 'Erreur serveur' });
