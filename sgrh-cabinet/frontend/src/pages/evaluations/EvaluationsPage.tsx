@@ -16,18 +16,9 @@ interface Evaluation {
   id: string;
   employee_id: string;
   employee_name: string;
-  employee_service_line: string;
   year: number;
   period: string;
   status: string;
-  overall_score: number | null;
-  objectives_score: number | null;
-  skills_score: number | null;
-  behavior_score: number | null;
-  comments: string | null;
-  objectives: string | null;
-  strengths: string | null;
-  improvements: string | null;
   document_path: string | null;
   document_name: string | null;
   created_at: string;
@@ -40,7 +31,7 @@ interface Employee {
 }
 
 const PERIOD_LABELS: Record<string, string> = {
-  ANNUEL:    'Annuel',
+  ANNUEL:     'Annuel',
   MI_PERIODE: 'Mi-période',
   PROBATOIRE: 'Probatoire',
 };
@@ -75,7 +66,6 @@ export default function EvaluationsPage() {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing]     = useState<Evaluation | null>(null);
 
-  // Document upload
   const fileInputRef   = useRef<HTMLInputElement>(null);
   const [uploadTarget, setUploadTarget] = useState<string | null>(null);
   const [uploading, setUploading]       = useState<string | null>(null);
@@ -120,7 +110,6 @@ export default function EvaluationsPage() {
     refresh();
   };
 
-  // ── Document handlers ─────────────────────────────────────────────────────
   const triggerUpload = (evalId: string) => {
     setUploadTarget(evalId);
     fileInputRef.current?.click();
@@ -137,7 +126,7 @@ export default function EvaluationsPage() {
       toast.success('Document uploadé');
       refresh();
     } catch {
-      toast.error('Erreur lors de l\'upload');
+      toast.error("Erreur lors de l'upload");
     } finally {
       setUploading(null);
       setUploadTarget(null);
@@ -148,7 +137,8 @@ export default function EvaluationsPage() {
   const handleDownload = async (ev: Evaluation) => {
     try {
       const res = await api.get(`/evaluations/${ev.id}/document`, { responseType: 'blob' });
-      const url = URL.createObjectURL(new Blob([res.data]));
+      const contentType = res.headers['content-type'] || 'application/octet-stream';
+      const url = URL.createObjectURL(new Blob([res.data as BlobPart], { type: contentType }));
       const a = document.createElement('a');
       a.href = url;
       a.download = ev.document_name || 'evaluation';
@@ -166,16 +156,10 @@ export default function EvaluationsPage() {
     refresh();
   };
 
-  // ── Stats ─────────────────────────────────────────────────────────────────
-  const withScore = allEvaluations.filter(e => e.overall_score !== null);
-  const avgScore  = withScore.length > 0
-    ? withScore.reduce((s, e) => s + e.overall_score!, 0) / withScore.length
-    : null;
-
   return (
     <div className="space-y-6 animate-fade-in">
 
-      {/* Hidden file input */}
+      {/* Hidden file input (upload depuis tableau) */}
       <input ref={fileInputRef} type="file" className="hidden"
         accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
         onChange={handleFileSelected} />
@@ -186,7 +170,6 @@ export default function EvaluationsPage() {
           <h2 className="text-2xl font-bold text-gray-800">Évaluations</h2>
           <p className="text-gray-500 text-sm mt-1">
             {total} évaluation(s) — {allEvaluations.filter(e => e.status === 'TERMINE').length} terminée(s)
-            {avgScore !== null && ` — Moyenne : ${avgScore.toFixed(1)}/20`}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -216,7 +199,7 @@ export default function EvaluationsPage() {
       </div>
 
       {/* ── Stats cards ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         {(['BROUILLON', 'EN_COURS', 'TERMINE'] as const).map(s => (
           <div key={s}
             onClick={() => handleFilter(year, period, status === s ? '' : s)}
@@ -225,14 +208,6 @@ export default function EvaluationsPage() {
             <p className="text-2xl font-bold text-gray-800">{allEvaluations.filter(e => e.status === s).length}</p>
           </div>
         ))}
-        <div className="card text-center p-4">
-          <div className="flex items-center justify-center gap-1 mb-2">
-            <StarIcon className="w-4 h-4 text-yellow-500" />
-            <span className="text-xs font-semibold text-yellow-600">Moyenne</span>
-          </div>
-          <p className="text-2xl font-bold text-gray-800">{avgScore !== null ? avgScore.toFixed(1) : '—'}</p>
-          <p className="text-xs text-gray-400">/20</p>
-        </div>
       </div>
 
       {/* ── Table ── */}
@@ -262,28 +237,10 @@ export default function EvaluationsPage() {
               </td></tr>
             ) : evaluations.map(ev => (
               <tr key={ev.id}>
-                {/* Collaborateur */}
-                <td>
-                  <p className="font-medium text-gray-800 text-sm">{ev.employee_name}</p>
-                  <p className="text-xs text-gray-400">{ev.employee_service_line?.replace(/_/g, ' ')}</p>
-                </td>
-
-                {/* Année */}
+                <td className="font-medium text-gray-800 text-sm">{ev.employee_name}</td>
                 <td className="text-sm text-gray-700 font-medium">{ev.year}</td>
-
-                {/* Période */}
-                <td>
-                  <span className="badge badge-blue">{PERIOD_LABELS[ev.period] || ev.period}</span>
-                </td>
-
-                {/* Statut */}
-                <td>
-                  <span className={`badge ${STATUS_COLORS[ev.status] || 'badge-gray'}`}>
-                    {STATUS_LABELS[ev.status] || ev.status}
-                  </span>
-                </td>
-
-                {/* Document */}
+                <td><span className="badge badge-blue">{PERIOD_LABELS[ev.period] || ev.period}</span></td>
+                <td><span className={`badge ${STATUS_COLORS[ev.status] || 'badge-gray'}`}>{STATUS_LABELS[ev.status] || ev.status}</span></td>
                 <td>
                   {ev.document_name ? (
                     <div className="flex items-center gap-1 min-w-0">
@@ -315,8 +272,6 @@ export default function EvaluationsPage() {
                     <span className="text-xs text-gray-300">—</span>
                   )}
                 </td>
-
-                {/* Actions */}
                 <td>
                   <div className="flex gap-1">
                     {canManage && (
@@ -352,7 +307,7 @@ export default function EvaluationsPage() {
   );
 }
 
-// ── Modal création / modification ─────────────────────────────────────────────
+// ── Modal ─────────────────────────────────────────────────────────────────────
 function EvaluationModal({ evaluation, year, onClose, onSaved }: {
   evaluation: Evaluation | null;
   year: number;
@@ -362,63 +317,66 @@ function EvaluationModal({ evaluation, year, onClose, onSaved }: {
   useModalEscape(onClose);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [form, setForm] = useState({
-    employee_id:      evaluation?.employee_id || '',
-    year:             evaluation?.year || year,
-    period:           evaluation?.period || 'ANNUEL',
-    status:           evaluation?.status || 'EN_COURS',
-    objectives_score: evaluation?.objectives_score ?? '',
-    skills_score:     evaluation?.skills_score ?? '',
-    behavior_score:   evaluation?.behavior_score ?? '',
-    comments:         evaluation?.comments || '',
-    objectives:       evaluation?.objectives || '',
-    strengths:        evaluation?.strengths || '',
-    improvements:     evaluation?.improvements || '',
+    employee_id: evaluation?.employee_id || '',
+    year:        evaluation?.year || year,
+    period:      evaluation?.period || 'ANNUEL',
+    status:      evaluation?.status || 'EN_COURS',
   });
-  const [saving, setSaving] = useState(false);
-  const [docName, setDocName]     = useState<string | null>(evaluation?.document_name || null);
-  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving]           = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [docName, setDocName]         = useState<string | null>(evaluation?.document_name || null);
+  const [uploading, setUploading]     = useState(false);
   const modalFileRef = useRef<HTMLInputElement>(null);
 
-  const handleModalUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    api.get('/employees', { params: { limit: 500, status: 'ACTIF' } })
+      .then(res => setEmployees(res.data.data || []));
+  }, []);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !evaluation) return;
-    const fd = new FormData();
-    fd.append('file', file);
-    setUploading(true);
-    try {
-      await api.post(`/evaluations/${evaluation.id}/document`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-      setDocName(file.name);
-      toast.success('Document uploadé');
-    } catch {
-      toast.error('Erreur upload');
-    } finally {
-      setUploading(false);
+    if (!file) return;
+    if (evaluation) {
+      // Mode édition : upload immédiat
+      const fd = new FormData();
+      fd.append('file', file);
+      setUploading(true);
+      api.post(`/evaluations/${evaluation.id}/document`, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+        .then(() => { setDocName(file.name); toast.success('Document uploadé'); })
+        .catch(() => toast.error('Erreur upload'))
+        .finally(() => { setUploading(false); e.target.value = ''; });
+    } else {
+      // Mode création : stocker en attente
+      setPendingFile(file);
       e.target.value = '';
     }
   };
 
-  const handleModalDeleteDoc = async () => {
+  const handleDeleteDoc = async () => {
     if (!evaluation || !confirm('Supprimer le document ?')) return;
     await api.delete(`/evaluations/${evaluation.id}/document`);
     setDocName(null);
     toast.success('Document supprimé');
   };
 
-  useEffect(() => {
-    api.get('/employees', { params: { limit: 200, status: 'ACTIF' } })
-      .then(res => setEmployees(res.data.data || []));
-  }, []);
-
   const handleSave = async () => {
     if (!form.employee_id) { toast.error('Collaborateur requis'); return; }
     setSaving(true);
     try {
+      let evalId = evaluation?.id;
       if (evaluation) {
         await api.put(`/evaluations/${evaluation.id}`, form);
         toast.success('Évaluation mise à jour');
       } else {
-        await api.post('/evaluations', form);
+        const res = await api.post('/evaluations', form);
+        evalId = res.data.id;
         toast.success('Évaluation créée');
+      }
+      // Upload du document en attente (création)
+      if (pendingFile && evalId) {
+        const fd = new FormData();
+        fd.append('file', pendingFile);
+        await api.post(`/evaluations/${evalId}/document`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
       }
       onSaved();
     } catch (err: unknown) {
@@ -429,25 +387,21 @@ function EvaluationModal({ evaluation, year, onClose, onSaved }: {
     }
   };
 
-  const auto = [form.objectives_score, form.skills_score, form.behavior_score]
-    .every(v => v !== '' && v !== null && v !== undefined);
-  const autoScore = auto
-    ? ((parseFloat(String(form.objectives_score)) + parseFloat(String(form.skills_score)) + parseFloat(String(form.behavior_score))) / 3).toFixed(2)
-    : null;
+  const currentDoc = docName || pendingFile?.name || null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl animate-fade-in max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-fade-in flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0">
           <h3 className="text-lg font-semibold text-gray-800">
-            {evaluation ? 'Modifier l\'évaluation' : 'Nouvelle évaluation'}
+            {evaluation ? "Modifier l'évaluation" : 'Nouvelle évaluation'}
           </h3>
           <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
             <XMarkIcon className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        <div className="p-6 space-y-4">
           {/* Collaborateur */}
           <div>
             <label className="label">Collaborateur *</label>
@@ -491,76 +445,48 @@ function EvaluationModal({ evaluation, year, onClose, onSaved }: {
             </div>
           </div>
 
-          {/* Notes */}
-          <div className="border-t pt-4">
-            <p className="text-sm font-semibold text-gray-600 mb-3">Notes <span className="font-normal text-gray-400">(sur 20)</span></p>
-            <div className="grid grid-cols-3 gap-3">
-              {([
-                ['Objectifs', 'objectives_score'],
-                ['Compétences', 'skills_score'],
-                ['Comportement', 'behavior_score'],
-              ] as const).map(([label, key]) => (
-                <div key={key}>
-                  <label className="label">{label}</label>
-                  <input type="number" min={0} max={20} step={0.5} className="input"
-                    value={form[key] as string | number}
-                    onChange={e => setForm(p => ({ ...p, [key]: e.target.value }))}
-                    placeholder="—" />
-                </div>
-              ))}
-            </div>
-            {autoScore && (
-              <p className="text-sm text-gray-500 mt-2">
-                Note globale calculée : <strong className="text-brand-700">{autoScore}/20</strong>
-              </p>
-            )}
-          </div>
-
-          {/* Textes */}
-          {([
-            ['Objectifs fixés', 'objectives', 'Objectifs du collaborateur pour la période...'],
-            ['Points forts', 'strengths', 'Points forts identifiés...'],
-            ["Axes d'amélioration", 'improvements', 'Axes à développer...'],
-            ['Commentaires', 'comments', 'Commentaires généraux...'],
-          ] as const).map(([label, key, ph]) => (
-            <div key={key}>
-              <label className="label">{label}</label>
-              <textarea className="input h-16 resize-none text-sm" value={form[key]}
-                onChange={e => setForm(p => ({ ...p, [key]: e.target.value }))}
-                placeholder={ph} />
-            </div>
-          ))}
-        </div>
-
-        {/* Document — uniquement en mode édition */}
-        {evaluation && (
-          <div className="px-6 pb-4 border-t pt-4 flex-shrink-0">
+          {/* Document */}
+          <div>
+            <label className="label">Document</label>
             <input ref={modalFileRef} type="file" className="hidden"
               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-              onChange={handleModalUpload} />
-            <p className="text-sm font-semibold text-gray-600 mb-2">Document attaché</p>
-            {docName ? (
-              <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
+              onChange={handleFileChange} />
+            {currentDoc ? (
+              <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
                 <DocumentIcon className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                <span className="text-sm text-gray-700 truncate flex-1">{docName}</span>
-                <button onClick={() => { const a = document.createElement('a'); a.href = `/api/evaluations/${evaluation.id}/document`; a.click(); }}
-                  className="p-1 text-blue-500 hover:text-blue-700" title="Télécharger">
-                  <ArrowDownTrayIcon className="w-4 h-4" />
-                </button>
-                <button onClick={handleModalDeleteDoc}
-                  className="p-1 text-gray-300 hover:text-red-500" title="Supprimer">
+                <span className="text-sm text-gray-700 truncate flex-1">{currentDoc}</span>
+                {evaluation && docName && (
+                  <button
+                    onClick={() => {
+                      api.get(`/evaluations/${evaluation.id}/document`, { responseType: 'blob' }).then(res => {
+                        const contentType = res.headers['content-type'] || 'application/octet-stream';
+                        const url = URL.createObjectURL(new Blob([res.data as BlobPart], { type: contentType }));
+                        const a = document.createElement('a'); a.href = url; a.download = docName; a.click(); URL.revokeObjectURL(url);
+                      });
+                    }}
+                    className="p-1 text-blue-500 hover:text-blue-700 flex-shrink-0" title="Télécharger">
+                    <ArrowDownTrayIcon className="w-4 h-4" />
+                  </button>
+                )}
+                <button
+                  onClick={() => { if (evaluation) handleDeleteDoc(); else setPendingFile(null); }}
+                  className="p-1 text-gray-300 hover:text-red-500 flex-shrink-0" title="Retirer">
                   <XMarkIcon className="w-4 h-4" />
                 </button>
               </div>
             ) : (
-              <button onClick={() => modalFileRef.current?.click()} disabled={uploading}
-                className="flex items-center gap-2 text-sm text-gray-400 hover:text-blue-600 hover:bg-blue-50 border border-dashed border-gray-300 hover:border-blue-400 rounded-lg px-4 py-2 w-full justify-center transition-colors disabled:opacity-50">
+              <button
+                type="button"
+                onClick={() => modalFileRef.current?.click()}
+                disabled={uploading}
+                className="flex items-center gap-2 text-sm text-gray-400 hover:text-blue-600 hover:bg-blue-50 border border-dashed border-gray-300 hover:border-blue-400 rounded-lg px-4 py-3 w-full justify-center transition-colors disabled:opacity-50"
+              >
                 <CloudArrowUpIcon className="w-5 h-5" />
-                {uploading ? 'Upload en cours...' : 'Importer un document (PDF, Word, image)'}
+                {uploading ? 'Upload en cours...' : 'Joindre un document (PDF, Word, image)'}
               </button>
             )}
           </div>
-        )}
+        </div>
 
         <div className="flex gap-3 justify-end px-6 py-4 border-t flex-shrink-0">
           <button onClick={onClose} className="btn-secondary">Annuler</button>
