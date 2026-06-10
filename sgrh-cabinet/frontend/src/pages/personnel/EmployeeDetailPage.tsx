@@ -132,7 +132,8 @@ export default function EmployeeDetailPage() {
   const handleDownloadDoc = async (docId: string, name: string) => {
     try {
       const res = await api.get(`/documents/${docId}/download`, { responseType: 'blob' });
-      const blob = new Blob([res.data as BlobPart]);
+      const contentType = res.headers['content-type'] || 'application/octet-stream';
+      const blob = new Blob([res.data as BlobPart], { type: contentType });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url; a.download = name; a.click();
