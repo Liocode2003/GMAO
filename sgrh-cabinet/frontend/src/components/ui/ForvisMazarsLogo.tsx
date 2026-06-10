@@ -7,7 +7,7 @@ interface LogoProps {
 export default function ForvisMazarsLogo({ variant = 'color', className = '', height = 44 }: LogoProps) {
   return (
     <img
-      src={variant === 'white' ? '/logo-white.svg' : '/logo.svg'}
+      src={variant === 'white' ? '/logo-white.svg' : '/logo.jpg'}
       alt="Forvis Mazars"
       height={height}
       className={className}
