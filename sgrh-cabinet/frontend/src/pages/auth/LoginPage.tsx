@@ -25,32 +25,16 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Côté gauche — Panneau décoratif branded */}
-      <div
-        className="hidden lg:flex lg:w-1/2 relative overflow-hidden flex-col justify-between p-12"
-        style={{ background: 'linear-gradient(145deg, #0f1f5c 0%, #1E2D72 40%, #1a5fa8 100%)' }}
-      >
-        {/* Cercles décoratifs SVG en arrière-plan */}
-        <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
-          <circle cx="75%" cy="12%" r="220" fill="rgba(26,137,212,0.15)" />
-          <circle cx="90%" cy="45%" r="160" fill="rgba(26,137,212,0.10)" />
-          <circle cx="15%" cy="80%" r="280" fill="rgba(26,137,212,0.12)" />
-          <circle cx="60%" cy="90%" r="120" fill="rgba(255,255,255,0.04)" />
-          <circle cx="5%"  cy="20%" r="80"  fill="rgba(255,255,255,0.05)" />
-          {/* Lignes décoratives */}
-          <line x1="0" y1="55%" x2="100%" y2="45%" stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
-          <line x1="0" y1="65%" x2="100%" y2="55%" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
-        </svg>
-
-        {/* Grille de points */}
-        <svg className="absolute inset-0 w-full h-full opacity-10" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <pattern id="dots" x="0" y="0" width="32" height="32" patternUnits="userSpaceOnUse">
-              <circle cx="2" cy="2" r="1.5" fill="white" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#dots)" />
-        </svg>
+      {/* Côté gauche — Image RH */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden flex-col justify-between p-12">
+        {/* Image de fond */}
+        <img
+          src="/hr-login.jpg"
+          alt="Human Resources"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        {/* Overlay semi-transparent pour lisibilité */}
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(145deg, rgba(15,31,92,0.75) 0%, rgba(30,45,114,0.65) 50%, rgba(26,95,168,0.60) 100%)' }} />
 
         {/* Logo */}
         <div className="relative z-10">
