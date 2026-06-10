@@ -11,23 +11,26 @@ import { PassThrough } from 'stream';
 // MOTEUR DE PAIE BURKINA FASO
 // ============================================================
 
-const CNSS_RATE_EMPLOYEE = 0.055;           // 5,5 %
-const CNSS_CEILING = 350000;                // plafond mensuel FCFA
-const CNSS_RATE_EMPLOYER = 0.16;            // 16 % plafonné
-const PROF_DEDUCTION_RATE = 0.20;
-const PROF_DEDUCTION_MAX = 25000;           // FCFA/mois
-const FAMILY_DEDUCTION_PER_CHARGE = 1500;   // FCFA/mois par ayant droit
+const CNSS_RATE_EMPLOYEE = 0.055;    // 5,5 %
+const CNSS_CEILING = 800000;         // plafond mensuel FCFA (arrêté 2022-067)
+const CNSS_RATE_EMPLOYER = 0.16;     // 16 % plafonné
+const RAMU_RATE_EMPLOYEE = 0.025;    // 2,5% salarié (décret 2024-0345)
+const RAMU_RATE_EMPLOYER = 0.025;    // 2,5% patronal (décret 2024-0345)
+const PROF_DEDUCTION_RATE = 0.25;    // 25% (CGI Burkina Faso)
+// Abattement charges de famille : réduction % sur IUTS brut (CGI 2018, max 4 charges)
+const FAMILY_CHARGE_RATES = [0, 0.08, 0.10, 0.12, 0.14];
 
-// Barème IUTS annuel (Burkina Faso)
-function calculateAnnualIUTS(taxable: number): number {
-  if (taxable <= 0) return 0;
-  if (taxable <= 240000) return 0;
-  if (taxable <= 300000) return (taxable - 240000) * 0.12;
-  if (taxable <= 600000) return 7200 + (taxable - 300000) * 0.15;
-  if (taxable <= 1200000) return 52200 + (taxable - 600000) * 0.225;
-  if (taxable <= 2400000) return 187200 + (taxable - 1200000) * 0.26;
-  if (taxable <= 4800000) return 499200 + (taxable - 2400000) * 0.29;
-  return 1195200 + (taxable - 4800000) * 0.32;
+// Barème IUTS mensuel (Burkina Faso — CGI)
+function calculateMonthlyIUTS(taxable: number): number {
+  if (taxable <= 30000) return 0;
+  let iuts = 0;
+  if (taxable > 30000)  iuts += Math.min(taxable - 30000,  20000) * 0.1210;
+  if (taxable > 50000)  iuts += Math.min(taxable - 50000,  30000) * 0.1390;
+  if (taxable > 80000)  iuts += Math.min(taxable - 80000,  40000) * 0.1570;
+  if (taxable > 120000) iuts += Math.min(taxable - 120000, 50000) * 0.1840;
+  if (taxable > 170000) iuts += Math.min(taxable - 170000, 80000) * 0.2170;
+  if (taxable > 250000) iuts += (taxable - 250000) * 0.25;
+  return iuts;
 }
 
 function r2(n: number) { return Math.round(n * 100) / 100; }
@@ -66,41 +69,41 @@ function computePayslip(inp: PayslipInput): PayslipCalc {
     inp.overtime_pay + inp.prime_amount + inp.other_earnings_amount
   );
 
-  // CNSS salarié (5,5 %, plafonné à 350 000 FCFA)
+  // CNSS salarié (5,5 %, plafonné à 800 000 FCFA)
   const cnssBase = Math.min(gross, CNSS_CEILING);
   const cnss_employee = r2(cnssBase * CNSS_RATE_EMPLOYEE);
 
-  // Pas d'AMO au Burkina Faso
-  const amo_employee = 0;
+  // RAMU salarié (2,5 % — décret 2024-0345)
+  const amo_employee = r2(gross * RAMU_RATE_EMPLOYEE);
 
   // CIMR salarié (assis sur salaire de base uniquement)
   const cimr_employee = r2(inp.base_salary * inp.cimr_rate / 100);
 
-  // Déduction professionnelle (20% brut, max 25 000/mois)
-  const professional_deduction = r2(Math.min(gross * PROF_DEDUCTION_RATE, PROF_DEDUCTION_MAX));
+  // Déduction professionnelle (25 % — CGI Burkina Faso)
+  const professional_deduction = r2(gross * PROF_DEDUCTION_RATE);
 
   // Base imposable mensuelle
   const net_taxable_monthly = r2(Math.max(0,
     gross - cnss_employee - cimr_employee - professional_deduction
   ));
 
-  // IUTS mensuel : annualiser → barème → diviser par 12
-  const annualTaxable = net_taxable_monthly * 12;
-  const annualIUTS = calculateAnnualIUTS(annualTaxable);
-  const iutsRaw = r2(annualIUTS / 12);
+  // IUTS mensuel (barème progressif direct)
+  const iutsRaw = r2(calculateMonthlyIUTS(net_taxable_monthly));
 
-  // Déduction charges de famille (1 500 FCFA/mois par ayant droit, max 6)
-  const family_charge_deduction = r2(Math.min(inp.family_charges, 6) * FAMILY_DEDUCTION_PER_CHARGE);
+  // Réduction charges de famille (CGI 2018 : 8–14 %, max 4 charges)
+  const chargesCount = Math.min(inp.family_charges, 4);
+  const familyRate = FAMILY_CHARGE_RATES[chargesCount];
+  const family_charge_deduction = r2(iutsRaw * familyRate);
   const igr = r2(Math.max(0, iutsRaw - family_charge_deduction));
 
-  // Cotisations patronales (informatif) — CNSS 16 % plafonné, pas d'AMO
+  // Cotisations patronales (informatif) — CNSS 16 % + RAMU 2,5 %
   const cnss_employer = r2(Math.min(gross, CNSS_CEILING) * CNSS_RATE_EMPLOYER);
-  const amo_employer = 0;
+  const amo_employer = r2(gross * RAMU_RATE_EMPLOYER);
   const cimr_employer = cimr_employee;
 
   // Net à payer
   const total_deductions = r2(
-    cnss_employee + cimr_employee + igr +
+    cnss_employee + amo_employee + cimr_employee + igr +
     inp.advance_amount + inp.other_deduction_amount
   );
   const net_salary = r2(gross - total_deductions);
@@ -224,8 +227,9 @@ async function generatePDF(payslipId: string): Promise<string> {
     if (parseFloat(ps.other_earnings_amount) > 0) leftLines.push([ps.other_earnings_label || 'Autres gains', parseFloat(ps.other_earnings_amount)]);
 
     const rightLines: [string, number][] = [
-      ['CNSS salarié (5,5% — plaf. 350 000)', parseFloat(ps.cnss_employee)],
+      ['CNSS salarié (5,5% — plaf. 800 000)', parseFloat(ps.cnss_employee)],
     ];
+    if (parseFloat(ps.amo_employee) > 0) rightLines.push(['RAMU salarié (2,5%)', parseFloat(ps.amo_employee)]);
     if (parseFloat(ps.cimr_employee) > 0) rightLines.push([`CIMR salarié (${parseFloat(ps.cimr_rate)}%)`, parseFloat(ps.cimr_employee)]);
     rightLines.push(['IUTS', parseFloat(ps.igr)]);
     if (parseFloat(ps.advance_amount) > 0) rightLines.push(['Avance sur salaire', parseFloat(ps.advance_amount)]);
@@ -253,7 +257,7 @@ async function generatePDF(payslipId: string): Promise<string> {
       .text(`SALAIRE BRUT : ${fmt(ps.gross_salary)} FCFA`, 44, y + 5)
       .fillColor(red)
       .text(`TOTAL RETENUES : ${fmt(
-        parseFloat(ps.cnss_employee) +
+        parseFloat(ps.cnss_employee) + parseFloat(ps.amo_employee) +
         parseFloat(ps.cimr_employee) + parseFloat(ps.igr) +
         parseFloat(ps.advance_amount) + parseFloat(ps.other_deduction_amount)
       )} FCFA`, 48 + halfW, y + 5);
@@ -269,8 +273,8 @@ async function generatePDF(payslipId: string): Promise<string> {
     doc.rect(40, y, W, 12).fill(light);
     doc.fillColor('#6b7280').fontSize(7.5).font('Helvetica')
       .text(`Base imposable mensuelle : ${fmt(ps.net_taxable_monthly)} FCFA   |   ` +
-        `Déduction prof. (20%) : ${fmt(ps.professional_deduction)} FCFA   |   ` +
-        `Charges de famille : ${ps.family_charges} (−${fmt(ps.family_charge_deduction)} FCFA/mois)`, 44, y + 3);
+        `Abattement prof. (25%) : ${fmt(ps.professional_deduction)} FCFA   |   ` +
+        `Charges de famille : ${ps.family_charges} (réduction −${fmt(ps.family_charge_deduction)} FCFA)`, 44, y + 3);
     y += 18;
 
     // ── COTISATIONS PATRONALES ────────────────────────────
@@ -278,7 +282,7 @@ async function generatePDF(payslipId: string): Promise<string> {
     const cnssEmpl = parseFloat(ps.cnss_employer);
     const cimrEmpl = parseFloat(ps.cimr_employer);
     doc.fillColor('#15803d').fontSize(7.5).font('Helvetica')
-      .text(`Cotisations patronales (informatif) — CNSS patronal (16%) : ${fmt(cnssEmpl)} FCFA  |  CIMR : ${fmt(cimrEmpl)} FCFA  |  Coût total employeur : ${fmt(parseFloat(ps.gross_salary) + cnssEmpl + cimrEmpl)} FCFA`, 44, y + 3);
+      .text(`Cotisations patronales (informatif) — CNSS (16%) : ${fmt(cnssEmpl)} FCFA  |  RAMU (2,5%) : ${fmt(parseFloat(ps.amo_employer))} FCFA  |  CIMR : ${fmt(cimrEmpl)} FCFA  |  Coût total employeur : ${fmt(parseFloat(ps.gross_salary) + cnssEmpl + parseFloat(ps.amo_employer) + cimrEmpl)} FCFA`, 44, y + 3);
     y += 18;
 
     // ── CUMULS ANNUELS ────────────────────────────────────
@@ -702,8 +706,8 @@ async function generateAttestation9421(employeeId: string, year: number): Promis
   `, [employeeId, year]);
   const cumul = cumResult.rows[0];
 
-  const profDed = Math.min(parseFloat(cumul.total_brut) * 0.20, 300000); // max 25 000/mois * 12
-  const igrBase = Math.max(0, parseFloat(cumul.total_brut) - parseFloat(cumul.total_cnss) - parseFloat(cumul.total_cimr) - profDed);
+  const profDed = parseFloat(cumul.total_brut) * 0.25;
+  const igrBase = Math.max(0, parseFloat(cumul.total_brut) - parseFloat(cumul.total_cnss) - parseFloat(cumul.total_amo) - parseFloat(cumul.total_cimr) - profDed);
 
   return new Promise<Buffer>((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 50 });
@@ -769,8 +773,9 @@ async function generateAttestation9421(employeeId: string, year: number): Promis
     const tableLines: [string, number][] = [
       ['Salaire brut imposable', parseFloat(cumul.total_brut)],
       ['Cotisations CNSS salarié (5,5%)', parseFloat(cumul.total_cnss)],
+      ['Cotisations RAMU salarié (2,5%)', parseFloat(cumul.total_amo)],
       ['Cotisations CIMR salarié', parseFloat(cumul.total_cimr)],
-      ['Déduction frais professionnels (20%)', profDed],
+      ['Abattement frais professionnels (25%)', profDed],
       ['Base imposable (revenu net taxable)', igrBase],
       ['IUTS (Impôt Unique sur les Traitements et Salaires)', parseFloat(cumul.total_igr)],
       ['Net total versé', parseFloat(cumul.total_net)],
