@@ -11,53 +11,47 @@ async function stripEmptyDrawings(filePath: string): Promise<void> {
     const JSZip = require('jszip');
     const data = fs.readFileSync(filePath);
     const zip  = await JSZip.loadAsync(data);
-    const files = Object.keys(zip.files) as string[];
+    const allFiles = Object.keys(zip.files) as string[];
+
+    logger.info(`stripEmptyDrawings: ${allFiles.length} entries in zip`);
+
+    // Trouver tous les drawing XML (case-insensitive, pas d'ancre stricte)
+    const drawingFiles = allFiles.filter(f => /xl\/drawings\/drawing\d+\.xml$/i.test(f));
+    logger.info(`stripEmptyDrawings: drawings trouvés → [${drawingFiles.join(', ')}]`);
 
     let modified = false;
 
-    // 1. Identifier les drawings vides ou sans contenu réel
-    const emptyDrawings = new Set<string>();
-    for (const f of files) {
-      if (!/^xl\/drawings\/drawing\d+\.xml$/.test(f)) continue;
-      const xml: string = await zip.files[f].async('string');
-      if (!xml.includes('CellAnchor')) emptyDrawings.add(f);
-    }
-
-    // 2. Nettoyer les _rels des feuilles (même si le drawing n'existe pas dans zip)
-    for (const relsPath of files.filter(f => /xl\/worksheets\/_rels\//.test(f))) {
-      const rels: string = await zip.files[relsPath].async('string');
-      // Supprimer TOUTE référence drawing (vide ou orpheline)
-      const cleaned = rels.replace(/<Relationship[^>]+Target="[^"]*drawing\d+\.xml"[^>]*\/>/g, (m) => {
-        const target = m.match(/Target="([^"]+)"/)?.[1] ?? '';
-        const drawPath = 'xl/drawings/' + target.split('/').pop();
-        if (emptyDrawings.has(drawPath) || !zip.files[drawPath]) { modified = true; return ''; }
-        return m;
-      });
-      if (cleaned !== rels) zip.file(relsPath, cleaned);
-    }
-
-    // 3. Supprimer les fichiers drawing vides + leurs _rels
-    for (const dp of emptyDrawings) {
+    // Supprimer TOUS les drawings (ce classeur n'a pas de charts ni d'images)
+    for (const dp of drawingFiles) {
+      const xml: string = await zip.files[dp].async('string');
+      logger.info(`stripEmptyDrawings: ${dp} → ${xml.slice(0, 120).replace(/\n/g, ' ')}`);
       zip.remove(dp);
-      const num = dp.match(/drawing(\d+)/)?.[1];
+      const num = dp.match(/drawing(\d+)/i)?.[1];
       if (num) zip.remove(`xl/drawings/_rels/drawing${num}.xml.rels`);
       modified = true;
     }
 
-    // 4. Nettoyer Content_Types.xml
+    // Nettoyer les _rels des feuilles (toute référence à un drawing)
+    for (const relsPath of allFiles.filter(f => /xl\/worksheets\/_rels\//i.test(f))) {
+      const rels: string = await zip.files[relsPath].async('string');
+      const cleaned = rels.replace(/<Relationship[^>]+Target="[^"]*drawing[^"]*\.xml"[^>]*\/>/gi,
+        () => { modified = true; return ''; });
+      if (cleaned !== rels) zip.file(relsPath, cleaned);
+    }
+
+    // Nettoyer Content_Types.xml
     if (modified && zip.files['[Content_Types].xml']) {
       const ct: string = await zip.files['[Content_Types].xml'].async('string');
-      const ctCleaned = ct.replace(/<Override[^>]+\/xl\/drawings\/drawing\d+\.xml"[^/]*\/>/g, (m) => {
-        const name = m.match(/drawing\d+\.xml/)?.[0] ?? '';
-        return zip.files[`xl/drawings/${name}`] ? m : '';
-      });
+      const ctCleaned = ct.replace(/<Override[^>]*\/xl\/drawings\/[^"]*\.xml"[^/]*\/>/gi, '');
       if (ctCleaned !== ct) zip.file('[Content_Types].xml', ctCleaned);
     }
 
     if (modified) {
       const buf: Buffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
       fs.writeFileSync(filePath, buf);
-      logger.info(`stripEmptyDrawings: nettoyage OK → ${emptyDrawings.size} drawing(s) supprimé(s)`);
+      logger.info(`stripEmptyDrawings: OK → ${drawingFiles.length} drawing(s) supprimé(s)`);
+    } else {
+      logger.info('stripEmptyDrawings: aucun drawing trouvé dans ce fichier');
     }
   } catch (err) {
     logger.warn('stripEmptyDrawings skipped:', err);
