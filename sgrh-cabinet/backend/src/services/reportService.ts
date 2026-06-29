@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { query } from '../config/database';
 import { logger } from '../utils/logger';
+import { addGroupedBarChart, addPieChart } from './chartService';
 
 // Supprime les drawing.xml vides/orphelins générés par ExcelJS (bug connu v4.4.0)
 async function stripEmptyDrawings(filePath: string): Promise<void> {
@@ -333,11 +334,13 @@ async function buildEffectifs(
   ws.getColumn(3).width = 16;
   ws.getColumn(4).width = 12;
   ws.getColumn(5).width = 14;
+  ws.getColumn(7).width = 4; // marge avant le graphique
 
   const addBlank = () => { ws.addRow([]); };
 
   // ── Section 1 : Effectif total ──
   addBlank();
+  const sect1Row = ws.rowCount + 1;
   ws.mergeCells(`A${ws.rowCount}:E${ws.rowCount}`);
   styleSection(ws.getCell(`A${ws.rowCount}`));
   ws.getCell(`A${ws.rowCount}`).value = '1. EFFECTIF TOTAL (HORS STAGIAIRES ÉCOLE)';
@@ -370,8 +373,15 @@ async function buildEffectifs(
   if (ci1(totRow, 4) > 0) totRow.getCell(4).font = { ...totRow.getCell(4).font, color: { argb: C.GREEN } };
   totRow.height = 20;
 
+  await addGroupedBarChart(wb, ws, [
+    { label: 'Permanents',  series: [{ label: String(year), value: permCur }, { label: String(year - 1), value: permPrv }] },
+    { label: 'Consultants', series: [{ label: String(year), value: consCur }, { label: String(year - 1), value: consPrv }] },
+    { label: 'Total',       series: [{ label: String(year), value: totCur },  { label: String(year - 1), value: totPrv }] },
+  ], 6, sect1Row - 1, { title: `Effectif total — ${monthName} ${year} vs ${year - 1}`, width: 420, height: 230 });
+
   // ── Section 2 : H/F ──
   addBlank();
+  const sect2Row = ws.rowCount + 1;
   ws.mergeCells(`A${ws.rowCount}:E${ws.rowCount}`);
   styleSection(ws.getCell(`A${ws.rowCount}`));
   ws.getCell(`A${ws.rowCount}`).value = '2. RÉPARTITION HOMMES / FEMMES';
@@ -406,6 +416,11 @@ async function buildEffectifs(
   const totGRow = ws.addRow(['TOTAL', gtotCur, '100%', gtotPrv, '100%']);
   totGRow.eachCell((c, ci) => styleTotal(c, ci !== 1));
   totGRow.height = 20;
+
+  await addPieChart(wb, ws, [
+    { label: 'Hommes', value: gcur.M || 0, color: '#1B3A5C' },
+    { label: 'Femmes', value: gcur.F || 0, color: '#D4A017' },
+  ], 6, sect2Row - 1, { title: `Répartition H/F — Fin ${monthName} ${year}`, width: 380, height: 230 });
 }
 
 // helper: cellule numérique d'une ligne
@@ -532,6 +547,7 @@ async function buildParDepartement(
 
   ws.getColumn(1).width = 28;
   [2, 3, 4, 5].forEach(i => { ws.getColumn(i).width = 16; });
+  ws.getColumn(7).width = 4;
 
   const depts = [
     'AUDIT_ASSURANCE', 'ADMINISTRATION', 'CONSULTING_FA', 'OUTSOURCING', 'JURIDIQUE_FISCALITE',
@@ -577,6 +593,14 @@ async function buildParDepartement(
   const totRow = ws.addRow(['TOTAL', totCur, '100%', totPrv, '100%']);
   totRow.eachCell((c, ci) => styleTotal(c, ci !== 1));
   totRow.height = 20;
+
+  await addGroupedBarChart(wb, ws, depts.map(dept => ({
+    label: DEPT_LABELS[dept] ?? dept,
+    series: [
+      { label: String(year), value: curMap[dept] || 0 },
+      { label: String(year - 1), value: prvMap[dept] || 0 },
+    ],
+  })), 6, 1, { title: `Effectif par département — ${monthName} ${year} vs ${year - 1}`, width: 480, height: 260 });
 }
 
 // ─── Feuille 5 : Tranches d'Âge ──────────────────────────────────────────────
@@ -598,6 +622,7 @@ async function buildTranchesAge(wb: ExcelJS.Workbook, monthName: string, year: n
   ws.getColumn(1).width = 22;
   ws.getColumn(2).width = 12;
   ws.getColumn(3).width = 14;
+  ws.getColumn(5).width = 4;
 
   const tranches = [
     { label: 'Moins de 25 ans', min: 0,  max: 24  },
@@ -638,6 +663,14 @@ async function buildTranchesAge(wb: ExcelJS.Workbook, monthName: string, year: n
   const totRow = ws.addRow(['TOTAL', total, '100%']);
   totRow.eachCell((c, ci) => styleTotal(c, ci !== 1));
   totRow.height = 20;
+
+  const AGE_PALETTE = ['#1B3A5C', '#2C5282', '#3182CE', '#63B3ED', '#D4A017', '#DD6B20', '#9B2335'];
+  await addGroupedBarChart(wb, ws, tranches.map((t, i) => {
+    const count = Object.entries(ageCounts)
+      .filter(([age]) => parseInt(age) >= t.min && parseInt(age) <= t.max)
+      .reduce((a, [, v]) => a + v, 0);
+    return { label: t.label, series: [{ label: t.label, value: count, color: AGE_PALETTE[i % AGE_PALETTE.length] }] };
+  }), 4, 1, { title: `Répartition par tranches d'âge — Fin ${monthName} ${year}`, width: 460, height: 260 });
 }
 
 // ─── Feuille 6 : Turn-Over ────────────────────────────────────────────────────
@@ -654,6 +687,7 @@ async function buildTurnOver(
   ws.getColumn(1).width = 40;
   ws.getColumn(2).width = 18;
   ws.getColumn(3).width = 18;
+  ws.getColumn(5).width = 4;
 
   // ── Titre ──
   ws.mergeCells('A1:C1');
@@ -754,6 +788,15 @@ async function buildTurnOver(
     row.getCell(1).style = { ...row.getCell(1).style, alignment: { horizontal: 'left' } };
     row.height = 20;
   });
+
+  const toGloCurNum = avgCur > 0 ? Math.round((depTotCur / avgCur) * 1000) / 10 : 0;
+  const toGloPrvNum = avgPrv > 0 ? Math.round((depTotPrv / avgPrv) * 1000) / 10 : 0;
+  await addGroupedBarChart(wb, ws, [
+    { label: 'Turn-Over Global (%)', series: [
+      { label: `YTD ${year}`, value: toGloCurNum },
+      { label: `${year - 1}`, value: toGloPrvNum },
+    ] },
+  ], 4, 1, { title: `Turn-Over global — YTD ${monthName} ${year} vs ${year - 1}`, width: 380, height: 230 });
 }
 
 // ─── Feuille 7 : Motifs de Départ ────────────────────────────────────────────
