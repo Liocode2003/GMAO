@@ -11,6 +11,10 @@ FROM node:20-alpine AS production
 
 RUN addgroup -S sgrh && adduser -S sgrh -G sgrh
 
+# Polices nécessaires pour le rendu texte des graphiques SVG (chartService.ts via sharp/librsvg).
+# Sans ça, Alpine n'a aucune police système et le texte des graphiques s'affiche en carrés vides.
+RUN apk add --no-cache fontconfig ttf-dejavu && fc-cache -f
+
 WORKDIR /app
 COPY package*.json ./
 RUN npm install --omit=dev && npm cache clean --force

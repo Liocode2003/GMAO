@@ -319,6 +319,7 @@ async function buildEffectifs(
   wb: ExcelJS.Workbook, monthName: string, year: number, endDate: string, prevEndDate: string
 ) {
   const ws = wb.addWorksheet('Effectifs');
+  ws.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
 
   const colLabel = `Fin ${monthName} ${year}`;
   const colPrev  = `Fin ${monthName} ${year - 1}`;
@@ -373,11 +374,12 @@ async function buildEffectifs(
   if (ci1(totRow, 4) > 0) totRow.getCell(4).font = { ...totRow.getCell(4).font, color: { argb: C.GREEN } };
   totRow.height = 20;
 
+  const chart1Height = 200;
   await addGroupedBarChart(wb, ws, [
     { label: 'Permanents',  series: [{ label: String(year), value: permCur }, { label: String(year - 1), value: permPrv }] },
     { label: 'Consultants', series: [{ label: String(year), value: consCur }, { label: String(year - 1), value: consPrv }] },
     { label: 'Total',       series: [{ label: String(year), value: totCur },  { label: String(year - 1), value: totPrv }] },
-  ], 6, sect1Row - 1, { title: `Effectif total — ${monthName} ${year} vs ${year - 1}`, width: 420, height: 230 });
+  ], 6, sect1Row - 1, { title: `Effectif total — ${monthName} ${year} vs ${year - 1}`, width: 420, height: chart1Height });
 
   // ── Section 2 : H/F ──
   addBlank();
@@ -417,10 +419,12 @@ async function buildEffectifs(
   totGRow.eachCell((c, ci) => styleTotal(c, ci !== 1));
   totGRow.height = 20;
 
+  const EXCEL_ROW_PX = 20;
+  const chart1RowSpan = Math.ceil(chart1Height / EXCEL_ROW_PX) + 1; // marge de sécurité 1 ligne
   await addPieChart(wb, ws, [
     { label: 'Hommes', value: gcur.M || 0, color: '#1B3A5C' },
     { label: 'Femmes', value: gcur.F || 0, color: '#D4A017' },
-  ], 6, sect2Row - 1, { title: `Répartition H/F — Fin ${monthName} ${year}`, width: 380, height: 230 });
+  ], 6, (sect1Row - 1) + chart1RowSpan, { title: `Répartition H/F — Fin ${monthName} ${year}`, width: 380, height: 230 });
 }
 
 // helper: cellule numérique d'une ligne
@@ -529,6 +533,7 @@ async function buildParDepartement(
   wb: ExcelJS.Workbook, monthName: string, year: number, endDate: string, prevEndDate: string
 ) {
   const ws = wb.addWorksheet('Par Département');
+  ws.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
 
   ws.mergeCells('A1:E1');
   styleTitle(ws.getCell('A1'));
@@ -607,6 +612,7 @@ async function buildParDepartement(
 
 async function buildTranchesAge(wb: ExcelJS.Workbook, monthName: string, year: number, endDate: string) {
   const ws = wb.addWorksheet("Tranches d'Âge");
+  ws.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
 
   ws.mergeCells('A1:C1');
   styleTitle(ws.getCell('A1'));
@@ -670,7 +676,7 @@ async function buildTranchesAge(wb: ExcelJS.Workbook, monthName: string, year: n
       .filter(([age]) => parseInt(age) >= t.min && parseInt(age) <= t.max)
       .reduce((a, [, v]) => a + v, 0);
     return { label: t.label, series: [{ label: t.label, value: count, color: AGE_PALETTE[i % AGE_PALETTE.length] }] };
-  }), 4, 1, { title: `Répartition par tranches d'âge — Fin ${monthName} ${year}`, width: 460, height: 260 });
+  }), 4, 1, { title: `Répartition par tranches d'âge — Fin ${monthName} ${year}`, width: 560, height: 260 });
 }
 
 // ─── Feuille 6 : Turn-Over ────────────────────────────────────────────────────
@@ -680,6 +686,7 @@ async function buildTurnOver(
   endCur: string, endPrv: string, startCur: string, startPrv: string
 ) {
   const ws = wb.addWorksheet('Turn-Over');
+  ws.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
 
   const colCur = `YTD Janv.–${monthName} ${year}`;
   const colPrv = `Année ${year - 1} (complète)`;

@@ -9,7 +9,7 @@ const RED         = '#9B2335';
 const TEXT_MUTED  = '#718096';
 const GRID        = '#E2E8F0';
 
-const FONT = 'Arial, Helvetica, sans-serif';
+const FONT = "'DejaVu Sans', Arial, Helvetica, sans-serif";
 
 export interface BarSeries {
   label: string;
