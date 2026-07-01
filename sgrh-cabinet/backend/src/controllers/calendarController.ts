@@ -99,7 +99,7 @@ export const listCalendarEvents = async (req: Request, res: Response) => {
       ...contractEndsResult.rows,
     ];
 
-    return res.json({ data: events });
+    return res.json(events);
 
   } catch (err) {
     logger.error('listCalendarEvents error', err);
